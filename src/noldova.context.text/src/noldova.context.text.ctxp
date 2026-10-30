@@ -1,0 +1,14 @@
+{
+  "name": "noldova.context.text",
+  "version": "0.0.1",
+  "kind": "library",
+  "frameworks": [],
+  "dependencies": {
+    "projects": [],
+    "packages": [
+      "noldova.context.collections",
+      "noldova.context.core",
+      "noldova.context.exceptions"
+    ]
+  }
+}

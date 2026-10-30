@@ -1,0 +1,112 @@
+/**
+ * @license
+ * Copyright (c) Noldova.
+ *
+ * This source code is licensed under the license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+export class Resources {
+  public static readonly alternativesParameterName: string = "alternatives";
+  public static readonly ampersandAmpersand: string = "&&";
+  public static readonly asterisk: string = "*";
+  public static readonly backslash: string = "\\";
+  public static readonly backspaceCodePoint: number = 0x08;
+  public static readonly backspaceEscape: string = "\\b";
+  public static readonly backspaceEscapeCharacter: string = "b";
+  public static readonly bar: string = "|";
+  public static readonly caret: string = "^";
+  public static readonly carriageReturnCodePoint: number = 0x0D;
+  public static readonly carriageReturnEscape: string = "\\r";
+  public static readonly carriageReturnEscapeCharacter: string = "r";
+  public static readonly classControlEscapeCharacter: string = "c";
+  public static readonly classSetReservedPunctuators: string = "&-!#%,:;<=>@`~";
+  public static readonly classSetReservedDoublePunctuators: string = "&!#$%*+,.:;<=>?@^`~";
+  public static readonly classSetSyntaxCharacters: string = "()[]{}/-\\|";
+  public static readonly classStringDisjunctionEscapeCharacter: string = "q";
+  public static readonly classStringDisjunctionStart: string = "\\q{";
+  public static readonly closeBrace: string = "}";
+  public static readonly closeBracket: string = "]";
+  public static readonly closeParenthesis: string = ")";
+  public static readonly colon: string = ":";
+  public static readonly comma: string = ",";
+  public static readonly digitEscape: string = "\\d";
+  public static readonly digitEscapeCharacter: string = "d";
+  public static readonly digitThree: string = "3";
+  public static readonly digitZero: string = "0";
+  public static readonly dollar: string = "$";
+  public static readonly dollarCodePoint: number = 0x24;
+  public static readonly dot: string = ".";
+  public static readonly dotAllFlag: string = "s";
+  public static readonly equals: string = "=";
+  public static readonly exclamation: string = "!";
+  public static readonly flagCharacters: string = "dgimsuvy";
+  public static readonly flagsOutsideInput: string = "The flags span must follow the pattern and remain inside the complete regular-expression input.";
+  public static readonly formFeedCodePoint: number = 0x0C;
+  public static readonly formFeedEscape: string = "\\f";
+  public static readonly formFeedEscapeCharacter: string = "f";
+  public static readonly generalCategoryProperty: string = "General_Category";
+  public static readonly generalCategoryPropertyAlias: string = "gc";
+  public static readonly globalFlag: string = "g";
+  public static readonly greaterThan: string = ">";
+  public static readonly hasIndicesFlag: string = "d";
+  public static readonly hexEscapeCharacter: string = "x";
+  public static readonly hyphen: string = "-";
+  public static readonly hyphenHyphen: string = "--";
+  public static readonly ignoreCaseFlag: string = "i";
+  public static readonly lessThan: string = "<";
+  public static readonly maximumNestingDepth: number = 512;
+  public static readonly modifierCharacters: string = "ims";
+  public static readonly multilineFlag: string = "m";
+  public static readonly namedBackreferenceEscapeCharacter: string = "k";
+  public static readonly negatedUnicodePropertyEscapeCharacter: string = "P";
+  public static readonly newlineCodePoint: number = 0x0A;
+  public static readonly newlineEscape: string = "\\n";
+  public static readonly newlineEscapeCharacter: string = "n";
+  public static readonly nonDigitEscape: string = "\\D";
+  public static readonly nonDigitEscapeCharacter: string = "D";
+  public static readonly nonWhitespaceEscape: string = "\\S";
+  public static readonly nonWhitespaceEscapeCharacter: string = "S";
+  public static readonly nonWordBoundary: string = "\\B";
+  public static readonly nonWordBoundaryEscapeCharacter: string = "B";
+  public static readonly nonWordEscape: string = "\\W";
+  public static readonly nonWordEscapeCharacter: string = "W";
+  public static readonly nullCodePoint: number = 0;
+  public static readonly nullEscape: string = "\\0";
+  public static readonly oneRepetition: bigint = 1n;
+  public static readonly openBrace: string = "{";
+  public static readonly openBracket: string = "[";
+  public static readonly openParenthesis: string = "(";
+  public static readonly operandsParameterName: string = "operands";
+  public static readonly patternOutsideInput: string = "The pattern span must remain inside the complete regular-expression input.";
+  public static readonly patternReaderMustStartAtRegionStart: string = "The pattern reader must be positioned at the start of its bounded source region.";
+  public static readonly plus: string = "+";
+  public static readonly question: string = "?";
+  public static readonly scriptProperty: string = "Script";
+  public static readonly scriptPropertyAlias: string = "sc";
+  public static readonly scriptExtensionsProperty: string = "Script_Extensions";
+  public static readonly scriptExtensionsPropertyAlias: string = "scx";
+  public static readonly slash: string = "/";
+  public static readonly stickyFlag: string = "y";
+  public static readonly stringsParameterName: string = "strings";
+  public static readonly syntaxCharacters: string = "^$\\.*+?()[]{}|";
+  public static readonly tabCodePoint: number = 0x09;
+  public static readonly tabEscape: string = "\\t";
+  public static readonly tabEscapeCharacter: string = "t";
+  public static readonly underscore: string = "_";
+  public static readonly underscoreCodePoint: number = 0x5F;
+  public static readonly unicodeEscapeCharacter: string = "u";
+  public static readonly unicodeEscapePrefix: string = "\\u";
+  public static readonly unicodeFlag: string = "u";
+  public static readonly unicodePropertyEscapeCharacter: string = "p";
+  public static readonly unicodeSetsFlag: string = "v";
+  public static readonly verticalTabCodePoint: number = 0x0B;
+  public static readonly verticalTabEscape: string = "\\v";
+  public static readonly verticalTabEscapeCharacter: string = "v";
+  public static readonly whitespaceEscape: string = "\\s";
+  public static readonly whitespaceEscapeCharacter: string = "s";
+  public static readonly wordBoundary: string = "\\b";
+  public static readonly wordEscape: string = "\\w";
+  public static readonly wordEscapeCharacter: string = "w";
+  public static readonly zeroRepetitions: bigint = 0n;
+}

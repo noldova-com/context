@@ -1,0 +1,14 @@
+{
+  "name": "noldova.context.collections.tests",
+  "version": "0.0.1",
+  "kind": "library",
+  "frameworks": [],
+  "dependencies": {
+    "projects": [
+      "../src/noldova.context.collections.ctxp"
+    ],
+    "packages": [
+      "noldova.context.testing"
+    ]
+  }
+}

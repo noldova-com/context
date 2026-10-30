@@ -1,0 +1,16 @@
+{
+  "name": "noldova.context.json.tests",
+  "version": "0.0.1",
+  "kind": "library",
+  "frameworks": [],
+  "dependencies": {
+    "projects": [
+      "../src/noldova.context.json.ctxp"
+    ],
+    "packages": [
+      "noldova.context.core",
+      "noldova.context.exceptions",
+      "noldova.context.testing"
+    ]
+  }
+}

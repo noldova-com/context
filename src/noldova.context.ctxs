@@ -1,0 +1,24 @@
+{
+  "projects": [
+    "noldova.context.collections/src/noldova.context.collections.ctxp",
+    "noldova.context.collections/tests/noldova.context.collections.tests.ctxp",
+    "noldova.context.core/src/noldova.context.core.ctxp",
+    "noldova.context.core/tests/noldova.context.core.tests.ctxp",
+    "noldova.context.diagnostics/src/noldova.context.diagnostics.ctxp",
+    "noldova.context.diagnostics/tests/noldova.context.diagnostics.tests.ctxp",
+    "noldova.context.exceptions/src/noldova.context.exceptions.ctxp",
+    "noldova.context.exceptions/tests/noldova.context.exceptions.tests.ctxp",
+    "noldova.context.json/src/noldova.context.json.ctxp",
+    "noldova.context.json/tests/noldova.context.json.tests.ctxp",
+    "parsers/noldova.context.parsers/src/noldova.context.parsers.ctxp",
+    "parsers/noldova.context.parsers/tests/noldova.context.parsers.tests.ctxp",
+    "parsers/noldova.context.parsers.regex/src/noldova.context.parsers.regex.ctxp",
+    "parsers/noldova.context.parsers.regex/tests/noldova.context.parsers.regex.tests.ctxp",
+    "noldova.context.testing/src/noldova.context.testing.ctxp",
+    "noldova.context.testing/tests/noldova.context.testing.tests.ctxp",
+    "noldova.context.text/src/noldova.context.text.ctxp",
+    "noldova.context.text/tests/noldova.context.text.tests.ctxp",
+    "parsers/noldova.context.parsers.typescript/src/noldova.context.parsers.typescript.ctxp",
+    "parsers/noldova.context.parsers.typescript/tests/noldova.context.parsers.typescript.tests.ctxp"
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 2,
+  "typescriptVersion": "7.0.2",
+  "sources": {
+    "typescriptGo": {
+      "repository": "https://github.com/microsoft/typescript-go.git",
+      "tag": "typescript/v7.0.2",
+      "commit": "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
+    },
+    "typescript": {
+      "repository": "https://github.com/microsoft/TypeScript.git",
+      "commit": "4d4f005c8541e0255a9d8791205fdce326e462bc"
+    }
+  },
+  "compilerOptions": {
+    "noEmit": true,
+    "target": "esnext",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "exactOptionalPropertyTypes": true,
+    "forceConsistentCasingInFileNames": true,
+    "noErrorTruncation": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noUncheckedIndexedAccess": true,
+    "noUncheckedSideEffectImports": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": false,
+    "types": []
+  },
+  "compilerOptionsSha256": "bfa8d2c366dd0d135a433bd764fec73911eee466bbcae469bff2de5829799dff",
+  "unitSplittingVersion": 3,
+  "totals": {
+    "caseFiles": 12762,
+    "applicable": 11342,
+    "inapplicable": 1420,
+    "inapplicableByReason": {
+      "JavaScript": 1016,
+      "JavaScript+Jsx": 7,
+      "JavaScript+Jsx+Other": 1,
+      "JavaScript+Other": 3,
+      "Jsx": 390,
+      "Other": 3
+    },
+    "diagnostics": 67542
+  },
+  "retries": [],
+  "resultsSha256": "a542026b9792f09fe8a9384248018d4c28d7863eea6de8dbb46104a571a6f1f4"
+}

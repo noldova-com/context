@@ -1,0 +1,1772 @@
+{
+  "expectedDiagnosticsSha256": "a542026b9792f09fe8a9384248018d4c28d7863eea6de8dbb46104a571a6f1f4",
+  "summary": {
+    "applicable": 11342,
+    "passing": 11311,
+    "statedDifferences": 10,
+    "checkerDecided": 21,
+    "failing": 0
+  },
+  "failing": [
+    {
+      "path": "classic/compiler/awaitInNonAsyncFunction.ts",
+      "missing": [
+        {
+          "unit": "awaitInNonAsyncFunction.ts",
+          "start": 314,
+          "length": 5,
+          "message": {
+            "code": 1103,
+            "category": "error",
+            "text": "'for await' loops are only allowed within async functions and at the top levels of modules.",
+            "chain": []
+          },
+          "related": [
+            {
+              "unit": "awaitInNonAsyncFunction.ts",
+              "start": 256,
+              "length": 18,
+              "message": {
+                "code": 1356,
+                "category": "error",
+                "text": "Did you mean to mark this function as 'async'?",
+                "chain": []
+              },
+              "related": [],
+              "tags": []
+            }
+          ],
+          "tags": []
+        },
+        {
+          "unit": "awaitInNonAsyncFunction.ts",
+          "start": 339,
+          "length": 5,
+          "message": {
+            "code": 1308,
+            "category": "error",
+            "text": "'await' expressions are only allowed within async functions and at the top levels of modules.",
+            "chain": []
+          },
+          "related": [
+            {
+              "unit": "awaitInNonAsyncFunction.ts",
+              "start": 256,
+              "length": 18,
+              "message": {
+                "code": 1356,
+                "category": "error",
+                "text": "Did you mean to mark this function as 'async'?",
+                "chain": []
+              },
+              "related": [],
+              "tags": []
+            }
+          ],
+          "tags": []
+        }
+      ],
+      "extra": [
+        {
+          "unit": "awaitInNonAsyncFunction.ts",
+          "start": 314,
+          "length": 5,
+          "message": {
+            "code": 1103,
+            "category": "error",
+            "text": "'for await' loops are only allowed within async functions and at the top levels of modules.",
+            "chain": []
+          },
+          "related": [
+            {
+              "unit": "awaitInNonAsyncFunction.ts",
+              "start": 277,
+              "length": 8,
+              "message": {
+                "code": 1356,
+                "category": "error",
+                "text": "Did you mean to mark this function as 'async'?",
+                "chain": []
+              },
+              "related": [],
+              "tags": []
+            }
+          ],
+          "tags": []
+        },
+        {
+          "unit": "awaitInNonAsyncFunction.ts",
+          "start": 339,
+          "length": 5,
+          "message": {
+            "code": 1308,
+            "category": "error",
+            "text": "'await' expressions are only allowed within async functions and at the top levels of modules.",
+            "chain": []
+          },
+          "related": [
+            {
+              "unit": "awaitInNonAsyncFunction.ts",
+              "start": 277,
+              "length": 8,
+              "message": {
+                "code": 1356,
+                "category": "error",
+                "text": "Did you mean to mark this function as 'async'?",
+                "chain": []
+              },
+              "related": [],
+              "tags": []
+            }
+          ],
+          "tags": []
+        }
+      ]
+    },
+    {
+      "path": "classic/compiler/duplicateObjectLiteralProperty_computedName1.ts",
+      "missing": [
+        {
+          "unit": "duplicateObjectLiteralProperty_computedName1.ts",
+          "start": 77,
+          "length": 4,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "duplicateObjectLiteralProperty_computedName1.ts",
+          "start": 130,
+          "length": 4,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "duplicateObjectLiteralProperty_computedName1.ts",
+          "start": 314,
+          "length": 4,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/compiler/duplicateObjectLiteralProperty_computedName2.ts",
+      "missing": [
+        {
+          "unit": "duplicateObjectLiteralProperty_computedName2.ts",
+          "start": 99,
+          "length": 3,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "duplicateObjectLiteralProperty_computedName2.ts",
+          "start": 152,
+          "length": 3,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "duplicateObjectLiteralProperty_computedName2.ts",
+          "start": 208,
+          "length": 6,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "duplicateObjectLiteralProperty_computedName2.ts",
+          "start": 267,
+          "length": 6,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/compiler/duplicateObjectLiteralProperty_computedName3.ts",
+      "missing": [
+        {
+          "unit": "b.ts",
+          "start": 64,
+          "length": 8,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "b.ts",
+          "start": 127,
+          "length": 8,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "b.ts",
+          "start": 193,
+          "length": 11,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "b.ts",
+          "start": 262,
+          "length": 11,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/compiler/indexerConstraints2.ts",
+      "missing": [
+        {
+          "unit": "indexerConstraints2.ts",
+          "start": 1009,
+          "length": 10,
+          "message": {
+            "code": 1021,
+            "category": "error",
+            "text": "An index signature must have a type annotation.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/compiler/regExpWithOpenBracketInCharClass.ts",
+      "missing": [
+        {
+          "unit": "regExpWithOpenBracketInCharClass.ts",
+          "start": 72,
+          "length": 0,
+          "message": {
+            "code": 1005,
+            "category": "error",
+            "text": "']' expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/compiler/regularExpressionAnnexB.ts",
+      "missing": [
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 35,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 49,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 55,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 72,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 86,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 92,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 142,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 156,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 162,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 180,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 194,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 200,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 471,
+          "length": 0,
+          "message": {
+            "code": 1005,
+            "category": "error",
+            "text": "'}' expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 482,
+          "length": 0,
+          "message": {
+            "code": 1005,
+            "category": "error",
+            "text": "'}' expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 494,
+          "length": 0,
+          "message": {
+            "code": 1005,
+            "category": "error",
+            "text": "'}' expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 507,
+          "length": 0,
+          "message": {
+            "code": 1005,
+            "category": "error",
+            "text": "'}' expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionAnnexB.ts",
+          "start": 520,
+          "length": 0,
+          "message": {
+            "code": 1005,
+            "category": "error",
+            "text": "'}' expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/compiler/regularExpressionScanning.ts",
+      "missing": [
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 201,
+          "length": 3,
+          "message": {
+            "code": 1487,
+            "category": "error",
+            "text": "Octal escape sequences are not allowed. Use the syntax '\\x01'.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 208,
+          "length": 2,
+          "message": {
+            "code": 1487,
+            "category": "error",
+            "text": "Octal escape sequences are not allowed. Use the syntax '\\x00'.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 217,
+          "length": 3,
+          "message": {
+            "code": 1487,
+            "category": "error",
+            "text": "Octal escape sequences are not allowed. Use the syntax '\\x03'.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 223,
+          "length": 4,
+          "message": {
+            "code": 1487,
+            "category": "error",
+            "text": "Octal escape sequences are not allowed. Use the syntax '\\x05'.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 229,
+          "length": 3,
+          "message": {
+            "code": 1487,
+            "category": "error",
+            "text": "Octal escape sequences are not allowed. Use the syntax '\\x00'.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 261,
+          "length": 3,
+          "message": {
+            "code": 1487,
+            "category": "error",
+            "text": "Octal escape sequences are not allowed. Use the syntax '\\x01'.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 268,
+          "length": 2,
+          "message": {
+            "code": 1487,
+            "category": "error",
+            "text": "Octal escape sequences are not allowed. Use the syntax '\\x00'.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 277,
+          "length": 3,
+          "message": {
+            "code": 1487,
+            "category": "error",
+            "text": "Octal escape sequences are not allowed. Use the syntax '\\x03'.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 283,
+          "length": 4,
+          "message": {
+            "code": 1487,
+            "category": "error",
+            "text": "Octal escape sequences are not allowed. Use the syntax '\\x05'.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 289,
+          "length": 3,
+          "message": {
+            "code": 1487,
+            "category": "error",
+            "text": "Octal escape sequences are not allowed. Use the syntax '\\x00'.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 1413,
+          "length": 0,
+          "message": {
+            "code": 1005,
+            "category": "error",
+            "text": "'}' expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 1627,
+          "length": 0,
+          "message": {
+            "code": 1005,
+            "category": "error",
+            "text": "'--' expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 1631,
+          "length": 0,
+          "message": {
+            "code": 1005,
+            "category": "error",
+            "text": "'--' expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 1686,
+          "length": 0,
+          "message": {
+            "code": 1005,
+            "category": "error",
+            "text": "'--' expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "regularExpressionScanning.ts",
+          "start": 1775,
+          "length": 0,
+          "message": {
+            "code": 1005,
+            "category": "error",
+            "text": "'&&' expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/classes/members/privateNames/privateNameBadAssignment.ts",
+      "missing": [
+        {
+          "unit": "privateNameBadAssignment.ts",
+          "start": 8,
+          "length": 5,
+          "message": {
+            "code": 18016,
+            "category": "error",
+            "text": "Private identifiers are not allowed outside class bodies.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "privateNameBadAssignment.ts",
+          "start": 88,
+          "length": 3,
+          "message": {
+            "code": 18016,
+            "category": "error",
+            "text": "Private identifiers are not allowed outside class bodies.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/es6/Symbols/symbolProperty36.ts",
+      "missing": [
+        {
+          "unit": "symbolProperty36.ts",
+          "start": 50,
+          "length": 27,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions07.ts",
+      "missing": [
+        {
+          "unit": "unicodeExtendedEscapesInRegularExpressions07.ts",
+          "start": 104,
+          "length": 6,
+          "message": {
+            "code": 1198,
+            "category": "error",
+            "text": "An extended Unicode escape value must be between 0x0 and 0x10FFFF inclusive.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions12.ts",
+      "missing": [
+        {
+          "unit": "unicodeExtendedEscapesInRegularExpressions12.ts",
+          "start": 12,
+          "length": 8,
+          "message": {
+            "code": 1198,
+            "category": "error",
+            "text": "An extended Unicode escape value must be between 0x0 and 0x10FFFF inclusive.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions14.ts",
+      "missing": [
+        {
+          "unit": "unicodeExtendedEscapesInRegularExpressions14.ts",
+          "start": 58,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions17.ts",
+      "missing": [
+        {
+          "unit": "unicodeExtendedEscapesInRegularExpressions17.ts",
+          "start": 12,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "unicodeExtendedEscapesInRegularExpressions17.ts",
+          "start": 17,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "unicodeExtendedEscapesInRegularExpressions17.ts",
+          "start": 22,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions19.ts",
+      "missing": [
+        {
+          "unit": "unicodeExtendedEscapesInRegularExpressions19.ts",
+          "start": 12,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/esDecorators/esDecorators-privateFieldAccess.ts",
+      "missing": [
+        {
+          "unit": "esDecorators-privateFieldAccess.ts",
+          "start": 35,
+          "length": 4,
+          "message": {
+            "code": 18016,
+            "category": "error",
+            "text": "Private identifiers are not allowed outside class bodies.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/expressions/unaryOperators/decrementOperator/decrementOperatorWithUnsupportedBooleanType.ts",
+      "missing": [],
+      "extra": [
+        {
+          "unit": "decrementOperatorWithUnsupportedBooleanType.ts",
+          "start": 763,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "decrementOperatorWithUnsupportedBooleanType.ts",
+          "start": 795,
+          "length": 7,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "decrementOperatorWithUnsupportedBooleanType.ts",
+          "start": 828,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "decrementOperatorWithUnsupportedBooleanType.ts",
+          "start": 860,
+          "length": 7,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "decrementOperatorWithUnsupportedBooleanType.ts",
+          "start": 985,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "decrementOperatorWithUnsupportedBooleanType.ts",
+          "start": 1044,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ]
+    },
+    {
+      "path": "classic/conformance/expressions/unaryOperators/decrementOperator/decrementOperatorWithUnsupportedStringType.ts",
+      "missing": [],
+      "extra": [
+        {
+          "unit": "decrementOperatorWithUnsupportedStringType.ts",
+          "start": 867,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "decrementOperatorWithUnsupportedStringType.ts",
+          "start": 899,
+          "length": 7,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "decrementOperatorWithUnsupportedStringType.ts",
+          "start": 933,
+          "length": 17,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "decrementOperatorWithUnsupportedStringType.ts",
+          "start": 1076,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "decrementOperatorWithUnsupportedStringType.ts",
+          "start": 1108,
+          "length": 7,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "decrementOperatorWithUnsupportedStringType.ts",
+          "start": 1142,
+          "length": 17,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "decrementOperatorWithUnsupportedStringType.ts",
+          "start": 1236,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "decrementOperatorWithUnsupportedStringType.ts",
+          "start": 1317,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ]
+    },
+    {
+      "path": "classic/conformance/expressions/unaryOperators/incrementOperator/incrementOperatorWithEnumTypeInvalidOperations.ts",
+      "missing": [],
+      "extra": [
+        {
+          "unit": "incrementOperatorWithEnumTypeInvalidOperations.ts",
+          "start": 260,
+          "length": 19,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "incrementOperatorWithEnumTypeInvalidOperations.ts",
+          "start": 303,
+          "length": 19,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ]
+    },
+    {
+      "path": "classic/conformance/expressions/unaryOperators/incrementOperator/incrementOperatorWithUnsupportedBooleanType.ts",
+      "missing": [],
+      "extra": [
+        {
+          "unit": "incrementOperatorWithUnsupportedBooleanType.ts",
+          "start": 764,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "incrementOperatorWithUnsupportedBooleanType.ts",
+          "start": 796,
+          "length": 7,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "incrementOperatorWithUnsupportedBooleanType.ts",
+          "start": 829,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "incrementOperatorWithUnsupportedBooleanType.ts",
+          "start": 861,
+          "length": 7,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "incrementOperatorWithUnsupportedBooleanType.ts",
+          "start": 986,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "incrementOperatorWithUnsupportedBooleanType.ts",
+          "start": 1045,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ]
+    },
+    {
+      "path": "classic/conformance/expressions/unaryOperators/incrementOperator/incrementOperatorWithUnsupportedStringType.ts",
+      "missing": [],
+      "extra": [
+        {
+          "unit": "incrementOperatorWithUnsupportedStringType.ts",
+          "start": 868,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "incrementOperatorWithUnsupportedStringType.ts",
+          "start": 900,
+          "length": 7,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "incrementOperatorWithUnsupportedStringType.ts",
+          "start": 934,
+          "length": 17,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "incrementOperatorWithUnsupportedStringType.ts",
+          "start": 1077,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "incrementOperatorWithUnsupportedStringType.ts",
+          "start": 1109,
+          "length": 7,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "incrementOperatorWithUnsupportedStringType.ts",
+          "start": 1143,
+          "length": 17,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "incrementOperatorWithUnsupportedStringType.ts",
+          "start": 1237,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "incrementOperatorWithUnsupportedStringType.ts",
+          "start": 1318,
+          "length": 5,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ]
+    },
+    {
+      "path": "classic/conformance/node/nodeModulesImportAttributesModeDeclarationEmitErrors.ts",
+      "missing": [
+        {
+          "unit": "index.ts",
+          "start": 88,
+          "length": 8,
+          "message": {
+            "code": 1453,
+            "category": "error",
+            "text": "`resolution-mode` should be either `require` or `import`.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/node/nodeModulesImportAttributesTypeModeDeclarationEmitErrors.ts",
+      "missing": [
+        {
+          "unit": "index.ts",
+          "start": 77,
+          "length": 8,
+          "message": {
+            "code": 1453,
+            "category": "error",
+            "text": "`resolution-mode` should be either `require` or `import`.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "index.ts",
+          "start": 261,
+          "length": 8,
+          "message": {
+            "code": 1453,
+            "category": "error",
+            "text": "`resolution-mode` should be either `require` or `import`.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/node/nodeModulesImportModeDeclarationEmitErrors1.ts",
+      "missing": [
+        {
+          "unit": "index.ts",
+          "start": 88,
+          "length": 8,
+          "message": {
+            "code": 1453,
+            "category": "error",
+            "text": "`resolution-mode` should be either `require` or `import`.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/node/nodeModulesImportTypeModeDeclarationEmitErrors1.ts",
+      "missing": [
+        {
+          "unit": "index.ts",
+          "start": 77,
+          "length": 8,
+          "message": {
+            "code": 1453,
+            "category": "error",
+            "text": "`resolution-mode` should be either `require` or `import`.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "index.ts",
+          "start": 261,
+          "length": 8,
+          "message": {
+            "code": 1453,
+            "category": "error",
+            "text": "`resolution-mode` should be either `require` or `import`.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/parser/ecmascript2021/numericSeparators/parser.numericSeparators.unicodeEscape.ts",
+      "missing": [
+        {
+          "unit": "12.ts",
+          "start": 4,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "16.ts",
+          "start": 4,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "20.ts",
+          "start": 3,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "24.ts",
+          "start": 3,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "28.ts",
+          "start": 10,
+          "length": 0,
+          "message": {
+            "code": 1199,
+            "category": "error",
+            "text": "Unterminated Unicode escape sequence.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "4.ts",
+          "start": 6,
+          "length": 0,
+          "message": {
+            "code": 1199,
+            "category": "error",
+            "text": "Unterminated Unicode escape sequence.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "40.ts",
+          "start": 6,
+          "length": 0,
+          "message": {
+            "code": 1199,
+            "category": "error",
+            "text": "Unterminated Unicode escape sequence.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "44.ts",
+          "start": 5,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "48.ts",
+          "start": 4,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "8.ts",
+          "start": 5,
+          "length": 0,
+          "message": {
+            "code": 1125,
+            "category": "error",
+            "text": "Hexadecimal digit expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/parser/ecmascript5/Expressions/parserUnaryExpression1.ts",
+      "missing": [],
+      "extra": [
+        {
+          "unit": "parserUnaryExpression1.ts",
+          "start": 2,
+          "length": 4,
+          "message": {
+            "code": 2357,
+            "category": "error",
+            "text": "The operand of an increment or decrement operator must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ]
+    },
+    {
+      "path": "classic/conformance/parser/ecmascript5/RegressionTests/parser579071.ts",
+      "missing": [
+        {
+          "unit": "parser579071.ts",
+          "start": 13,
+          "length": 0,
+          "message": {
+            "code": 1005,
+            "category": "error",
+            "text": "')' expected.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    },
+    {
+      "path": "classic/conformance/parser/ecmascript5/Statements/parserForStatement4.ts",
+      "missing": [],
+      "extra": [
+        {
+          "unit": "parserForStatement4.ts",
+          "start": 5,
+          "length": 5,
+          "message": {
+            "code": 2406,
+            "category": "error",
+            "text": "The left-hand side of a 'for...in' statement must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ]
+    },
+    {
+      "path": "classic/conformance/parser/ecmascript5/Statements/parserForStatement8.ts",
+      "missing": [],
+      "extra": [
+        {
+          "unit": "parserForStatement8.ts",
+          "start": 5,
+          "length": 4,
+          "message": {
+            "code": 2406,
+            "category": "error",
+            "text": "The left-hand side of a 'for...in' statement must be a variable or a property access.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ]
+    },
+    {
+      "path": "classic/conformance/types/uniqueSymbol/uniqueSymbolsPropertyNames.ts",
+      "missing": [
+        {
+          "unit": "uniqueSymbolsPropertyNames.ts",
+          "start": 548,
+          "length": 10,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "uniqueSymbolsPropertyNames.ts",
+          "start": 619,
+          "length": 19,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "uniqueSymbolsPropertyNames.ts",
+          "start": 700,
+          "length": 20,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        },
+        {
+          "unit": "uniqueSymbolsPropertyNames.ts",
+          "start": 765,
+          "length": 20,
+          "message": {
+            "code": 1117,
+            "category": "error",
+            "text": "An object literal cannot have multiple properties with the same name.",
+            "chain": []
+          },
+          "related": [],
+          "tags": []
+        }
+      ],
+      "extra": []
+    }
+  ],
+  "statedDifferences": [
+    "classic/compiler/regExpWithOpenBracketInCharClass.ts",
+    "classic/compiler/regularExpressionAnnexB.ts",
+    "classic/compiler/regularExpressionScanning.ts",
+    "classic/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions07.ts",
+    "classic/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions12.ts",
+    "classic/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions14.ts",
+    "classic/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions17.ts",
+    "classic/conformance/es6/unicodeExtendedEscapes/unicodeExtendedEscapesInRegularExpressions19.ts",
+    "classic/conformance/parser/ecmascript2021/numericSeparators/parser.numericSeparators.unicodeEscape.ts",
+    "classic/conformance/parser/ecmascript5/RegressionTests/parser579071.ts"
+  ],
+  "checkerDecided": [
+    "classic/compiler/awaitInNonAsyncFunction.ts",
+    "classic/compiler/duplicateObjectLiteralProperty_computedName1.ts",
+    "classic/compiler/duplicateObjectLiteralProperty_computedName2.ts",
+    "classic/compiler/duplicateObjectLiteralProperty_computedName3.ts",
+    "classic/compiler/indexerConstraints2.ts",
+    "classic/conformance/classes/members/privateNames/privateNameBadAssignment.ts",
+    "classic/conformance/es6/Symbols/symbolProperty36.ts",
+    "classic/conformance/esDecorators/esDecorators-privateFieldAccess.ts",
+    "classic/conformance/expressions/unaryOperators/decrementOperator/decrementOperatorWithUnsupportedBooleanType.ts",
+    "classic/conformance/expressions/unaryOperators/decrementOperator/decrementOperatorWithUnsupportedStringType.ts",
+    "classic/conformance/expressions/unaryOperators/incrementOperator/incrementOperatorWithEnumTypeInvalidOperations.ts",
+    "classic/conformance/expressions/unaryOperators/incrementOperator/incrementOperatorWithUnsupportedBooleanType.ts",
+    "classic/conformance/expressions/unaryOperators/incrementOperator/incrementOperatorWithUnsupportedStringType.ts",
+    "classic/conformance/node/nodeModulesImportAttributesModeDeclarationEmitErrors.ts",
+    "classic/conformance/node/nodeModulesImportAttributesTypeModeDeclarationEmitErrors.ts",
+    "classic/conformance/node/nodeModulesImportModeDeclarationEmitErrors1.ts",
+    "classic/conformance/node/nodeModulesImportTypeModeDeclarationEmitErrors1.ts",
+    "classic/conformance/parser/ecmascript5/Expressions/parserUnaryExpression1.ts",
+    "classic/conformance/parser/ecmascript5/Statements/parserForStatement4.ts",
+    "classic/conformance/parser/ecmascript5/Statements/parserForStatement8.ts",
+    "classic/conformance/types/uniqueSymbol/uniqueSymbolsPropertyNames.ts"
+  ]
+}

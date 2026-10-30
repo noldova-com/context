@@ -1,0 +1,19 @@
+{
+  "name": "noldova.context.parsers",
+  "version": "0.0.1",
+  "kind": "library",
+  "frameworks": [],
+  "internalsVisibleTo": [
+    "noldova.context.parsers.tests"
+  ],
+  "dependencies": {
+    "projects": [],
+    "packages": [
+      "noldova.context.collections",
+      "noldova.context.core",
+      "noldova.context.diagnostics",
+      "noldova.context.exceptions",
+      "noldova.context.text"
+    ]
+  }
+}

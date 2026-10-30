@@ -1,0 +1,27 @@
+/**
+ * @license
+ * Copyright (c) Noldova.
+ *
+ * This source code is licensed under the license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+import { type Node, SourceSpan, WhitespaceNode } from "@noldova/context.parsers";
+import { TypeScriptLineCommentNode, TypeScriptUnknownNode } from "@noldova/context.parsers.typescript";
+import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
+
+@TestClass
+export class TypeScriptUnknownNodeTests {
+  @TestMethod
+  public constructorPreservesValueSpanAndTrivia(): void {
+    const leadingTrivia = new TypeScriptLineCommentNode(" leading", new SourceSpan(0, 10));
+    const span = new SourceSpan(10, 2);
+    const trailingTrivia = new WhitespaceNode(" ", new SourceSpan(span.endOffset, 1));
+    const node = new TypeScriptUnknownNode("😀", span, leadingTrivia, trailingTrivia);
+
+    Assert.areEqual("😀", node.value);
+    Assert.areEqual(span, node.span);
+    Assert.areEqual<Node | undefined>(leadingTrivia, node.leadingTrivia);
+    Assert.areEqual<Node | undefined>(trailingTrivia, node.trailingTrivia);
+  }
+}

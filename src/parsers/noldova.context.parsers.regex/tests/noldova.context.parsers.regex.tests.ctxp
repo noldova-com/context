@@ -1,0 +1,19 @@
+{
+  "name": "noldova.context.parsers.regex.tests",
+  "version": "0.0.1",
+  "kind": "library",
+  "frameworks": [],
+  "dependencies": {
+    "projects": [
+      "../src/noldova.context.parsers.regex.ctxp"
+    ],
+    "packages": [
+      "noldova.context.core",
+      "noldova.context.diagnostics",
+      "noldova.context.exceptions",
+      "noldova.context.parsers",
+      "noldova.context.testing",
+      "noldova.context.text"
+    ]
+  }
+}

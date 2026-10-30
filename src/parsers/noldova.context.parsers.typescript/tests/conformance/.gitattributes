@@ -1,0 +1,6 @@
+cases/** -text
+baselines/** -text
+diagnostic-definitions/** -text
+libraries/** -text
+licenses/** -text
+expected/** -text

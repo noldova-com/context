@@ -1,0 +1,27 @@
+{
+  "name": "@noldova/context",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "packageManager": "npm@11.19.0",
+  "engines": {
+    "node": "24.21.0",
+    "npm": "11.19.0"
+  },
+  "scripts": {
+    "build": "node scripts/build.ts",
+    "release": "node scripts/release.ts",
+    "generate:regex-known-failures": "node src/parsers/noldova.context.parsers.regex/scripts/generate-known-failures.ts",
+    "generate:typescript-diagnostics": "node src/parsers/noldova.context.parsers.typescript/scripts/generate-diagnostics.ts",
+    "generate:typescript-expected-diagnostics": "node src/parsers/noldova.context.parsers.typescript/scripts/generate-expected-diagnostics.ts",
+    "generate:typescript-known-failures": "node src/parsers/noldova.context.parsers.typescript/scripts/generate-known-failures.ts",
+    "test": "node scripts/test.ts",
+    "vendor:regex": "node src/parsers/noldova.context.parsers.regex/scripts/vendor-regex.ts",
+    "vendor:typescript": "node src/parsers/noldova.context.parsers.typescript/scripts/vendor-typescript.ts"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "7.0.2"
+  }
+}

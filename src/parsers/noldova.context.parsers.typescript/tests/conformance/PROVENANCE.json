@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "typescriptVersion": "7.0.2",
+  "sources": {
+    "typescriptGo": {
+      "repository": "https://github.com/microsoft/typescript-go.git",
+      "tag": "typescript/v7.0.2",
+      "commit": "2bd066d87f5bafd315be9f40889d0a60b9e58e0b"
+    },
+    "typescript": {
+      "repository": "https://github.com/microsoft/TypeScript.git",
+      "commit": "4d4f005c8541e0255a9d8791205fdce326e462bc"
+    }
+  },
+  "corpus": {
+    "native": {
+      "cases": {
+        "source": "typescriptGo",
+        "upstreamRoots": [
+          "testdata/tests/cases"
+        ],
+        "localRoot": "cases/native",
+        "files": 317
+      },
+      "diagnosticBaselines": {
+        "source": "typescriptGo",
+        "selection": "*.errors.txt",
+        "upstreamRoots": [
+          "testdata/baselines/reference/compiler",
+          "testdata/baselines/reference/conformance"
+        ],
+        "localRoot": "baselines/native",
+        "files": 135
+      }
+    },
+    "classic": {
+      "cases": {
+        "source": "typescript",
+        "upstreamRoots": [
+          "tests/cases/compiler",
+          "tests/cases/conformance"
+        ],
+        "localRoot": "cases/classic",
+        "files": 12445
+      },
+      "diagnosticBaselines": {
+        "source": "typescriptGo",
+        "selection": "*.errors.txt",
+        "upstreamRoots": [
+          "testdata/baselines/reference/submodule/compiler",
+          "testdata/baselines/reference/submodule/conformance"
+        ],
+        "localRoot": "baselines/classic",
+        "files": 7033
+      }
+    }
+  },
+  "standardLibrary": {
+    "source": "typescriptGo",
+    "sourcePackagePattern": "@typescript/typescript-<platform>",
+    "sourcePackageVersion": "7.0.2",
+    "upstreamRoot": "lib",
+    "selection": "lib*.d.ts",
+    "localRoot": "libraries",
+    "files": 108
+  },
+  "diagnostics": {
+    "classic": {
+      "source": "typescript",
+      "upstreamPath": "src/compiler/diagnosticMessages.json",
+      "localPath": "diagnostic-definitions/classic/diagnosticMessages.json",
+      "entries": 2130,
+      "sha256": "21a229f8ce2636dda83a3579e26b8621c8767521dde2e9a67384cca2f4855905"
+    },
+    "native": {
+      "source": "typescriptGo",
+      "upstreamPath": "internal/diagnostics/extraDiagnosticMessages.json",
+      "localPath": "diagnostic-definitions/native/extraDiagnosticMessages.json",
+      "entries": 33,
+      "sha256": "403d549f4a612c3a634e4bcd076441823ac683c7732e10182daedbba5f295248"
+    },
+    "composition": {
+      "base": "classic",
+      "overlay": "native",
+      "key": "code",
+      "overriddenCodes": [
+        1549,
+        5074,
+        5090,
+        5112,
+        6048,
+        6353,
+        6401,
+        6420,
+        8030
+      ],
+      "entries": 2154
+    }
+  },
+  "licenses": {
+    "native": {
+      "source": "typescriptGo",
+      "localRoot": "licenses/native"
+    },
+    "classic": {
+      "source": "typescript",
+      "localRoot": "licenses/classic"
+    }
+  },
+  "totals": {
+    "caseFiles": 12762,
+    "diagnosticBaselineFiles": 7168,
+    "diagnosticDefinitionFiles": 2,
+    "diagnosticDefinitions": 2163,
+    "effectiveDiagnosticDefinitions": 2154,
+    "standardLibraryFiles": 108
+  }
+}

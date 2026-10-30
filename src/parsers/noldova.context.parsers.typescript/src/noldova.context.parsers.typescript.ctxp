@@ -1,0 +1,17 @@
+{
+  "name": "noldova.context.parsers.typescript",
+  "version": "0.0.1",
+  "kind": "library",
+  "internalsVisibleTo": ["noldova.context.parsers.typescript.tests"],
+  "frameworks": [],
+  "dependencies": {
+    "projects": [],
+    "packages": [
+      "noldova.context.core",
+      "noldova.context.diagnostics",
+      "noldova.context.parsers",
+      "noldova.context.parsers.regex",
+      "noldova.context.text"
+    ]
+  }
+}

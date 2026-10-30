@@ -1,0 +1,12 @@
+{
+  "name": "noldova.context.exceptions",
+  "version": "0.0.1",
+  "kind": "library",
+  "frameworks": [],
+  "dependencies": {
+    "projects": [],
+    "packages": [
+      "noldova.context.core"
+    ]
+  }
+}

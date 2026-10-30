@@ -1,0 +1,23 @@
+/**
+ * @license
+ * Copyright (c) Noldova.
+ *
+ * This source code is licensed under the license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+import { TestClass, TestMethod } from "@noldova/context.testing";
+
+@TestClass
+export class LoopingFixtureTests {
+  @TestMethod
+  public finishesFirst(): void { }
+
+  @TestMethod
+  public loopsForever(): void {
+    for (;;) { }
+  }
+
+  @TestMethod
+  public passesAfterTheLoop(): void { }
+}

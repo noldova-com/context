@@ -1,0 +1,27 @@
+{
+  "name": "@noldova/context.testing",
+  "version": "__VERSION__",
+  "type": "module",
+  "main": "api/index.js",
+  "types": "api/index.d.ts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noldova-com/context.git",
+    "directory": "src/noldova.context.testing"
+  },
+  "homepage": "https://github.com/noldova-com/context#readme",
+  "bugs": {
+    "url": "https://github.com/noldova-com/context/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "@noldova/context.collections": "__VERSION__",
+    "@noldova/context.core": "__VERSION__",
+    "@noldova/context.exceptions": "__VERSION__",
+    "@noldova/context.text": "__VERSION__"
+  }
+}

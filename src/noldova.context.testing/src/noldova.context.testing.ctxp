@@ -1,0 +1,15 @@
+{
+  "name": "noldova.context.testing",
+  "version": "0.0.1",
+  "kind": "library",
+  "frameworks": [],
+  "dependencies": {
+    "projects": [],
+    "packages": [
+      "noldova.context.collections",
+      "noldova.context.core",
+      "noldova.context.exceptions",
+      "noldova.context.text"
+    ]
+  }
+}

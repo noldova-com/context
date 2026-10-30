@@ -1,0 +1,19 @@
+{
+  "name": "noldova.context.parsers.regex",
+  "version": "0.0.1",
+  "kind": "library",
+  "frameworks": [],
+  "internalsVisibleTo": [
+    "noldova.context.parsers.regex.tests"
+  ],
+  "dependencies": {
+    "projects": [],
+    "packages": [
+      "noldova.context.core",
+      "noldova.context.diagnostics",
+      "noldova.context.exceptions",
+      "noldova.context.parsers",
+      "noldova.context.text"
+    ]
+  }
+}

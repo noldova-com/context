@@ -1,0 +1,1047 @@
+{
+  "expectedPatternsSha256": "1ae79526ce1d7310bc3ddf3ec3d89749f03eabff52cf91a2ad9c056fde7cf2d7",
+  "summary": {
+    "applicable": 1818,
+    "passing": 1796,
+    "statedDifferences": 22,
+    "failing": 0
+  },
+  "failing": [
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_-_Beria_Erfe.js",
+      "refused": [
+        {
+          "start": 606,
+          "pattern": "^\\p{Script=Beria_Erfe}+$",
+          "flags": "u"
+        },
+        {
+          "start": 704,
+          "pattern": "^\\p{Script=Berf}+$",
+          "flags": "u"
+        },
+        {
+          "start": 790,
+          "pattern": "^\\p{sc=Beria_Erfe}+$",
+          "flags": "u"
+        },
+        {
+          "start": 880,
+          "pattern": "^\\p{sc=Berf}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1168,
+          "pattern": "^\\P{Script=Beria_Erfe}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1269,
+          "pattern": "^\\P{Script=Berf}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1358,
+          "pattern": "^\\P{sc=Beria_Erfe}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1451,
+          "pattern": "^\\P{sc=Berf}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_-_Garay.js",
+      "refused": [
+        {
+          "start": 627,
+          "pattern": "^\\p{Script=Garay}+$",
+          "flags": "u"
+        },
+        {
+          "start": 715,
+          "pattern": "^\\p{Script=Gara}+$",
+          "flags": "u"
+        },
+        {
+          "start": 801,
+          "pattern": "^\\p{sc=Garay}+$",
+          "flags": "u"
+        },
+        {
+          "start": 881,
+          "pattern": "^\\p{sc=Gara}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1195,
+          "pattern": "^\\P{Script=Garay}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1286,
+          "pattern": "^\\P{Script=Gara}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1375,
+          "pattern": "^\\P{sc=Garay}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1458,
+          "pattern": "^\\P{sc=Gara}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_-_Gurung_Khema.js",
+      "refused": [
+        {
+          "start": 582,
+          "pattern": "^\\p{Script=Gurung_Khema}+$",
+          "flags": "u"
+        },
+        {
+          "start": 684,
+          "pattern": "^\\p{Script=Gukh}+$",
+          "flags": "u"
+        },
+        {
+          "start": 770,
+          "pattern": "^\\p{sc=Gurung_Khema}+$",
+          "flags": "u"
+        },
+        {
+          "start": 864,
+          "pattern": "^\\p{sc=Gukh}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1126,
+          "pattern": "^\\P{Script=Gurung_Khema}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1231,
+          "pattern": "^\\P{Script=Gukh}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1320,
+          "pattern": "^\\P{sc=Gurung_Khema}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1417,
+          "pattern": "^\\P{sc=Gukh}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_-_Kirat_Rai.js",
+      "refused": [
+        {
+          "start": 579,
+          "pattern": "^\\p{Script=Kirat_Rai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 675,
+          "pattern": "^\\p{Script=Krai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 761,
+          "pattern": "^\\p{sc=Kirat_Rai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 849,
+          "pattern": "^\\p{sc=Krai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1111,
+          "pattern": "^\\P{Script=Kirat_Rai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1210,
+          "pattern": "^\\P{Script=Krai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1299,
+          "pattern": "^\\P{sc=Kirat_Rai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1390,
+          "pattern": "^\\P{sc=Krai}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_-_Ol_Onal.js",
+      "refused": [
+        {
+          "start": 593,
+          "pattern": "^\\p{Script=Ol_Onal}+$",
+          "flags": "u"
+        },
+        {
+          "start": 685,
+          "pattern": "^\\p{Script=Onao}+$",
+          "flags": "u"
+        },
+        {
+          "start": 771,
+          "pattern": "^\\p{sc=Ol_Onal}+$",
+          "flags": "u"
+        },
+        {
+          "start": 855,
+          "pattern": "^\\p{sc=Onao}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1143,
+          "pattern": "^\\P{Script=Ol_Onal}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1238,
+          "pattern": "^\\P{Script=Onao}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1327,
+          "pattern": "^\\P{sc=Ol_Onal}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1414,
+          "pattern": "^\\P{sc=Onao}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_-_Sidetic.js",
+      "refused": [
+        {
+          "start": 577,
+          "pattern": "^\\p{Script=Sidetic}+$",
+          "flags": "u"
+        },
+        {
+          "start": 669,
+          "pattern": "^\\p{Script=Sidt}+$",
+          "flags": "u"
+        },
+        {
+          "start": 755,
+          "pattern": "^\\p{sc=Sidetic}+$",
+          "flags": "u"
+        },
+        {
+          "start": 839,
+          "pattern": "^\\p{sc=Sidt}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1101,
+          "pattern": "^\\P{Script=Sidetic}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1196,
+          "pattern": "^\\P{Script=Sidt}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1285,
+          "pattern": "^\\P{sc=Sidetic}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1372,
+          "pattern": "^\\P{sc=Sidt}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_-_Sunuwar.js",
+      "refused": [
+        {
+          "start": 603,
+          "pattern": "^\\p{Script=Sunuwar}+$",
+          "flags": "u"
+        },
+        {
+          "start": 695,
+          "pattern": "^\\p{Script=Sunu}+$",
+          "flags": "u"
+        },
+        {
+          "start": 781,
+          "pattern": "^\\p{sc=Sunuwar}+$",
+          "flags": "u"
+        },
+        {
+          "start": 865,
+          "pattern": "^\\p{sc=Sunu}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1153,
+          "pattern": "^\\P{Script=Sunuwar}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1248,
+          "pattern": "^\\P{Script=Sunu}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1337,
+          "pattern": "^\\P{sc=Sunuwar}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1424,
+          "pattern": "^\\P{sc=Sunu}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_-_Tai_Yo.js",
+      "refused": [
+        {
+          "start": 628,
+          "pattern": "^\\p{Script=Tai_Yo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 718,
+          "pattern": "^\\p{Script=Tayo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 804,
+          "pattern": "^\\p{sc=Tai_Yo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 886,
+          "pattern": "^\\p{sc=Tayo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1190,
+          "pattern": "^\\P{Script=Tai_Yo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1283,
+          "pattern": "^\\P{Script=Tayo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1372,
+          "pattern": "^\\P{sc=Tai_Yo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1457,
+          "pattern": "^\\P{sc=Tayo}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_-_Todhri.js",
+      "refused": [
+        {
+          "start": 576,
+          "pattern": "^\\p{Script=Todhri}+$",
+          "flags": "u"
+        },
+        {
+          "start": 666,
+          "pattern": "^\\p{Script=Todr}+$",
+          "flags": "u"
+        },
+        {
+          "start": 752,
+          "pattern": "^\\p{sc=Todhri}+$",
+          "flags": "u"
+        },
+        {
+          "start": 834,
+          "pattern": "^\\p{sc=Todr}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1096,
+          "pattern": "^\\P{Script=Todhri}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1189,
+          "pattern": "^\\P{Script=Todr}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1278,
+          "pattern": "^\\P{sc=Todhri}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1363,
+          "pattern": "^\\P{sc=Todr}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_-_Tolong_Siki.js",
+      "refused": [
+        {
+          "start": 607,
+          "pattern": "^\\p{Script=Tolong_Siki}+$",
+          "flags": "u"
+        },
+        {
+          "start": 707,
+          "pattern": "^\\p{Script=Tols}+$",
+          "flags": "u"
+        },
+        {
+          "start": 793,
+          "pattern": "^\\p{sc=Tolong_Siki}+$",
+          "flags": "u"
+        },
+        {
+          "start": 885,
+          "pattern": "^\\p{sc=Tols}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1173,
+          "pattern": "^\\P{Script=Tolong_Siki}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1276,
+          "pattern": "^\\P{Script=Tols}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1365,
+          "pattern": "^\\P{sc=Tolong_Siki}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1460,
+          "pattern": "^\\P{sc=Tols}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_-_Tulu_Tigalari.js",
+      "refused": [
+        {
+          "start": 797,
+          "pattern": "^\\p{Script=Tulu_Tigalari}+$",
+          "flags": "u"
+        },
+        {
+          "start": 901,
+          "pattern": "^\\p{Script=Tutg}+$",
+          "flags": "u"
+        },
+        {
+          "start": 987,
+          "pattern": "^\\p{sc=Tulu_Tigalari}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1083,
+          "pattern": "^\\p{sc=Tutg}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1523,
+          "pattern": "^\\P{Script=Tulu_Tigalari}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1630,
+          "pattern": "^\\P{Script=Tutg}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1719,
+          "pattern": "^\\P{sc=Tulu_Tigalari}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1818,
+          "pattern": "^\\P{sc=Tutg}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Beria_Erfe.js",
+      "refused": [
+        {
+          "start": 617,
+          "pattern": "^\\p{Script_Extensions=Beria_Erfe}+$",
+          "flags": "u"
+        },
+        {
+          "start": 737,
+          "pattern": "^\\p{Script_Extensions=Berf}+$",
+          "flags": "u"
+        },
+        {
+          "start": 845,
+          "pattern": "^\\p{scx=Beria_Erfe}+$",
+          "flags": "u"
+        },
+        {
+          "start": 937,
+          "pattern": "^\\p{scx=Berf}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1227,
+          "pattern": "^\\P{Script_Extensions=Beria_Erfe}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1350,
+          "pattern": "^\\P{Script_Extensions=Berf}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1461,
+          "pattern": "^\\P{scx=Beria_Erfe}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1556,
+          "pattern": "^\\P{scx=Berf}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Garay.js",
+      "refused": [
+        {
+          "start": 682,
+          "pattern": "^\\p{Script_Extensions=Garay}+$",
+          "flags": "u"
+        },
+        {
+          "start": 792,
+          "pattern": "^\\p{Script_Extensions=Gara}+$",
+          "flags": "u"
+        },
+        {
+          "start": 900,
+          "pattern": "^\\p{scx=Garay}+$",
+          "flags": "u"
+        },
+        {
+          "start": 982,
+          "pattern": "^\\p{scx=Gara}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1376,
+          "pattern": "^\\P{Script_Extensions=Garay}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1489,
+          "pattern": "^\\P{Script_Extensions=Gara}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1600,
+          "pattern": "^\\P{scx=Garay}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1685,
+          "pattern": "^\\P{scx=Gara}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Gurung_Khema.js",
+      "refused": [
+        {
+          "start": 609,
+          "pattern": "^\\p{Script_Extensions=Gurung_Khema}+$",
+          "flags": "u"
+        },
+        {
+          "start": 733,
+          "pattern": "^\\p{Script_Extensions=Gukh}+$",
+          "flags": "u"
+        },
+        {
+          "start": 841,
+          "pattern": "^\\p{scx=Gurung_Khema}+$",
+          "flags": "u"
+        },
+        {
+          "start": 937,
+          "pattern": "^\\p{scx=Gukh}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1227,
+          "pattern": "^\\P{Script_Extensions=Gurung_Khema}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1354,
+          "pattern": "^\\P{Script_Extensions=Gukh}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1465,
+          "pattern": "^\\P{scx=Gurung_Khema}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1564,
+          "pattern": "^\\P{scx=Gukh}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Kirat_Rai.js",
+      "refused": [
+        {
+          "start": 590,
+          "pattern": "^\\p{Script_Extensions=Kirat_Rai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 708,
+          "pattern": "^\\p{Script_Extensions=Krai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 816,
+          "pattern": "^\\p{scx=Kirat_Rai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 906,
+          "pattern": "^\\p{scx=Krai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1170,
+          "pattern": "^\\P{Script_Extensions=Kirat_Rai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1291,
+          "pattern": "^\\P{Script_Extensions=Krai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1402,
+          "pattern": "^\\P{scx=Kirat_Rai}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1495,
+          "pattern": "^\\P{scx=Krai}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Ol_Onal.js",
+      "refused": [
+        {
+          "start": 630,
+          "pattern": "^\\p{Script_Extensions=Ol_Onal}+$",
+          "flags": "u"
+        },
+        {
+          "start": 744,
+          "pattern": "^\\p{Script_Extensions=Onao}+$",
+          "flags": "u"
+        },
+        {
+          "start": 852,
+          "pattern": "^\\p{scx=Ol_Onal}+$",
+          "flags": "u"
+        },
+        {
+          "start": 938,
+          "pattern": "^\\p{scx=Onao}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1254,
+          "pattern": "^\\P{Script_Extensions=Ol_Onal}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1371,
+          "pattern": "^\\P{Script_Extensions=Onao}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1482,
+          "pattern": "^\\P{scx=Ol_Onal}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1571,
+          "pattern": "^\\P{scx=Onao}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Sidetic.js",
+      "refused": [
+        {
+          "start": 588,
+          "pattern": "^\\p{Script_Extensions=Sidetic}+$",
+          "flags": "u"
+        },
+        {
+          "start": 702,
+          "pattern": "^\\p{Script_Extensions=Sidt}+$",
+          "flags": "u"
+        },
+        {
+          "start": 810,
+          "pattern": "^\\p{scx=Sidetic}+$",
+          "flags": "u"
+        },
+        {
+          "start": 896,
+          "pattern": "^\\p{scx=Sidt}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1160,
+          "pattern": "^\\P{Script_Extensions=Sidetic}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1277,
+          "pattern": "^\\P{Script_Extensions=Sidt}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1388,
+          "pattern": "^\\P{scx=Sidetic}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1477,
+          "pattern": "^\\P{scx=Sidt}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Sunuwar.js",
+      "refused": [
+        {
+          "start": 712,
+          "pattern": "^\\p{Script_Extensions=Sunuwar}+$",
+          "flags": "u"
+        },
+        {
+          "start": 826,
+          "pattern": "^\\p{Script_Extensions=Sunu}+$",
+          "flags": "u"
+        },
+        {
+          "start": 934,
+          "pattern": "^\\p{scx=Sunuwar}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1020,
+          "pattern": "^\\p{scx=Sunu}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1456,
+          "pattern": "^\\P{Script_Extensions=Sunuwar}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1573,
+          "pattern": "^\\P{Script_Extensions=Sunu}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1684,
+          "pattern": "^\\P{scx=Sunuwar}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1773,
+          "pattern": "^\\P{scx=Sunu}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Tai_Yo.js",
+      "refused": [
+        {
+          "start": 639,
+          "pattern": "^\\p{Script_Extensions=Tai_Yo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 751,
+          "pattern": "^\\p{Script_Extensions=Tayo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 859,
+          "pattern": "^\\p{scx=Tai_Yo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 943,
+          "pattern": "^\\p{scx=Tayo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1249,
+          "pattern": "^\\P{Script_Extensions=Tai_Yo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1364,
+          "pattern": "^\\P{Script_Extensions=Tayo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1475,
+          "pattern": "^\\P{scx=Tai_Yo}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1562,
+          "pattern": "^\\P{scx=Tayo}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Todhri.js",
+      "refused": [
+        {
+          "start": 673,
+          "pattern": "^\\p{Script_Extensions=Todhri}+$",
+          "flags": "u"
+        },
+        {
+          "start": 785,
+          "pattern": "^\\p{Script_Extensions=Todr}+$",
+          "flags": "u"
+        },
+        {
+          "start": 893,
+          "pattern": "^\\p{scx=Todhri}+$",
+          "flags": "u"
+        },
+        {
+          "start": 977,
+          "pattern": "^\\p{scx=Todr}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1387,
+          "pattern": "^\\P{Script_Extensions=Todhri}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1502,
+          "pattern": "^\\P{Script_Extensions=Todr}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1613,
+          "pattern": "^\\P{scx=Todhri}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1700,
+          "pattern": "^\\P{scx=Todr}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Tolong_Siki.js",
+      "refused": [
+        {
+          "start": 618,
+          "pattern": "^\\p{Script_Extensions=Tolong_Siki}+$",
+          "flags": "u"
+        },
+        {
+          "start": 740,
+          "pattern": "^\\p{Script_Extensions=Tols}+$",
+          "flags": "u"
+        },
+        {
+          "start": 848,
+          "pattern": "^\\p{scx=Tolong_Siki}+$",
+          "flags": "u"
+        },
+        {
+          "start": 942,
+          "pattern": "^\\p{scx=Tols}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1232,
+          "pattern": "^\\P{Script_Extensions=Tolong_Siki}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1357,
+          "pattern": "^\\P{Script_Extensions=Tols}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1468,
+          "pattern": "^\\P{scx=Tolong_Siki}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1565,
+          "pattern": "^\\P{scx=Tols}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    },
+    {
+      "path": "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Tulu_Tigalari.js",
+      "refused": [
+        {
+          "start": 902,
+          "pattern": "^\\p{Script_Extensions=Tulu_Tigalari}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1028,
+          "pattern": "^\\p{Script_Extensions=Tutg}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1136,
+          "pattern": "^\\p{scx=Tulu_Tigalari}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1234,
+          "pattern": "^\\p{scx=Tutg}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1794,
+          "pattern": "^\\P{Script_Extensions=Tulu_Tigalari}+$",
+          "flags": "u"
+        },
+        {
+          "start": 1923,
+          "pattern": "^\\P{Script_Extensions=Tutg}+$",
+          "flags": "u"
+        },
+        {
+          "start": 2034,
+          "pattern": "^\\P{scx=Tulu_Tigalari}+$",
+          "flags": "u"
+        },
+        {
+          "start": 2135,
+          "pattern": "^\\P{scx=Tutg}+$",
+          "flags": "u"
+        }
+      ],
+      "accepted": []
+    }
+  ],
+  "statedDifferences": [
+    "built-ins/RegExp/property-escapes/generated/Script_-_Beria_Erfe.js",
+    "built-ins/RegExp/property-escapes/generated/Script_-_Garay.js",
+    "built-ins/RegExp/property-escapes/generated/Script_-_Gurung_Khema.js",
+    "built-ins/RegExp/property-escapes/generated/Script_-_Kirat_Rai.js",
+    "built-ins/RegExp/property-escapes/generated/Script_-_Ol_Onal.js",
+    "built-ins/RegExp/property-escapes/generated/Script_-_Sidetic.js",
+    "built-ins/RegExp/property-escapes/generated/Script_-_Sunuwar.js",
+    "built-ins/RegExp/property-escapes/generated/Script_-_Tai_Yo.js",
+    "built-ins/RegExp/property-escapes/generated/Script_-_Todhri.js",
+    "built-ins/RegExp/property-escapes/generated/Script_-_Tolong_Siki.js",
+    "built-ins/RegExp/property-escapes/generated/Script_-_Tulu_Tigalari.js",
+    "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Beria_Erfe.js",
+    "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Garay.js",
+    "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Gurung_Khema.js",
+    "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Kirat_Rai.js",
+    "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Ol_Onal.js",
+    "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Sidetic.js",
+    "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Sunuwar.js",
+    "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Tai_Yo.js",
+    "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Todhri.js",
+    "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Tolong_Siki.js",
+    "built-ins/RegExp/property-escapes/generated/Script_Extensions_-_Tulu_Tigalari.js"
+  ]
+}

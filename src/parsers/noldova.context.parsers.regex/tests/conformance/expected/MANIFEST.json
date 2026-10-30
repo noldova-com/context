@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "typescriptVersion": "7.0.2",
+  "readingVersion": 1,
+  "caseFiles": 2179,
+  "applicable": 1818,
+  "inapplicable": 361,
+  "inapplicableByReason": {
+    "LiteralBoundary": 19,
+    "NoWrittenPattern": 272,
+    "RuntimePatterns": 70
+  },
+  "acceptedPatterns": 5355,
+  "rejectedGroups": 658,
+  "patternsSha256": "1ae79526ce1d7310bc3ddf3ec3d89749f03eabff52cf91a2ad9c056fde7cf2d7"
+}

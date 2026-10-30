@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/tc39/test262.git",
+  "commit": "d86b2294eb0a17eaa281ff12c73c473ec864c72f",
+  "roots": [
+    {
+      "upstreamRoot": "test/annexB/built-ins/RegExp",
+      "localRoot": "cases/annexB/built-ins/RegExp",
+      "files": 62
+    },
+    {
+      "upstreamRoot": "test/built-ins/RegExp",
+      "localRoot": "cases/built-ins/RegExp",
+      "files": 1879
+    },
+    {
+      "upstreamRoot": "test/language/literals/regexp",
+      "localRoot": "cases/language/literals/regexp",
+      "files": 238
+    }
+  ],
+  "license": {
+    "upstreamPath": "LICENSE",
+    "localPath": "licenses/LICENSE"
+  },
+  "caseFiles": 2179
+}
