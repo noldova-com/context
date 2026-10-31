@@ -94,8 +94,7 @@ npm test -- --skip-test-details --skip-coverage-details
 
 ## Releases
 
-The packages are published to npm under `@noldova` from `main` by the release workflow, `.github/workflows/release-npm.yml`, with provenance.
-The first publish uses a one-time token that only the `release` environment holds, since npm's trusted publishing needs each package to exist; every later publish uses trusted publishing, without a stored token.
+The packages are published to npm under `@noldova` from `main` by the release workflow, `.github/workflows/release-npm.yml`, with provenance and without a stored token.
 Their versions follow [VERSIONING-AND-COMPATIBILITY.md](documents/VERSIONING-AND-COMPATIBILITY.md).
 
 ## License

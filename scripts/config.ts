@@ -9,7 +9,7 @@
 import PackageInfo from "./package-info.ts";
 
 export default class Config {
-  public static readonly VERSION: string = "0.0.1";
+  public static readonly VERSION: string = "0.0.2";
   public static readonly BUILD_FOLDER: string = "_build/node";
   public static readonly COVERAGE_FOLDER: string = "_build/coverage";
   public static readonly PACKAGES_FOLDER: string = "_packages";
