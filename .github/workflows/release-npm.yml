@@ -35,3 +35,6 @@ jobs:
       version: ${{ inputs.version }}
       commit: ${{ inputs.commit }}
       environment: release
+    secrets:
+      # For the first publish only, since npm's trusted publishing needs each package to exist; this line goes once each has its trusted publisher.
+      registry-token: ${{ secrets.NPM_FIRST_PUBLISH_TOKEN }}
