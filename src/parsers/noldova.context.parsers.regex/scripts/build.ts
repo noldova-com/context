@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type PackageInfo from "../../../../scripts/package-info.ts";
+import type { PackageInfo } from "../../../noldova.context.tooling/src/api/index.ts";
 import Script from "../../../../scripts/script.ts";
 import RegexExpectedPatternsGenerator from "./regex-expected-patterns-generator.ts";
 

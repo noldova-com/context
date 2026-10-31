@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import CommandFailedException from "./command-failed.exception.ts";
+import { CommandFailedException } from "../src/noldova.context.tooling/src/api/index.ts";
 
 export default class JsonObjectReader {
   private static readonly ARRAY_KIND: string = "an array";

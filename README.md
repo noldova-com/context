@@ -36,6 +36,7 @@ Each package's declarations, `api/index.d.ts`, document its whole public API wit
 | `src/parsers/noldova.context.parsers` | The base every language parser builds on: sources, spans, a reader, and the lexer and parser classes |
 | `src/parsers/noldova.context.parsers.regex` | The regular-expression parser, with its vendored conformance cases |
 | `src/parsers/noldova.context.parsers.typescript` | The TypeScript parser, with its vendored conformance cases |
+| `src/noldova.context.tooling` | The repository's release tooling, which `npm run release` runs; it is built and tested like the other packages and never published |
 | `scripts/` | The build, test and release entry points, `npm run build`, `npm test` and `npm run release` |
 
 ## Checks

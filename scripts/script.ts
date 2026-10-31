@@ -11,10 +11,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import CommandFailedException from "./command-failed.exception.ts";
+import { CommandFailedException, type PackageInfo, ProcessResult } from "../src/noldova.context.tooling/src/api/index.ts";
 import Config from "./config.ts";
-import type PackageInfo from "./package-info.ts";
-import ProcessResult from "./process-result.ts";
 
 export default abstract class Script {
   private static readonly API_DIRECTORY_NAME: string = "api";

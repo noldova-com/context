@@ -14,9 +14,8 @@
 
 import path from "node:path";
 
-import CommandFailedException from "./command-failed.exception.ts";
+import { CommandFailedException, type PackageInfo } from "../src/noldova.context.tooling/src/api/index.ts";
 import Config from "./config.ts";
-import type PackageInfo from "./package-info.ts";
 import Script from "./script.ts";
 
 export class Build extends Script {

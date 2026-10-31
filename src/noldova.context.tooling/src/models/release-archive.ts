@@ -6,9 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type PackageInfo from "./package-info.ts";
+import type { PackageInfo } from "./package-info.ts";
 
-export default class ReleaseArchive {
+export class ReleaseArchive {
   public readonly packageInfo: PackageInfo;
   public readonly filePath: string;
 

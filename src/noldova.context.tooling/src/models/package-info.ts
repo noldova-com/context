@@ -6,15 +6,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export default class PackageInfo {
+export class PackageInfo {
   public readonly name: string;
   public readonly path: string;
   public readonly packageName: string;
+  public readonly isPublished: boolean;
 
-  public constructor(name: string, path: string, packageName: string) {
+  public constructor(name: string, path: string, packageName: string, isPublished: boolean) {
     this.name = name;
     this.path = path;
     this.packageName = packageName;
+    this.isPublished = isPublished;
   }
 
   public archiveName(version: string): string {

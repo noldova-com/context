@@ -1,0 +1,9 @@
+{
+  "name": "@noldova/context.tooling",
+  "version": "__VERSION__",
+  "private": true,
+  "type": "module",
+  "main": "api/index.js",
+  "types": "api/index.d.ts",
+  "license": "MIT"
+}

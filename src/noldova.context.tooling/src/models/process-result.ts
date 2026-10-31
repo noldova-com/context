@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export default class ProcessResult {
+export class ProcessResult {
   public readonly exitCode: number | null;
   public readonly output: string;
   public readonly errorOutput: string;

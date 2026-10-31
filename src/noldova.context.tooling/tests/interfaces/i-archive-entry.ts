@@ -6,4 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export default class CommandFailedException extends Error { }
+export interface IArchiveEntry {
+  readonly name: string;
+  readonly content: string;
+  readonly type?: string;
+  readonly prefix?: string;
+  readonly size?: string;
+}

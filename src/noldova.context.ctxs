@@ -18,6 +18,8 @@
     "noldova.context.testing/tests/noldova.context.testing.tests.ctxp",
     "noldova.context.text/src/noldova.context.text.ctxp",
     "noldova.context.text/tests/noldova.context.text.tests.ctxp",
+    "noldova.context.tooling/src/noldova.context.tooling.ctxp",
+    "noldova.context.tooling/tests/noldova.context.tooling.tests.ctxp",
     "parsers/noldova.context.parsers.typescript/src/noldova.context.parsers.typescript.ctxp",
     "parsers/noldova.context.parsers.typescript/tests/noldova.context.parsers.typescript.tests.ctxp"
   ]
