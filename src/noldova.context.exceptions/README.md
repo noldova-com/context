@@ -27,6 +27,7 @@ function readName(values: Map<string, string>): string {
   return name; // Narrowed to string by the guard.
 }
 
+readName(new Map([["name", "Fixture"]])); // "Fixture"
 new ArgumentNullException("input").message; // "Value cannot be null or undefined. (Parameter 'input')"
 new InputException("Cannot read input.", new ExceptionOptions(new Error("Bad encoding."))).name; // "InputException"
 ```
