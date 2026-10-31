@@ -129,8 +129,10 @@ export class Release extends Script {
       }
     }
     catch (error) {
-      // The archives published before the failure are still confirmed, so a rerun finds them on the registry and skips them
-      // instead of publishing them again, which npm refuses. The publish failure stays the one reported.
+      // The publish failure is logged first, so it reaches the log even if the confirmation below fails or outlasts the job. The archives
+      // published before it are still confirmed, so a rerun finds them on the registry and skips them instead of publishing them again,
+      // which npm refuses.
+      await this.writeLogAsync(error instanceof Error ? error.message : String(error));
       try {
         await this.confirmPublishedAsync(published, version, registryURL);
       }
