@@ -121,12 +121,36 @@ export class Release extends Script {
       if (await this.isUnpublishedAsync(archive, version, registryURL))
         pending.push(archive);
 
-    for (const archive of pending)
-      await this.executeNPMCommandAsync(["publish", archive.filePath, "--access", access, "--registry", registryURL], process.cwd(), true);
+    const published: ReleaseArchive[] = [];
+    try {
+      for (const archive of pending) {
+        await this.executeNPMCommandAsync(["publish", archive.filePath, "--access", access, "--registry", registryURL], process.cwd(), true);
+        published.push(archive);
+      }
+    }
+    catch (error) {
+      // The archives published before the failure are still confirmed, so a rerun finds them on the registry and skips them
+      // instead of publishing them again, which npm refuses. The publish failure stays the one reported.
+      try {
+        await this.confirmPublishedAsync(published, version, registryURL);
+      }
+      catch (confirmationError) {
+        if (!(confirmationError instanceof CommandFailedException))
+          throw confirmationError;
 
-    // The waits run after every publish, so they overlap: the job waits about as long as the slowest version, not their sum.
+        await this.writeLogAsync(confirmationError.message);
+      }
+
+      throw error;
+    }
+
+    await this.confirmPublishedAsync(published, version, registryURL);
+  }
+
+  // The waits run after every publish, so they overlap: the job waits about as long as the slowest version, not their sum.
+  private async confirmPublishedAsync(archives: readonly ReleaseArchive[], version: string, registryURL: string): Promise<void> {
     const deadline = Date.now() + Release.PUBLISHED_WAIT_MILLISECONDS;
-    for (const archive of pending) {
+    for (const archive of archives) {
       await this.waitUntilPublishedAsync(archive, version, registryURL, deadline);
       await this.writeLogAsync(Release.published(archive.packageInfo.packageName, version));
     }
@@ -158,17 +182,32 @@ export class Release extends Script {
   // appear, so a version counts as published only once the registry answers with this archive's integrity.
   private async waitUntilPublishedAsync(archive: ReleaseArchive, version: string, registryURL: string, deadline: number): Promise<void> {
     const name = archive.packageInfo.packageName;
-    let published = await this.viewAsync(`${name}@${version}`, "dist.integrity", registryURL);
-    while (published === undefined) {
-      if (Date.now() >= deadline)
-        throw new CommandFailedException(Release.notPublished(name, version, Release.PUBLISHED_WAIT_MILLISECONDS));
-
+    let published = await this.tryViewIntegrityAsync(`${name}@${version}`, registryURL);
+    while ((published === undefined || published instanceof CommandFailedException) && Date.now() < deadline) {
       await delayAsync(Release.PUBLISHED_RETRY_MILLISECONDS);
-      published = await this.viewAsync(`${name}@${version}`, "dist.integrity", registryURL);
+      published = await this.tryViewIntegrityAsync(`${name}@${version}`, registryURL);
     }
 
+    if (published instanceof CommandFailedException)
+      throw new CommandFailedException(Release.notPublishedAfterError(name, version, Release.PUBLISHED_WAIT_MILLISECONDS, published.message));
+    if (published === undefined)
+      throw new CommandFailedException(Release.notPublished(name, version, Release.PUBLISHED_WAIT_MILLISECONDS));
     if (published !== await Release.readIntegrityAsync(archive))
       throw new CommandFailedException(Release.publishedOtherwise(name, version));
+  }
+
+  // A failed read, such as a registry timeout, means only "not yet" while the wait lasts, so it comes back as the exception instead of
+  // ending the wait.
+  private async tryViewIntegrityAsync(specifier: string, registryURL: string): Promise<unknown> {
+    try {
+      return await this.viewAsync(specifier, "dist.integrity", registryURL);
+    }
+    catch (error) {
+      if (!(error instanceof CommandFailedException))
+        throw error;
+
+      return error;
+    }
   }
 
   // npm caches registry answers, and an answer cached before a publish lacks its version, so every read asks the registry.
@@ -412,6 +451,10 @@ export class Release extends Script {
 
   private static notPublished(name: string, version: string, waitMilliseconds: number): string {
     return `${name}@${version} was not on the registry ${waitMilliseconds / 1_000} seconds after the last publish; check the registry before releasing again.`;
+  }
+
+  private static notPublishedAfterError(name: string, version: string, waitMilliseconds: number, lastError: string): string {
+    return `${name}@${version} was not on the registry ${waitMilliseconds / 1_000} seconds after the last publish, and the last read failed: ${lastError}`;
   }
 
   private static published(name: string, version: string): string {
