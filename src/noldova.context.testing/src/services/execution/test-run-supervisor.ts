@@ -139,6 +139,19 @@ export class TestRunSupervisor {
       if (this.workers.size === 0 && !this.isFailed)
         resolve();
     };
+    // A worker with no run left ends by itself, so its thread writes its coverage; it is ended only when it does not end within the limit.
+    const end = (): void => {
+      isStopping = true;
+      worker.removeAllListeners(Resources.messageEvent);
+      worker.removeAllListeners(Resources.exitEvent);
+      worker.once(Resources.exitEvent, () => {
+        this.clock.clearTimeout(watchdog);
+        finish();
+      });
+      this.clock.clearTimeout(watchdog);
+      watchdog = this.clock.setTimeout(() => void stopAsync().then(finish), Resources.testWorkerEndMilliseconds);
+      worker.postMessage(undefined);
+    };
     const fail = (error: unknown): void => {
       this.isFailed = true;
       this.runs.length = 0;
@@ -167,7 +180,7 @@ export class TestRunSupervisor {
     const runNext = (): void => {
       const run = this.runs.shift();
       if (Object.isUndefined(run)) {
-        void stopAsync().then(finish);
+        end();
         return;
       }
 

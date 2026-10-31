@@ -8,6 +8,7 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
+import { once } from "node:events";
 import { BroadcastChannel, Worker } from "node:worker_threads";
 
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
@@ -40,6 +41,27 @@ export class TestRunWorkerEntryPointTests {
       }));
 
       Assert.areEqual("Imported,Ready,Started,MethodCompleted,ClassCompleted", kinds.join());
+    }
+    finally {
+      await TestRunWorkerEntryPointTests.endAsync(worker);
+      await project.removeAsync();
+    }
+  }
+
+  @TestMethod
+  public async endsItsThreadByItselfWhenNoRunIsLeftAsync(): Promise<void> {
+    const project = await FixtureTestProject.createAsync(["passing-fixture"]);
+    const worker = new Worker(new URL(import.meta.resolve(TestRunWorkerEntryPointTests.ENTRY_POINT)),
+      { workerData: new TestWorkerStart([project.testProject], [], 1000).toData() });
+    try {
+      await new Promise<void>(resolve => worker.on("message", (value: unknown) => {
+        if (TestWorkerMessage.from(value).kind === TestWorkerMessageKind.Ready)
+          resolve();
+      }));
+
+      const exitCode = await TestRunWorkerEntryPointTests.endAsync(worker);
+
+      Assert.areEqual(0, exitCode);
     }
     finally {
       await worker.terminate();
@@ -76,8 +98,19 @@ export class TestRunWorkerEntryPointTests {
       Assert.areEqual("Imported,Ready,Started,MethodCompleted,TimedOut,rejectedLate", events.join());
     }
     finally {
-      await worker.terminate();
+      await TestRunWorkerEntryPointTests.endAsync(worker);
       await project.removeAsync();
     }
+  }
+
+  // Tells the worker no run is left and waits until its thread ends by itself, so the thread writes its coverage.
+  private static async endAsync(worker: Worker): Promise<number> {
+    if (worker.threadId === -1)
+      return worker.terminate();
+
+    const exited = once(worker, "exit");
+    worker.postMessage(undefined);
+    const [exitCode] = await exited;
+    return exitCode as number;
   }
 }

@@ -167,6 +167,24 @@ export class TestRunSupervisorTests {
   }
 
   @TestMethod
+  public async endsAWorkerThatDoesNotEndByItselfWithinTheLimitAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const release = Promise.withResolvers<void>();
+    const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), release.promise);
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+      undefined, () => worker, clock).runAsync();
+    worker.send(TestWorkerMessage.ready(1, 1, 1));
+    await worker.ending;
+
+    clock.fire(clock.latestTimer);
+    await worker.terminating;
+    release.resolve();
+    const totals = await running;
+
+    Assert.areEqual(1, totals.passed);
+  }
+
+  @TestMethod
   public async failsTheRunWhenItsWorkerReturnsFewerResultsThanItSelectedAsync(): Promise<void> {
     const worker = new ScriptedWorker(() => undefined);
     const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,

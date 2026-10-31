@@ -35,6 +35,7 @@ export class Resources {
   public static readonly testRunWorkerFileName: string = "./test-run-worker-entry-point.js";
   public static readonly testWorkerGraceMilliseconds: number = 250;
   public static readonly testWorkerStartMilliseconds: number = 5_000;
+  public static readonly testWorkerEndMilliseconds: number = 5_000;
   public static readonly temporaryDirectoryPrefix: string = "noldova-test-run-";
   public static readonly temporaryDirectoryVariables: readonly string[] = ["TMPDIR", "TEMP", "TMP"];
   public static readonly temporaryRemovalRetries: number = 5;

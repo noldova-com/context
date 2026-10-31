@@ -138,6 +138,23 @@ export class TestRunWorkerTests {
       messages.map(t => TestRunWorkerTests.describe(t)).join());
   }
 
+  @TestMethod
+  public async closesItsPortWhenNoRunIsLeftAsync(): Promise<void> {
+    const project = await FixtureTestProject.createAsync(["passing-fixture"]);
+    const channel = new MessageChannel();
+    try {
+      const closed = Promise.all([once(channel.port1, "close"), once(channel.port2, "close")]);
+      await new TestRunWorker(channel.port1, new TestWorkerStart([project.testProject], [], 100)).startAsync();
+
+      channel.port2.postMessage(undefined);
+
+      await closed;
+    }
+    finally {
+      await project.removeAsync();
+    }
+  }
+
   private async runAsync(fixtureNames: readonly string[], act: (worker: TestRunWorker, port: MessagePort) => Promise<void>,
     endingKinds: readonly TestWorkerMessageKind[] = [TestWorkerMessageKind.ClassCompleted, TestWorkerMessageKind.TimedOut],
     filters: readonly string[] = [], clock?: IClock): Promise<TestWorkerMessage[]> {
