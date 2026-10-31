@@ -11,7 +11,9 @@ timeout is recorded as timed out, and the run goes on.
 npm install @noldova/context.testing
 ```
 
-## Write tests
+## Use
+
+### Write tests
 
 A test class is exported, its name ends in `Tests`, and it is saved in a file
 whose name ends in `.test.ts`:
@@ -33,7 +35,7 @@ export class AdditionTests {
 
 Each `TestData` row runs and is reported as a test of its own.
 
-## Run tests
+### Run tests
 
 Compile the tests, then run their compiled folder:
 
@@ -46,8 +48,10 @@ console.log(`${result.passed} passed, ${result.failed} failed, ${result.skipped}
 
 The first argument is each test's timeout in milliseconds; leaving out the
 filters runs every test. `TestConsoleReporter`, `TestReportWriter` and
-`CoverageReportWriter` print and write the results. The declaration file
-`api/index.d.ts` documents every member with its contract and examples.
+`CoverageReportWriter` print and write the results. The example's `console`
+needs Node's types: `@types/node`, with `"types": ["node"]` in `tsconfig.json`.
+The declaration file `api/index.d.ts` documents every member with its contract
+and examples.
 
 ## License
 
