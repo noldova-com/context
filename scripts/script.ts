@@ -185,7 +185,7 @@ export default abstract class Script {
   protected async copyReadmeFileAsync(packageInfo: PackageInfo): Promise<void> {
     const sourceFilePath = `${Script.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Script.README_FILE_NAME}`;
     if (!await this.pathExistsAsync(sourceFilePath))
-      return;
+      throw new CommandFailedException(Script.readmeMissing(packageInfo.packageName, sourceFilePath));
 
     await this.copyFileAsync(sourceFilePath, `${Config.BUILD_FOLDER}/${packageInfo.name}/${Script.README_FILE_NAME}`);
   }
@@ -213,5 +213,9 @@ export default abstract class Script {
 
   private static packageDuplicated(packageName: string): string {
     return `Package ${packageName} was selected more than once.`;
+  }
+
+  private static readmeMissing(packageName: string, readmeFilePath: string): string {
+    return `Package ${packageName} has no ${Script.README_FILE_NAME} at "${readmeFilePath}"; every package ships one.`;
   }
 }
