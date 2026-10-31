@@ -139,23 +139,27 @@ export class TestRunSupervisor {
       if (this.workers.size === 0 && !this.isFailed)
         resolve();
     };
-    // A worker with no run left ends by itself, so its thread writes its coverage; it is ended only when it does not end within the limit.
-    const end = (): void => {
-      isStopping = true;
-      worker.removeAllListeners(Resources.messageEvent);
-      worker.removeAllListeners(Resources.exitEvent);
-      worker.once(Resources.exitEvent, () => {
-        this.clock.clearTimeout(watchdog);
-        finish();
-      });
-      this.clock.clearTimeout(watchdog);
-      watchdog = this.clock.setTimeout(() => void stopAsync().then(finish), Resources.testWorkerEndMilliseconds);
-      worker.postMessage(undefined);
-    };
     const fail = (error: unknown): void => {
       this.isFailed = true;
       this.runs.length = 0;
       void Promise.all([...this.workers.values()].map(stopWorkerAsync => stopWorkerAsync())).then(() => reject(error));
+    };
+    // A worker with no run left ends by itself, so its thread writes its coverage. It fails the run when it ends with an error or an exit code
+    // other than 0, or does not end within the limit, since its coverage would then be incomplete.
+    const end = (): void => {
+      worker.removeAllListeners(Resources.messageEvent);
+      worker.removeAllListeners(Resources.exitEvent);
+      worker.once(Resources.exitEvent, (code: number) => {
+        this.clock.clearTimeout(watchdog);
+        if (code === 0)
+          finish();
+        else
+          fail(new TestingException(Resources.testWorkerEndedAfterItsLastClass(code)));
+      });
+      this.clock.clearTimeout(watchdog);
+      watchdog = this.clock.setTimeout(() => fail(new TestingException(Resources.testWorkerDidNotEnd(Resources.testWorkerEndMilliseconds))),
+        Resources.testWorkerEndMilliseconds);
+      worker.postMessage(undefined);
     };
     const replace = (ending: TestWorkerMessage): void => {
       void stopAsync().then(() => {

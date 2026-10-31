@@ -183,6 +183,14 @@ export class Resources {
     return `The test worker ended with exit code ${exitCode} before the run finished.`;
   }
 
+  public static testWorkerEndedAfterItsLastClass(exitCode: number): string {
+    return `The test worker ended with exit code ${exitCode} after its last class.`;
+  }
+
+  public static testWorkerDidNotEnd(limitMilliseconds: number): string {
+    return `The test worker did not end within ${limitMilliseconds} milliseconds after its last class, so its coverage is incomplete.`;
+  }
+
   public static testWorkerDiscoveryMismatch(classCount: number, methodCount: number, otherClassCount: number, otherMethodCount: number): string {
     return `The test workers discovered different tests: ${classCount} classes and ${methodCount} tests, then ${otherClassCount} classes and ` +
       `${otherMethodCount} tests.`;

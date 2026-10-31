@@ -27,6 +27,7 @@ export class ScriptedWorker extends Worker {
   public readonly ending: Promise<void>;
   public readonly terminating: Promise<void>;
   public readonly runs: TestWorkerRun[];
+  public terminateCount: number;
 
   public constructor(script: (worker: ScriptedWorker) => void, released: Promise<void> = Promise.resolve()) {
     super(FixtureTestProject.workerUrl("silent-worker"));
@@ -40,6 +41,7 @@ export class ScriptedWorker extends Worker {
     this.signalEnding = ending.resolve;
     this.signalTerminating = terminating.resolve;
     this.runs = [];
+    this.terminateCount = 0;
   }
 
   public send(message: TestWorkerMessage): void {
@@ -58,6 +60,7 @@ export class ScriptedWorker extends Worker {
   }
 
   public override async terminate(): Promise<number> {
+    this.terminateCount++;
     this.signalTerminating();
     await this.released;
     if (this.threadId === -1)

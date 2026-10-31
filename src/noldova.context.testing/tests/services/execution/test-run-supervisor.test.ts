@@ -167,7 +167,22 @@ export class TestRunSupervisorTests {
   }
 
   @TestMethod
-  public async endsAWorkerThatDoesNotEndByItselfWithinTheLimitAsync(): Promise<void> {
+  public async letsAWorkerEndByItselfWithoutTerminatingItAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"));
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+      undefined, () => worker, clock).runAsync();
+    worker.send(TestWorkerMessage.ready(1, 1, 1));
+
+    const totals = await running;
+    clock.advance(5_000);
+
+    Assert.areEqual(1, totals.passed);
+    Assert.areEqual(0, worker.terminateCount);
+  }
+
+  @TestMethod
+  public async failsTheRunWhenAWorkerDoesNotEndWithinTheLimitAsync(): Promise<void> {
     const clock = new FakeClock();
     const release = Promise.withResolvers<void>();
     const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), release.promise);
@@ -176,12 +191,47 @@ export class TestRunSupervisorTests {
     worker.send(TestWorkerMessage.ready(1, 1, 1));
     await worker.ending;
 
-    clock.fire(clock.latestTimer);
-    await worker.terminating;
+    clock.advance(4_999);
+    const terminateCountBeforeTheLimit = worker.terminateCount;
+    clock.advance(1);
     release.resolve();
-    const totals = await running;
+    const error = await Assert.throwsAsync(() => running, Error);
 
-    Assert.areEqual(1, totals.passed);
+    Assert.areEqual(0, terminateCountBeforeTheLimit);
+    Assert.areEqual(1, worker.terminateCount);
+    Assert.areEqual("The test worker did not end within 5000 milliseconds after its last class, so its coverage is incomplete.", error.message);
+  }
+
+  @TestMethod
+  public async failsTheRunWhenAWorkerEndsWithAnExitCodeAfterItsLastClassAsync(): Promise<void> {
+    const release = Promise.withResolvers<void>();
+    const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), release.promise);
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+      undefined, () => worker, new FakeClock()).runAsync();
+    worker.send(TestWorkerMessage.ready(1, 1, 1));
+    await worker.ending;
+
+    worker.emit("exit", 3);
+    release.resolve();
+    const error = await Assert.throwsAsync(() => running, Error);
+
+    Assert.areEqual("The test worker ended with exit code 3 after its last class.", error.message);
+  }
+
+  @TestMethod
+  public async failsTheRunWhenAWorkerFailsAfterItsLastClassAsync(): Promise<void> {
+    const release = Promise.withResolvers<void>();
+    const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), release.promise);
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+      undefined, () => worker, new FakeClock()).runAsync();
+    worker.send(TestWorkerMessage.ready(1, 1, 1));
+    await worker.ending;
+
+    worker.emit("error", new Error("The worker failed after its last class."));
+    release.resolve();
+    const error = await Assert.throwsAsync(() => running, Error);
+
+    Assert.areEqual("The worker failed after its last class.", error.message);
   }
 
   @TestMethod
