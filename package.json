@@ -1,6 +1,5 @@
 {
   "name": "@noldova/context",
-  "version": "0.0.1",
   "private": true,
   "type": "module",
   "license": "MIT",
