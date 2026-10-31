@@ -35,6 +35,7 @@ export class Resources {
   public static readonly testRunWorkerFileName: string = "./test-run-worker-entry-point.js";
   public static readonly testWorkerGraceMilliseconds: number = 250;
   public static readonly testWorkerStartMilliseconds: number = 5_000;
+  public static readonly testWorkerEndMilliseconds: number = 5_000;
   public static readonly temporaryDirectoryPrefix: string = "noldova-test-run-";
   public static readonly temporaryDirectoryVariables: readonly string[] = ["TMPDIR", "TEMP", "TMP"];
   public static readonly temporaryRemovalRetries: number = 5;
@@ -180,6 +181,14 @@ export class Resources {
 
   public static testWorkerEnded(exitCode: number): string {
     return `The test worker ended with exit code ${exitCode} before the run finished.`;
+  }
+
+  public static testWorkerEndedAfterItsLastClass(exitCode: number): string {
+    return `The test worker ended with exit code ${exitCode} after its last class.`;
+  }
+
+  public static testWorkerDidNotEnd(limitMilliseconds: number): string {
+    return `The test worker did not end within ${limitMilliseconds} milliseconds after its last class, so its coverage is incomplete.`;
   }
 
   public static testWorkerDiscoveryMismatch(classCount: number, methodCount: number, otherClassCount: number, otherMethodCount: number): string {
