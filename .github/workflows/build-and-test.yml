@@ -31,7 +31,7 @@ jobs:
     permissions: {}
 
   build-and-test:
-    name: Build and test (all targets)
+    name: Linux x64
     needs: versions
     runs-on: ${{ fromJSON(needs.versions.outputs.runs-on-linux-x64) }}
     timeout-minutes: 20
@@ -168,3 +168,20 @@ jobs:
             exit 1
           fi
           echo 'The build and the tests changed no tracked file.'
+
+  all-targets:
+    name: All targets
+    needs: [versions, build-and-test]
+    if: always()
+    runs-on: ${{ fromJSON(needs.versions.outputs.runs-on-linux-x64) }}
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Require every target to pass
+        env:
+          VERSIONS_RESULT: ${{ needs.versions.result }}
+          RESULT: ${{ needs.build-and-test.result }}
+        run: |
+          echo "The versions' result: $VERSIONS_RESULT; the targets' result: $RESULT"
+          test "$VERSIONS_RESULT" = success
+          test "$RESULT" = success
