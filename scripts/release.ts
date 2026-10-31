@@ -11,13 +11,14 @@
  * @example
  * npm run release -- source <version> <commit> - checks that the commit is on main and that scripts/config.ts holds the version there.
  * npm run release -- check <folder> <version> <commit> - checks that the folder holds exactly the packages' archives at the version, built from the commit.
- * npm run release -- publish <folder> <version> <commit> - publishes the archives that the registry doesn't hold yet.
+ * npm run release -- publish <folder> <version> <commit> - publishes the archives that the registry doesn't hold yet, then waits until the registry serves each one.
  * npm run release -- tag <version> <commit> - tags the commit with the version through GitHub's API.
  */
 
 import { type BinaryToTextEncoding, createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { setTimeout as delayAsync } from "node:timers/promises";
 
 import ArchiveReader from "./archive.reader.ts";
 import CommandFailedException from "./command-failed.exception.ts";
@@ -50,6 +51,9 @@ export class Release extends Script {
   private static readonly PRIVATE_FIELD: string = "private";
   private static readonly ACCESS_LEVELS: readonly string[] = ["restricted", "public"];
   private static readonly NOT_FOUND_CODE: string = "E404";
+  private static readonly PREFER_ONLINE_OPTION: string = "--prefer-online";
+  private static readonly PUBLISHED_WAIT_MILLISECONDS: number = 600_000;
+  private static readonly PUBLISHED_RETRY_MILLISECONDS: number = 10_000;
   private static readonly INTEGRITY_ALGORITHM: string = "sha512";
   private static readonly INTEGRITY_ENCODING: BinaryToTextEncoding = "base64";
   private static readonly VERSION_SEPARATOR: string = ".";
@@ -117,8 +121,39 @@ export class Release extends Script {
       if (await this.isUnpublishedAsync(archive, version, registryURL))
         pending.push(archive);
 
-    for (const archive of pending) {
-      await this.executeNPMCommandAsync(["publish", archive.filePath, "--access", access, "--registry", registryURL], process.cwd(), true);
+    const published: ReleaseArchive[] = [];
+    try {
+      for (const archive of pending) {
+        await this.executeNPMCommandAsync(["publish", archive.filePath, "--access", access, "--registry", registryURL], process.cwd(), true);
+        published.push(archive);
+      }
+    }
+    catch (error) {
+      // The publish failure is logged first, so it reaches the log even if the confirmation below fails or outlasts the job. The archives
+      // published before it are still confirmed, so a rerun finds them on the registry and skips them instead of publishing them again,
+      // which npm refuses.
+      await this.writeLogAsync(error instanceof Error ? error.message : String(error));
+      try {
+        await this.confirmPublishedAsync(published, version, registryURL);
+      }
+      catch (confirmationError) {
+        if (!(confirmationError instanceof CommandFailedException))
+          throw confirmationError;
+
+        await this.writeLogAsync(confirmationError.message);
+      }
+
+      throw error;
+    }
+
+    await this.confirmPublishedAsync(published, version, registryURL);
+  }
+
+  // The waits run after every publish, so they overlap: the job waits about as long as the slowest version, not their sum.
+  private async confirmPublishedAsync(archives: readonly ReleaseArchive[], version: string, registryURL: string): Promise<void> {
+    const deadline = Date.now() + Release.PUBLISHED_WAIT_MILLISECONDS;
+    for (const archive of archives) {
+      await this.waitUntilPublishedAsync(archive, version, registryURL, deadline);
       await this.writeLogAsync(Release.published(archive.packageInfo.packageName, version));
     }
   }
@@ -127,8 +162,7 @@ export class Release extends Script {
     const name = archive.packageInfo.packageName;
     const published = await this.viewAsync(`${name}@${version}`, "dist.integrity", registryURL);
     if (published !== undefined) {
-      const integrity = `${Release.INTEGRITY_ALGORITHM}-${createHash(Release.INTEGRITY_ALGORITHM).update(await fs.readFile(archive.filePath)).digest(Release.INTEGRITY_ENCODING)}`;
-      if (published !== integrity)
+      if (published !== await Release.readIntegrityAsync(archive))
         throw new CommandFailedException(Release.publishedOtherwise(name, version));
 
       await this.writeLogAsync(Release.alreadyPublished(name, version));
@@ -146,8 +180,41 @@ export class Release extends Script {
     return true;
   }
 
+  // npm can exit before the registry serves the version it published, and a new package's first version has taken over a minute to
+  // appear, so a version counts as published only once the registry answers with this archive's integrity.
+  private async waitUntilPublishedAsync(archive: ReleaseArchive, version: string, registryURL: string, deadline: number): Promise<void> {
+    const name = archive.packageInfo.packageName;
+    let published = await this.tryViewIntegrityAsync(`${name}@${version}`, registryURL);
+    while ((published === undefined || published instanceof CommandFailedException) && Date.now() < deadline) {
+      await delayAsync(Release.PUBLISHED_RETRY_MILLISECONDS);
+      published = await this.tryViewIntegrityAsync(`${name}@${version}`, registryURL);
+    }
+
+    if (published instanceof CommandFailedException)
+      throw new CommandFailedException(Release.notPublishedAfterError(name, version, Release.PUBLISHED_WAIT_MILLISECONDS, published.message));
+    if (published === undefined)
+      throw new CommandFailedException(Release.notPublished(name, version, Release.PUBLISHED_WAIT_MILLISECONDS));
+    if (published !== await Release.readIntegrityAsync(archive))
+      throw new CommandFailedException(Release.publishedOtherwise(name, version));
+  }
+
+  // A failed read, such as a registry timeout, means only "not yet" while the wait lasts, so it comes back as the exception instead of
+  // ending the wait.
+  private async tryViewIntegrityAsync(specifier: string, registryURL: string): Promise<unknown> {
+    try {
+      return await this.viewAsync(specifier, "dist.integrity", registryURL);
+    }
+    catch (error) {
+      if (!(error instanceof CommandFailedException))
+        throw error;
+
+      return error;
+    }
+  }
+
+  // npm caches registry answers, and an answer cached before a publish lacks its version, so every read asks the registry.
   private async viewAsync(specifier: string, field: string, registryURL: string): Promise<unknown> {
-    const result = await this.readNPMCommandAsync(["view", specifier, field, "--json", "--registry", registryURL], process.cwd());
+    const result = await this.readNPMCommandAsync(["view", specifier, field, "--json", Release.PREFER_ONLINE_OPTION, "--registry", registryURL], process.cwd());
     if (!result.isSuccessful) {
       if (result.output.includes(Release.NOT_FOUND_CODE) || result.errorOutput.includes(Release.NOT_FOUND_CODE))
         return undefined;
@@ -252,6 +319,11 @@ export class Release extends Script {
       throw new CommandFailedException(Release.gitFailed(arguments_, result));
 
     return result.output;
+  }
+
+  private static async readIntegrityAsync(archive: ReleaseArchive): Promise<string> {
+    const hash = createHash(Release.INTEGRITY_ALGORITHM).update(await fs.readFile(archive.filePath)).digest(Release.INTEGRITY_ENCODING);
+    return `${Release.INTEGRITY_ALGORITHM}-${hash}`;
   }
 
   private static async readTargetAsync(response: Response, tag: string): Promise<JsonObjectReader> {
@@ -377,6 +449,14 @@ export class Release extends Script {
 
   private static notNewer(name: string, version: string, latest: string): string {
     return `${name}@${version} is not newer than ${latest}, its latest published version.`;
+  }
+
+  private static notPublished(name: string, version: string, waitMilliseconds: number): string {
+    return `${name}@${version} was not on the registry ${waitMilliseconds / 1_000} seconds after the last publish; check the registry before releasing again.`;
+  }
+
+  private static notPublishedAfterError(name: string, version: string, waitMilliseconds: number, lastError: string): string {
+    return `${name}@${version} was not on the registry ${waitMilliseconds / 1_000} seconds after the last publish, and the last read failed: ${lastError}`;
   }
 
   private static published(name: string, version: string): string {
