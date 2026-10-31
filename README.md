@@ -48,9 +48,9 @@ No test code pauses for a fixed time.
 |---|---|
 | Check / Linked issue | `.github/workflows/require-linked-issue.yml`, the "PR" workflow: the PR description has a standalone `Issue: #N`, `Issue #N` or closing reference, such as `Closes #N`, that names an issue in this repository. |
 | Check / Runner / Versions | The shared check's own call of the shared settings, which name the runner "Check / Linked issue" uses. |
-| Versions / Versions | The organization's shared settings, `.github`'s `versions.yml`, name the Node.js and npm versions and the runner that "Build and test" uses. |
-| Linux x64 | The toolchain is the Node.js and npm versions the shared settings name, Node.js 24.21.0 with npm 11.19.0 today, on the runner they name; `.gitattributes` holds `* text=auto eol=lf`, and every tracked text file outside the vendored inputs, which their own `.gitattributes` marks `-text`, uses LF line endings and ends with exactly one newline; `npm run build` installs the locked third-party packages with `npm ci --ignore-scripts`, then builds, packs and installs every package, `npm test` runs the whole suite, and both leave every tracked file unchanged. |
-| All targets | Every target's job passed, "Linux x64" today, and the shared settings named the versions; it reports even when a job before it failed or was skipped, so `main` can require it. |
+| Versions / Versions | The organization's shared settings, `.github`'s `versions.yml`, name the Node.js and npm versions and the runner for each target that "Build and test" uses. |
+| Linux x64, Linux arm64, Windows x64, Windows arm64, macOS x64, macOS arm64 | One job per target, each on the GitHub-hosted runner the shared settings name for it: the toolchain is the Node.js and npm versions they name, Node.js 24.21.0 with npm 11.19.0 today; `.gitattributes` holds `* text=auto eol=lf`, and every tracked text file outside the vendored inputs, which their own `.gitattributes` marks `-text`, uses LF line endings and ends with exactly one newline; `npm run build` installs the locked third-party packages with `npm ci --ignore-scripts`, then builds, packs and installs every package, `npm test` runs the whole suite, and both leave every tracked file unchanged. |
+| All targets | All six targets' jobs passed, and the shared settings named the versions and a runner for each target; it reports even when a job before it failed or was skipped, so `main` can require it. |
 
 ## Running tests from an app
 
