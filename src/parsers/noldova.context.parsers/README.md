@@ -5,6 +5,12 @@ spans and line positions, a reader over it, and the lexer and parser base
 classes every language parser builds on. It contains no grammar; TypeScript,
 Regex, and future languages are separate packages.
 
+## Install
+
+```bash
+npm install @noldova/context.parsers
+```
+
 ## Model
 
 - `Source` holds the text once. `SourceSpan` is a half-open UTF-16 range in it;
@@ -47,7 +53,9 @@ this keeps the per-token path free of checks. Everything that accepts an offset
 or span from elsewhere validates it: `Source`, the `SourceReader` constructor,
 `SourceLineMap`, `SourceLine`, and `SourcePosition`.
 
-## Writing a language parser
+## Use
+
+A language parser derives its nodes, lexer and parser from these classes:
 
 ```ts
 import { DiagnosticCollector, EndOfFileNode, Lexer, LiteralNode, Node, Parser, ParserContext, Source, SourceSpan } from "@noldova/context.parsers";
@@ -91,5 +99,10 @@ const result = new TextParser(context, new TextLexer(source, context.diagnosticC
 console.assert(result.rootNode.value === "text" && result.diagnostics.length === 0);
 ```
 
-The declaration file `api/index.d.ts` documents every member with its
-contract and examples.
+The example's `console` needs Node's types: `@types/node`, with
+`"types": ["node"]` in `tsconfig.json`. The declaration file `api/index.d.ts`
+documents every member with its contract and examples.
+
+## License
+
+MIT; see `LICENSE`.
