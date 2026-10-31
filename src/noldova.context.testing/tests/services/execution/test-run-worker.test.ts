@@ -144,6 +144,7 @@ export class TestRunWorkerTests {
     const channel = new MessageChannel();
     try {
       const closed = Promise.all([once(channel.port1, "close"), once(channel.port2, "close")]);
+      channel.port2.on("message", () => undefined);
       await new TestRunWorker(channel.port1, new TestWorkerStart([project.testProject], [], 100)).startAsync();
 
       channel.port2.postMessage(undefined);
