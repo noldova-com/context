@@ -8,4 +8,7 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
-setInterval(() => undefined, 1_000);
+import { parentPort } from "node:worker_threads";
+
+// Stays idle until a message tells it to end, then closes its port so its thread ends by itself, as a test worker does.
+parentPort?.on("message", () => parentPort?.close());
