@@ -14,6 +14,7 @@ npm run build
   -> for each selected package in configured dependency order:
        compile through TypeScript 7 against installed npm dependency packages
        include public declarations under the package's accepted documentation path
+       include the license and the package's README.md, failing when the README is missing
        pack the freshly built package
        install it into the root node_modules environment
 

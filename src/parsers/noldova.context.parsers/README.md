@@ -91,5 +91,5 @@ const result = new TextParser(context, new TextLexer(source, context.diagnosticC
 console.assert(result.rootNode.value === "text" && result.diagnostics.length === 0);
 ```
 
-The declaration file `src/api/index.d.ts` documents every member with its
+The declaration file `api/index.d.ts` documents every member with its
 contract and examples.
