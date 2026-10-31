@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   release:
-    uses: noldova-com/.github/.github/workflows/release-npm.yml@dc42ac82ad6aa68f8d57a9f136d0de171a44e7e3 # v1.0.0
+    uses: noldova-com/.github/.github/workflows/release-npm.yml@6e2ab8efb06aff6f0fdb9c4ac91c623c74359c30 # v1.0.0
     permissions:
       contents: write
       packages: write
