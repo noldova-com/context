@@ -52,7 +52,7 @@ export class Release extends Script {
   private static readonly ACCESS_LEVELS: readonly string[] = ["restricted", "public"];
   private static readonly NOT_FOUND_CODE: string = "E404";
   private static readonly PREFER_ONLINE_OPTION: string = "--prefer-online";
-  private static readonly PUBLISHED_WAIT_MILLISECONDS: number = 300_000;
+  private static readonly PUBLISHED_WAIT_MILLISECONDS: number = 600_000;
   private static readonly PUBLISHED_RETRY_MILLISECONDS: number = 10_000;
   private static readonly INTEGRITY_ALGORITHM: string = "sha512";
   private static readonly INTEGRITY_ENCODING: BinaryToTextEncoding = "base64";
