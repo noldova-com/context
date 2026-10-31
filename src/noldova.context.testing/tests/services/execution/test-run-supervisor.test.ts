@@ -8,6 +8,8 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
+import { once } from "node:events";
+
 import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
 import {
   Assert, TestClass, TestConsoleReporter, TestData, TestMethod, TestMethodResult, TestOutcome
@@ -167,18 +169,32 @@ export class TestRunSupervisorTests {
   }
 
   @TestMethod
-  public async letsAWorkerEndByItselfWithoutTerminatingItAsync(): Promise<void> {
+  public async letsAWorkerEndByItselfWhileAnotherStillRunsAsync(): Promise<void> {
     const clock = new FakeClock();
-    const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"));
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
-      undefined, () => worker, clock).runAsync();
-    worker.send(TestWorkerMessage.ready(1, 1, 1));
+    const secondFinishing = Promise.withResolvers<void>();
+    const first = new ScriptedWorker(worker => TestRunSupervisorTests.completeClass(worker, 0, "FirstTests"));
+    const second = new ScriptedWorker(worker => {
+      worker.send(TestWorkerMessage.started(1, 0));
+      void secondFinishing.promise.then(() => {
+        worker.send(TestWorkerMessage.methodCompleted(1, 0, TestRunSupervisorTests.result("SecondTests")));
+        worker.send(TestWorkerMessage.classCompleted(1, "SecondTests.test.js"));
+      });
+    });
+    const scripted = [first, second];
+    const running = new TestRunSupervisor(10_000, [], [], TestRunSupervisorTests.reporter([]), undefined, 2, undefined,
+      () => scripted.shift() ?? new ScriptedWorker(() => undefined), clock).runAsync();
+    first.send(TestWorkerMessage.ready(2, 2, 2));
+    second.send(TestWorkerMessage.ready(2, 2, 2));
+    await first.ending;
+    await once(first, "exit");
 
-    const totals = await running;
     clock.advance(5_000);
+    secondFinishing.resolve();
+    const totals = await running;
 
-    Assert.areEqual(1, totals.passed);
-    Assert.areEqual(0, worker.terminateCount);
+    Assert.areEqual(2, totals.passed);
+    Assert.areEqual(0, first.terminateCount);
+    Assert.areEqual(0, second.terminateCount);
   }
 
   @TestMethod
