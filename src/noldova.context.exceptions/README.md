@@ -1,8 +1,8 @@
 # noldova.context.exceptions
 
 The exceptions CONTEXT libraries throw: an abstract `Exception` base that names
-itself after its concrete class, and argument and index exceptions with guards
-that check a value and narrow its type in one call.
+itself after its concrete class, argument exceptions with guards that check a
+value and narrow its type in one call, and an index exception.
 
 ## Install
 
@@ -31,10 +31,11 @@ new ArgumentNullException("input").message; // "Value cannot be null or undefine
 new InputException("Cannot read input.", new ExceptionOptions(new Error("Bad encoding."))).name; // "InputException"
 ```
 
-`ArgumentException`, `ArgumentNullException`, `ArgumentOutOfRangeException`
-and `IndexOutOfRangeException` keep the parameter name and, where given, the
-rejected value as fields. The declaration file `api/index.d.ts` documents every
-member with its contract and examples.
+`ArgumentException`, `ArgumentNullException` and `ArgumentOutOfRangeException`
+keep the parameter name as a field, and `ArgumentOutOfRangeException` also keeps
+the rejected value. `IndexOutOfRangeException` carries a message and, where
+given, a cause. The declaration file `api/index.d.ts` documents every member
+with its contract and examples.
 
 ## License
 
