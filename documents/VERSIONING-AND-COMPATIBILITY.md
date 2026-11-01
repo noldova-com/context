@@ -17,7 +17,8 @@ Age, feature count, milestones, distribution to another machine, or use by anoth
 Only the last number goes up, and only when the packages are published: a publish run is started by hand, when a maintainer decides, and it publishes every package at the next number, as the README's [Releases](../README.md#releases) says.
 Major and minor stay `0` until the first public release, and the internal version stays `1`.
 The one number lives in `scripts/config.ts`; the bootstrap `package.json` files write `__VERSION__` for their own version and for CONTEXT-owned dependencies, and the build fills it in.
-Until CONTEXT compiles itself, the `.ctxp` project manifests keep `0.0.1`, since nothing reads their version yet; so do the repository's root `package.json` and its lockfile, which are never published.
+Until CONTEXT compiles itself, the `.ctxp` project manifests keep `0.0.1`, since nothing reads their version yet.
+The repository's root `package.json` and its lockfile have no version, since they are never published.
 CONTEXT-owned dependencies name the current number exactly: no caret, tilde, wildcard, range, floating tag, prerelease counter, date version, commit suffix, or independently incremented package version.
 The packages are published to npm under `@noldova`.
 
