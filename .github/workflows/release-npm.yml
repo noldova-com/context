@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: The version to release, 0.0.n, which scripts/config.ts holds at the commit
+        description: The version to release, 0.0.n, which version.json holds at the commit
         required: true
         type: string
       commit:
