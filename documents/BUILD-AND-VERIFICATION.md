@@ -11,7 +11,9 @@ A successful build proves that the selected source was accepted and its expected
 ```text
 npm run build
   -> select packages from the explicit temporary bootstrap configuration
+  -> read the checkout's head commit
   -> for each selected package in configured dependency order:
+       write its package.json at version.json's version, with the head commit as gitHead
        compile through TypeScript 7 against installed npm dependency packages
        include public declarations under the package's accepted documentation path
        include the license and the package's README.md, failing when the README is missing

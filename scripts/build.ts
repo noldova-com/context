@@ -22,9 +22,13 @@ import Script from "./script.ts";
 export class Build extends Script {
   private static readonly BUILD_SCRIPT_PATH: string = "scripts/build.ts";
   private static readonly CLEAN_INSTALL_ARGUMENTS: readonly string[] = ["ci", "--ignore-scripts"];
+  private static readonly GIT_HEAD_ARGUMENTS: readonly string[] = ["rev-parse", "--verify", "HEAD^{commit}"];
+  private static readonly GIT_HEAD_FIELD: string = "gitHead";
+  private static readonly GIT_PROGRAM: string = "git";
   private static readonly INSTALL_ARGUMENTS: readonly string[] = ["install", "--no-save", "--ignore-scripts", "--no-audit", "--no-fund"];
   private static readonly INSTALLING_PACKAGES: string = "Installing npm packages…";
   private static readonly LICENSE_FILE_NAME: string = "LICENSE";
+  private static readonly MANIFEST_INDENTATION: number = 2;
   private static readonly NODE_MODULES_DIRECTORY_NAME: string = "node_modules";
   private static readonly NO_PACKAGES: string = "No packages to build.";
   private static readonly NOTICES_FILE_NAME: string = "THIRD-PARTY-NOTICES.txt";
@@ -32,6 +36,7 @@ export class Build extends Script {
   private static readonly VERSION_PLACEHOLDER: string = "__VERSION__";
 
   public override async runAsync(): Promise<void> {
+    const commit = await this.readHeadCommitAsync();
     await this.npmInstallAsync();
     await this.createOutputDirectoriesAsync();
 
@@ -41,7 +46,15 @@ export class Build extends Script {
       return;
     }
 
-    await this.executeActionAsync(packagesInfo, this.buildPackageAsync.bind(this));
+    await this.executeActionAsync(packagesInfo, t => this.buildPackageAsync(t, commit));
+  }
+
+  private async readHeadCommitAsync(): Promise<string> {
+    const result = await this.readProcessAsync(Build.GIT_PROGRAM, Build.GIT_HEAD_ARGUMENTS, process.cwd());
+    if (!result.isSuccessful)
+      throw new CommandFailedException(Build.headCommitUnreadable(result.errorOutput.trim()));
+
+    return result.output.trim();
   }
 
   private async npmInstallAsync(): Promise<void> {
@@ -56,10 +69,10 @@ export class Build extends Script {
     await this.createDirectoryAsync(Config.PACKAGES_FOLDER);
   }
 
-  private async buildPackageAsync(packageInfo: PackageInfo): Promise<void> {
+  private async buildPackageAsync(packageInfo: PackageInfo, commit: string): Promise<void> {
     await this.runStepAsync(Build.buildingPackage(packageInfo.packageName), async () => {
       await this.createPackageDirectoryAsync(packageInfo);
-      await this.writePackageFileAsync(packageInfo);
+      await this.writePackageFileAsync(packageInfo, commit);
       await this.copyLicenseFileAsync(packageInfo);
       await this.copyNoticesFileAsync(packageInfo);
       await this.buildAsync(packageInfo);
@@ -75,14 +88,15 @@ export class Build extends Script {
     await this.createDirectoryAsync(directoryName);
   }
 
-  private async writePackageFileAsync(packageInfo: PackageInfo): Promise<void> {
+  private async writePackageFileAsync(packageInfo: PackageInfo, commit: string): Promise<void> {
     const packageFilePath = `${Build.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Build.PACKAGE_MANIFEST_FILE_NAME}`;
 
     if (await this.pathExistsAsync(packageFilePath) === false)
       throw new CommandFailedException(Build.packageManifestMissing(packageFilePath));
 
     const content = await this.readFileAsync(packageFilePath);
-    await this.writeFileAsync(`${Config.BUILD_FOLDER}/${packageInfo.name}/${Build.PACKAGE_MANIFEST_FILE_NAME}`, content.replaceAll(Build.VERSION_PLACEHOLDER, Config.VERSION));
+    const manifest = { ...JSON.parse(content.replaceAll(Build.VERSION_PLACEHOLDER, Config.VERSION)), [Build.GIT_HEAD_FIELD]: commit };
+    await this.writeFileAsync(`${Config.BUILD_FOLDER}/${packageInfo.name}/${Build.PACKAGE_MANIFEST_FILE_NAME}`, `${JSON.stringify(manifest, null, Build.MANIFEST_INDENTATION)}\n`);
   }
 
   private async copyLicenseFileAsync(packageInfo: PackageInfo): Promise<void> {
@@ -128,6 +142,10 @@ export class Build extends Script {
 
   private static buildingPackage(packageName: string): string {
     return `Building "${packageName}"...`;
+  }
+
+  private static headCommitUnreadable(errorOutput: string): string {
+    return `Git can't read the checkout's head commit, which the build records as each package's ${Build.GIT_HEAD_FIELD}: ${errorOutput}`;
   }
 
   private static packageManifestMissing(packageFilePath: string): string {

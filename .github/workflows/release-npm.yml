@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: The version to release, 0.0.n, which scripts/config.ts holds at the commit
+        description: The version to release, 0.0.n, which version.json holds at the commit
         required: true
         type: string
       commit:
@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   release:
-    uses: noldova-com/.github/.github/workflows/release-npm.yml@6e2ab8efb06aff6f0fdb9c4ac91c623c74359c30 # v1.0.0
+    uses: noldova-com/.github/.github/workflows/release-npm.yml@6f45dbf59e42ae79666a46c6732bffc231901001 # v2.0.0
     permissions:
       contents: write
       packages: write
