@@ -10,7 +10,6 @@
   },
   "scripts": {
     "build": "node scripts/build.ts",
-    "release": "node scripts/release.ts",
     "generate:regex-known-failures": "node src/parsers/noldova.context.parsers.regex/scripts/generate-known-failures.ts",
     "generate:typescript-diagnostics": "node src/parsers/noldova.context.parsers.typescript/scripts/generate-diagnostics.ts",
     "generate:typescript-expected-diagnostics": "node src/parsers/noldova.context.parsers.typescript/scripts/generate-expected-diagnostics.ts",

@@ -36,7 +36,7 @@ Each package's declarations, `api/index.d.ts`, document its whole public API wit
 | `src/parsers/noldova.context.parsers` | The base every language parser builds on: sources, spans, a reader, and the lexer and parser classes |
 | `src/parsers/noldova.context.parsers.regex` | The regular-expression parser, with its vendored conformance cases |
 | `src/parsers/noldova.context.parsers.typescript` | The TypeScript parser, with its vendored conformance cases |
-| `scripts/` | The build, test and release entry points, `npm run build`, `npm test` and `npm run release` |
+| `scripts/` | The build and test entry points, `npm run build` and `npm test` |
 
 ## Checks
 
@@ -81,7 +81,8 @@ npm run build
 npm test
 ```
 
-`npm run build` installs the two locked development packages, TypeScript and Node.js's type declarations, without running their install scripts; then it builds, packs and installs every CONTEXT package into `_build/` and `_packages/`.
+`npm run build` installs the two locked development packages, TypeScript and Node.js's type declarations, without running their install scripts; then it builds, packs and installs every CONTEXT package into `_build/` and `_packages/`, at the version `version.json` holds.
+The build writes the checkout's head commit into every package's `package.json` as `gitHead`, so each published version names the commit it was built from; it fails before building when git can't read the commit.
 `npm test` runs the whole suite, including the vendored conformance cases.
 Two options shorten its output, as the CI run uses them:
 
