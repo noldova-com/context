@@ -87,7 +87,7 @@ npm test
 
 `npm run build` installs the two locked development packages, TypeScript and Node.js's type declarations, without running their install scripts; then it builds, packs and installs every CONTEXT package into `_build/` and `_packages/`, at the version `version.json` holds.
 The build writes the checkout's head commit into every package's `package.json` as `gitHead`, so each published version names the commit it was built from; it fails before building when git can't read the commit.
-`npm run build --silent -- --list-copies` builds nothing and prints each file the build copies into a package, one per line, with tabs between its source, the package's name and its path inside the package, and then `end of copies`; the release checks each archive against that list.
+`npm run build --silent -- --list-copies` builds nothing and prints each file the build copies into a package, one per line, with tabs between its source, the package's name and its path inside the package, and then `end of copies`.
 `npm test` runs the whole suite, including the vendored conformance cases.
 Both entry points live in `scripts/`.
 Two options shorten its output, as the CI run uses them:
