@@ -29,6 +29,8 @@ npm run test
 Complete current verification is an all-package build followed by the complete test and coverage gate for the same source state; the test command does not rebuild production packages.
 `npm run build -- <package>...` accepts configured canonical package names in their configured order and computes no dependency closure; required dependencies must already be built and installed.
 Selected-package builds and targeted tests are investigation tools, not the gate.
+`npm run build --silent -- --list-copies` builds nothing and prints each file the build copies unchanged into a package: the license, the README, the public declarations and the third-party notices where a package has them, one per line, with tabs between its source, the package's name and its path inside the package, and then `end of copies`.
+The archive check compares each archive's copies with their sources byte for byte, so a copy added to the build is added to this list too.
 
 The root configuration explicitly lists bootstrap packages in dependency order.
 It is not the final solution graph: the Runtime-hosted SDK build provider will read `.ctxs` and `.ctxp`, resolve the graph under `PACKAGE-CONTRACT.md`, and replace the list, the shared bootstrap bases, and the package build scripts.
