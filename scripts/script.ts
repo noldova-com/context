@@ -175,6 +175,13 @@ export default abstract class Script {
       `${Config.BUILD_FOLDER}/${packageInfo.name}/${Script.API_DIRECTORY_NAME}/${Script.DECLARATION_FILE_NAME}`);
   }
 
+  protected static listCompiledCopies(packageInfo: PackageInfo): readonly (readonly [source: string, filePath: string])[] {
+    return [
+      [`${Script.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Script.SOURCE_DIRECTORY_NAME}/${Script.API_DIRECTORY_NAME}/${Script.DECLARATION_FILE_NAME}`, `${Script.API_DIRECTORY_NAME}/${Script.DECLARATION_FILE_NAME}`],
+      [`${Script.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Script.README_FILE_NAME}`, Script.README_FILE_NAME]
+    ];
+  }
+
   protected async compilePackageAsync(packageInfo: PackageInfo): Promise<void> {
     await this.copyDeclarationsFileAsync(packageInfo);
     await this.copyReadmeFileAsync(packageInfo);

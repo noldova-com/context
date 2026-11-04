@@ -10,6 +10,7 @@
  * @example
  * npm run build - builds all projects.
  * npm run build project1 project2 ... - builds specified projects.
+ * npm run build --silent -- --list-copies - builds nothing and prints each file the build copies into a package: its source, the package's name and its path inside the package, separated by tabs; the last line is "end of copies".
  */
 
 import path from "node:path";
@@ -28,6 +29,9 @@ export class Build extends Script {
   private static readonly INSTALL_ARGUMENTS: readonly string[] = ["install", "--no-save", "--ignore-scripts", "--no-audit", "--no-fund"];
   private static readonly INSTALLING_PACKAGES: string = "Installing npm packages…";
   private static readonly LICENSE_FILE_NAME: string = "LICENSE";
+  private static readonly LIST_COPIES_END_LINE: string = "end of copies";
+  private static readonly LIST_COPIES_OPTION: string = "--list-copies";
+  private static readonly LIST_COPIES_SEPARATOR: string = "\t";
   private static readonly MANIFEST_INDENTATION: number = 2;
   private static readonly NODE_MODULES_DIRECTORY_NAME: string = "node_modules";
   private static readonly NO_PACKAGES: string = "No packages to build.";
@@ -36,6 +40,12 @@ export class Build extends Script {
   private static readonly VERSION_PLACEHOLDER: string = "__VERSION__";
 
   public override async runAsync(): Promise<void> {
+    const arguments_ = process.argv.slice(2);
+    if (arguments_.includes(Build.LIST_COPIES_OPTION)) {
+      await this.listCopiesAsync(arguments_);
+      return;
+    }
+
     const commit = await this.readHeadCommitAsync();
     await this.npmInstallAsync();
     await this.createOutputDirectoriesAsync();
@@ -47,6 +57,23 @@ export class Build extends Script {
     }
 
     await this.executeActionAsync(packagesInfo, t => this.buildPackageAsync(t, commit));
+  }
+
+  private async listCopiesAsync(arguments_: readonly string[]): Promise<void> {
+    if (arguments_.length !== 1)
+      throw new CommandFailedException(Build.listCopiesAlone(Build.LIST_COPIES_OPTION));
+
+    const lines: string[] = [];
+    for (const packageInfo of Config.PACKAGES_INFO) {
+      const copies: (readonly [string, string])[] = [[Build.LICENSE_FILE_NAME, Build.LICENSE_FILE_NAME], ...Build.listCompiledCopies(packageInfo)];
+      const noticesFilePath = `${Build.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Build.NOTICES_FILE_NAME}`;
+      if (await this.pathExistsAsync(noticesFilePath))
+        copies.push([noticesFilePath, Build.NOTICES_FILE_NAME]);
+
+      lines.push(...copies.map(([source, filePath]) => [source, packageInfo.packageName, filePath].join(Build.LIST_COPIES_SEPARATOR)));
+    }
+
+    process.stdout.write(`${[...lines, Build.LIST_COPIES_END_LINE].join("\n")}\n`);
   }
 
   private async readHeadCommitAsync(): Promise<string> {
@@ -142,6 +169,10 @@ export class Build extends Script {
 
   private static buildingPackage(packageName: string): string {
     return `Building "${packageName}"...`;
+  }
+
+  private static listCopiesAlone(option: string): string {
+    return `Option ${option} takes no other value.`;
   }
 
   private static headCommitUnreadable(errorOutput: string): string {
