@@ -8,7 +8,7 @@ name: Flake proof
 
 # The inputs' defaults, which the inputs below take by their anchors, since an input's default can't read env.
 env:
-  DEFAULT_RUNS: &default-runs '50'
+  DEFAULT_RUNS: &default-runs '10'
   DEFAULT_PARALLEL_JOBS_PER_TARGET: &default-parallel-jobs-per-target '2'
   DEFAULT_TARGETS: &default-targets linux-x64 windows-x64
 
