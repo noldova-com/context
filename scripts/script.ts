@@ -12,28 +12,21 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import CommandFailedException from "./command-failed.exception.ts";
-import Config from "./config.ts";
-import type PackageInfo from "./package-info.ts";
 import ProcessResult from "./process-result.ts";
 
 export default abstract class Script {
-  private static readonly API_DIRECTORY_NAME: string = "api";
-  private static readonly DECLARATION_FILE_NAME: string = "index.d.ts";
   private static readonly NPM_EXECUTABLE_PATH_VARIABLE: string = "npm_execpath";
   private static readonly NPM_EXECUTABLE_PATH_UNAVAILABLE: string = "npm_execpath is unavailable. Run the bootstrap through npm.";
   private static readonly PACKAGE_MANIFEST_PATH: string = "typescript/package.json";
-  private static readonly README_FILE_NAME: string = "README.md";
-  private static readonly SOURCE_TSCONFIG_PATH: string = "src/tsconfig.json";
   private static readonly STEP_DONE: string = " Done.";
   private static readonly STEP_FAILED: string = " Failed.";
   private static readonly TYPESCRIPT_COMPILER_DIRECTORY_NAME: string = "bin";
   private static readonly TYPESCRIPT_COMPILER_FILE_NAME: string = "tsc";
   private static readonly TYPESCRIPT_PRETTY_OPTION: string = "--pretty";
   protected static readonly TYPESCRIPT_PROJECT_OPTION: string = "--project";
-  protected static readonly SOURCE_DIRECTORY_NAME: string = "src";
   protected static readonly TEXT_ENCODING: BufferEncoding = "utf8";
 
-  public abstract runAsync(packageInfo?: PackageInfo): Promise<void>;
+  public abstract runAsync(): Promise<void>;
 
   public async runAsEntryPointAsync(): Promise<void> {
     try {
@@ -117,27 +110,6 @@ export default abstract class Script {
     console.log(Script.STEP_DONE);
   }
 
-  protected async getPackagesInfoAsync(): Promise<PackageInfo[]> {
-    const packageNames = process.argv.slice(2);
-
-    if (packageNames.length > 0) {
-      const selectedPackageNames = new Set<string>();
-      for (const packageName of packageNames) {
-        if (selectedPackageNames.has(packageName))
-          throw new CommandFailedException(Script.packageDuplicated(packageName));
-
-        if (!Config.PACKAGES_INFO.some(t => t.name === packageName))
-          throw new CommandFailedException(Script.packageNotFound(packageName));
-
-        selectedPackageNames.add(packageName);
-      }
-
-      return Config.PACKAGES_INFO.filter(t => selectedPackageNames.has(t.name));
-    }
-
-    return [...Config.PACKAGES_INFO];
-  }
-
   protected async createDirectoryAsync(directoryName: string): Promise<void> {
     await fs.mkdir(directoryName, { recursive: true });
   }
@@ -168,40 +140,6 @@ export default abstract class Script {
     await fs.writeFile(filePath, content);
   }
 
-  protected async copyDeclarationsFileAsync(packageInfo: PackageInfo): Promise<void> {
-    await this.createDirectoryAsync(`${Config.BUILD_FOLDER}/${packageInfo.name}/${Script.API_DIRECTORY_NAME}`);
-    await this.copyFileAsync(
-      `${Script.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Script.SOURCE_DIRECTORY_NAME}/${Script.API_DIRECTORY_NAME}/${Script.DECLARATION_FILE_NAME}`,
-      `${Config.BUILD_FOLDER}/${packageInfo.name}/${Script.API_DIRECTORY_NAME}/${Script.DECLARATION_FILE_NAME}`);
-  }
-
-  protected static listCompiledCopies(packageInfo: PackageInfo): readonly (readonly [source: string, filePath: string])[] {
-    return [
-      [`${Script.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Script.SOURCE_DIRECTORY_NAME}/${Script.API_DIRECTORY_NAME}/${Script.DECLARATION_FILE_NAME}`, `${Script.API_DIRECTORY_NAME}/${Script.DECLARATION_FILE_NAME}`],
-      [`${Script.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Script.README_FILE_NAME}`, Script.README_FILE_NAME]
-    ];
-  }
-
-  protected async compilePackageAsync(packageInfo: PackageInfo): Promise<void> {
-    await this.copyDeclarationsFileAsync(packageInfo);
-    await this.copyReadmeFileAsync(packageInfo);
-    await this.executeTypeScriptCompilerAsync(
-      [Script.TYPESCRIPT_PROJECT_OPTION, `${Script.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Script.SOURCE_TSCONFIG_PATH}`]);
-  }
-
-  protected async copyReadmeFileAsync(packageInfo: PackageInfo): Promise<void> {
-    const sourceFilePath = `${Script.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Script.README_FILE_NAME}`;
-    if (!await this.pathExistsAsync(sourceFilePath))
-      throw new CommandFailedException(Script.readmeMissing(packageInfo.packageName, sourceFilePath));
-
-    await this.copyFileAsync(sourceFilePath, `${Config.BUILD_FOLDER}/${packageInfo.name}/${Script.README_FILE_NAME}`);
-  }
-
-  protected async executeActionAsync(packagesInfo: readonly PackageInfo[], action: (packageInfo: PackageInfo) => Promise<void>,): Promise<void> {
-    for (const packageInfo of packagesInfo)
-      await action(packageInfo);
-  }
-
   private static readNPMPath(): string {
     const npmPath: string | undefined = process.env[Script.NPM_EXECUTABLE_PATH_VARIABLE];
     if (npmPath === undefined || npmPath.length === 0)
@@ -212,17 +150,5 @@ export default abstract class Script {
 
   private static commandFailed(command: string, exitCode: number | null, output: string): string {
     return output.trim().length === 0 ? `Command "${command}" failed with exit code ${exitCode}.` : output.trimEnd();
-  }
-
-  private static packageNotFound(packageName: string): string {
-    return `Package ${packageName} not found in configuration.`;
-  }
-
-  private static packageDuplicated(packageName: string): string {
-    return `Package ${packageName} was selected more than once.`;
-  }
-
-  private static readmeMissing(packageName: string, readmeFilePath: string): string {
-    return `Package ${packageName} has no ${Script.README_FILE_NAME} at "${readmeFilePath}"; every package ships one.`;
   }
 }

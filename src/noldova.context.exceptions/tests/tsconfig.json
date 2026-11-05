@@ -3,6 +3,6 @@
   "compilerOptions": {
     "types": ["node"],
     "rootDir": ".",
-    "outDir": "../../../_build/node/noldova.context.exceptions.tests"
+    "outDir": "../../../_build/tests/noldova.context.exceptions"
   }
 }

@@ -10,10 +10,12 @@ A successful build proves that the selected source was accepted and its expected
 
 ```text
 npm run build
-  -> select packages from the explicit temporary bootstrap configuration
+  -> install the locked packages when node_modules doesn't hold them
+  -> select packages from build.json, the explicit temporary bootstrap configuration
   -> read the checkout's head commit
   -> for each selected package in configured dependency order:
        write its package.json at version.json's version, with the head commit as gitHead
+       run its pre script, where build.json names one
        compile through TypeScript 7 against installed npm dependency packages
        include public declarations under the package's accepted documentation path
        include the license and the package's README.md, failing when the README is missing
@@ -36,27 +38,30 @@ The root configuration explicitly lists bootstrap packages in dependency order.
 It is not the final solution graph: the Runtime-hosted SDK build provider will read `.ctxs` and `.ctxp`, resolve the graph under `PACKAGE-CONTRACT.md`, and replace the list, the shared bootstrap bases, and the package build scripts.
 Each package is compiled against installed packed dependencies: npm packages during bootstrap, `.ctxl` artifacts later.
 
-Build requirements: stale outputs and prior installed CONTEXT packages are removed before use; generated output is confined to declared generated directories; tracked source, manifests, and package metadata finish unchanged; build commands never change declared versions or publish packages; packing consumes only the freshly built package contents; installation into root `node_modules` consumes the freshly packed artifacts, not source directories; the root `package-lock.json` is committed and pins every third-party package, which the build installs with `npm ci` when `node_modules` is missing, while the freshly packed CONTEXT packages are installed with `npm install --no-save`, so they never enter the manifest or the lockfile, as Noldova's [TypeScript standard](https://github.com/noldova-com/.github/blob/main/standards/stacks/TYPESCRIPT.md) requires; and failure of any dependency, build, pack, or install step stops the workflow before dependants run.
+Build requirements: stale outputs and prior installed CONTEXT packages are removed before use; generated output is confined to declared generated directories; tracked source, manifests, and package metadata finish unchanged; build commands never change declared versions or publish packages; packing consumes only the freshly built package contents; installation into root `node_modules` consumes the freshly packed artifacts, not source directories; the root `package-lock.json` is committed and pins every third-party package, which the build installs with `npm ci --ignore-scripts` when `node_modules` doesn't hold what the lockfile locks, while the freshly packed CONTEXT packages are installed with `npm install --no-save`, so they never enter the manifest or the lockfile, as Noldova's [TypeScript standard](https://github.com/noldova-com/.github/blob/main/standards/stacks/TYPESCRIPT.md) requires; and failure of any dependency, build, pack, or install step stops the workflow before dependants run.
 Loose compiler output alone is not a completed build.
 
 ### Scripts
 
-npm commands select TypeScript entry points and pass arguments; the pinned Node runtime executes those files directly, with no inline shell workflow.
+`npm run build` and `npm test` run the `installed`, `build` and `test` steps of the pinned `@noldova/tools.pipelines.github`, which reads `build.json`; the packages compile into `_build/packages/` and their tests into `_build/tests/`.
+The `build` script is the one inline shell workflow: `(pipelines installed || npm ci --ignore-scripts) && pipelines build`, grouped so a POSIX shell and Windows' `cmd` read it alike.
+The other npm commands select TypeScript entry points and pass arguments; the pinned Node runtime executes those files directly, with no inline shell workflow.
 Do not add a TypeScript runner while Node can execute the required entry points.
 Node, npm, TypeScript, and Node declarations are exact bootstrap requirements in `package.json`.
-Package-specific scripts live in the owning package's `scripts/`; root scripts contain only repository-wide entry points and their explicit bootstrap composition.
-A package has a build script only when it adds steps beyond the default compile; otherwise the root build runs the default itself.
+Package-specific scripts live in the owning package's `scripts/`; root `scripts/` holds only the shared helpers they import.
+A package has a `pre` script in `build.json` only when it checks more before its compile, as the regex and TypeScript parsers' `scripts/verify.ts` do.
 A substantive domain implementation belongs to a named class in its owning package, and a growing repository-wide subsystem becomes a tooling package with `src/` and `tests/`.
 Add scripts only for present accepted work.
 
-Root and package automation classes extend `Script`, whose protected operations own process and bootstrap-tool execution, logging, package selection, filesystem work, and common package steps such as declaration copying.
+Package automation classes extend `Script`, whose protected operations own process and bootstrap-tool execution, logging and filesystem work.
 Each derived script keeps its workflow in `runAsync` and reuses or overrides those operations without duplicating them or adding another base.
 A narrow correction does not authorize adjacent changes to inheritance, workflow, names, or output.
-For packages that have not migrated documentation generation, `Build` copies the manual `src/api/index.d.ts` unchanged into the npm package.
+For packages that have not migrated documentation generation, the build copies the manual `src/api/index.d.ts` unchanged into the npm package.
 
-The stage-zero root and package scripts that construct Testing are temporarily outside its mirrored unit-test and coverage boundary; strict compilation and the complete build and test workflow verify them.
-That exception ends when the workflows move into a Testing-capable tooling package or SDK provider, and it covers no other automation.
-A package's own bootstrap automation, such as the TypeScript and Regex parsers' vendoring and generator scripts, is recorded beside that exception on the same terms: its `scripts/tsconfig.json` compiles under the strict profile in the package build, it throws the host `Error` as the root scripts do, and the certification rehash verifies what it produces.
+The build and test workflows have moved into a Testing-capable tooling package, `@noldova/tools.pipelines`, which tests and covers them in its own repository.
+The stage-zero package scripts that construct Testing stay temporarily outside its mirrored unit-test and coverage boundary; strict compilation and the complete build and test workflow verify them.
+That exception ends when they move into such a package or an SDK provider, and it covers no other automation.
+A package's own bootstrap automation, such as the TypeScript and Regex parsers' vendoring and generator scripts, is recorded beside that exception on the same terms: its `scripts/tsconfig.json` compiles under the strict profile in the package build, it throws the host `Error` as the shared root helpers do, and the certification rehash verifies what it produces.
 Each parser package's build fails when its committed expected results are missing, were generated under another pin or reading rule, or no longer match the hash their manifest seals; only the vendoring and generator commands read the cases again.
 
 Launch processes with an executable, argument array, explicit working directory when needed, and `shell: false`; construct no shell command strings, pipes, redirects, globs, or platform-specific environment syntax.
