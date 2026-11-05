@@ -2,7 +2,7 @@
   "extends": "../../../../tsconfig-base.json",
   "compilerOptions": {
     "rootDir": ".",
-    "outDir": "../../../../_build/node/noldova.context.parsers.regex.tests",
+    "outDir": "../../../../_build/tests/noldova.context.parsers.regex",
     "resolveJsonModule": true,
     "typeRoots": [
       "../../../../node_modules/@types"
