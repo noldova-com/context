@@ -23,6 +23,7 @@ export default abstract class Script {
   private static readonly NPM_EXECUTABLE_PATH_VARIABLE: string = "npm_execpath";
   private static readonly NPM_EXECUTABLE_PATH_UNAVAILABLE: string = "npm_execpath is unavailable. Run the bootstrap through npm.";
   private static readonly PACKAGE_MANIFEST_PATH: string = "typescript/package.json";
+  private static readonly PACKAGE_VERSION_FIELD: "version" = "version";
   private static readonly README_FILE_NAME: string = "README.md";
   private static readonly SOURCE_TSCONFIG_PATH: string = "src/tsconfig.json";
   private static readonly STEP_DONE: string = " Done.";
@@ -108,9 +109,12 @@ export default abstract class Script {
   }
 
   protected async readTypeScriptVersionAsync(): Promise<string> {
-    const manifest: { version: string } = JSON.parse(await this.readFileAsync(fileURLToPath(import.meta.resolve(Script.PACKAGE_MANIFEST_PATH))));
+    const manifest: unknown = JSON.parse(await this.readFileAsync(fileURLToPath(import.meta.resolve(Script.PACKAGE_MANIFEST_PATH))));
+    const version: unknown = typeof manifest === "object" && manifest !== null && Script.PACKAGE_VERSION_FIELD in manifest ? manifest[Script.PACKAGE_VERSION_FIELD] : undefined;
+    if (typeof version !== "string")
+      throw new CommandFailedException(Script.typeScriptVersionMissing());
 
-    return manifest.version;
+    return version;
   }
 
   protected async writeLogAsync(message: string): Promise<void> {
@@ -236,5 +240,9 @@ export default abstract class Script {
 
   private static readmeMissing(packageName: string, readmeFilePath: string): string {
     return `Package ${packageName} has no ${Script.README_FILE_NAME} at "${readmeFilePath}"; every package ships one.`;
+  }
+
+  private static typeScriptVersionMissing(): string {
+    return `${Script.PACKAGE_MANIFEST_PATH} must hold TypeScript's version as a string in "${Script.PACKAGE_VERSION_FIELD}".`;
   }
 }

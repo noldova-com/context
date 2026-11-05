@@ -85,9 +85,8 @@ npm run build
 npm test
 ```
 
-`npm run build` installs the two locked development packages, TypeScript and Node.js's type declarations, without running their install scripts; then it builds, packs and installs every CONTEXT package into `_build/` and `_packages/`, at the version `version.json` holds, installing each package's archive as soon as it is packed, so the next package builds against it.
+`npm run build` installs the two locked development packages, TypeScript and Node.js's type declarations, without running their install scripts; then it builds, packs and installs every CONTEXT package into `_build/` and `_packages/`, at the version `version.json` holds; after each package it installs every archive packed so far with `npm install --no-save`, so the next package builds against them and none enters `package.json` or `package-lock.json`.
 It writes `Building "<package>"...` for each and ends the line with ` Done.` or ` Failed.`.
-The build backs up `package.json` and `package-lock.json` in `_build/restore/` before its installs change them and restores them when it ends, or at the next build after one was stopped.
 The build writes the checkout's head commit into every package's `package.json` as `gitHead`, so each published version names the commit it was built from; it fails before building when git can't read the commit.
 `npm run build --silent -- --list-copies` builds nothing and prints each file the build copies into a package, one per line, with tabs between its source, the package's name and its path inside the package, and then `end of copies`.
 `npm test` runs the whole suite, including the vendored conformance cases.

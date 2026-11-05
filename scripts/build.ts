@@ -13,7 +13,6 @@
  * npm run build --silent -- --list-copies - builds nothing and prints each file the build copies into a package: its source, the package's name and its path inside the package, separated by tabs; the last line is "end of copies".
  */
 
-import fs from "node:fs/promises";
 import path from "node:path";
 
 import CommandFailedException from "./command-failed.exception.ts";
@@ -27,10 +26,7 @@ export class Build extends Script {
   private static readonly GIT_HEAD_ARGUMENTS: readonly string[] = ["rev-parse", "--verify", "HEAD^{commit}"];
   private static readonly GIT_HEAD_FIELD: string = "gitHead";
   private static readonly GIT_PROGRAM: string = "git";
-  private static readonly ARCHIVE_SPECIFIER_PREFIX: string = "file:";
-  private static readonly DEPENDENCIES_FIELD: "dependencies" = "dependencies";
-  private static readonly INSTALL_ARGUMENTS: readonly string[] = ["install", "--ignore-scripts", "--no-audit", "--no-fund"];
-  private static readonly INSTALL_FILE_NAMES: readonly string[] = ["package.json", "package-lock.json"];
+  private static readonly INSTALL_ARGUMENTS: readonly string[] = ["install", "--no-save", "--ignore-scripts", "--no-audit", "--no-fund"];
   private static readonly INSTALLING_PACKAGES: string = "Installing npm packages…";
   private static readonly LICENSE_FILE_NAME: string = "LICENSE";
   private static readonly LIST_COPIES_END_LINE: string = "end of copies";
@@ -41,9 +37,6 @@ export class Build extends Script {
   private static readonly NO_PACKAGES: string = "No packages to build.";
   private static readonly NOTICES_FILE_NAME: string = "THIRD-PARTY-NOTICES.txt";
   private static readonly PACKAGE_MANIFEST_FILE_NAME: string = "package.json";
-  private static readonly RESTORE_DISCARD_FOLDER: string = "_build/restore.discard";
-  private static readonly RESTORE_FOLDER: string = "_build/restore";
-  private static readonly RESTORE_STAGING_FOLDER: string = "_build/restore.partial";
   private static readonly VERSION_PLACEHOLDER: string = "__VERSION__";
 
   public override async runAsync(): Promise<void> {
@@ -54,7 +47,6 @@ export class Build extends Script {
     }
 
     const commit = await this.readHeadCommitAsync();
-    await this.restoreInstallFilesAsync();
     await this.npmInstallAsync();
     await this.createOutputDirectoriesAsync();
 
@@ -64,59 +56,7 @@ export class Build extends Script {
       return;
     }
 
-    await this.backUpInstallFilesAsync();
-    try {
-      await this.listUnbuiltArchivesAsync(packagesInfo);
-      await this.executeActionAsync(packagesInfo, t => this.buildPackageAsync(t, commit));
-    }
-    finally {
-      await this.restoreInstallFilesAsync();
-    }
-  }
-
-  private async backUpInstallFilesAsync(): Promise<void> {
-    await fs.rm(Build.RESTORE_STAGING_FOLDER, { recursive: true, force: true });
-    await fs.mkdir(Build.RESTORE_STAGING_FOLDER, { recursive: true });
-    for (const fileName of Build.INSTALL_FILE_NAMES)
-      if (await this.pathExistsAsync(fileName))
-        await fs.copyFile(fileName, path.join(Build.RESTORE_STAGING_FOLDER, fileName));
-
-    await fs.rename(Build.RESTORE_STAGING_FOLDER, Build.RESTORE_FOLDER);
-  }
-
-  private async restoreInstallFilesAsync(): Promise<void> {
-    if (!(await this.pathExistsAsync(Build.RESTORE_FOLDER)))
-      return;
-
-    for (const fileName of Build.INSTALL_FILE_NAMES) {
-      const copy = path.join(Build.RESTORE_FOLDER, fileName);
-      if (await this.pathExistsAsync(copy))
-        await fs.copyFile(copy, fileName);
-      else
-        await fs.rm(fileName, { force: true });
-    }
-
-    await fs.rm(Build.RESTORE_DISCARD_FOLDER, { recursive: true, force: true });
-    await fs.rename(Build.RESTORE_FOLDER, Build.RESTORE_DISCARD_FOLDER);
-    await fs.rm(Build.RESTORE_DISCARD_FOLDER, { recursive: true, force: true });
-  }
-
-  private async listUnbuiltArchivesAsync(packagesInfo: readonly PackageInfo[]): Promise<void> {
-    const archives: [string, string][] = [];
-    for (const packageInfo of Config.PACKAGES_INFO.filter(t => !packagesInfo.includes(t))) {
-      const archive = `${Config.PACKAGES_FOLDER}/${packageInfo.archiveName(Config.VERSION)}`;
-      if (await this.pathExistsAsync(archive))
-        archives.push([packageInfo.packageName, `${Build.ARCHIVE_SPECIFIER_PREFIX}${archive}`]);
-    }
-
-    if (archives.length === 0)
-      return;
-
-    const parsed: unknown = JSON.parse(await this.readFileAsync(Build.PACKAGE_MANIFEST_FILE_NAME));
-    const manifest: object = typeof parsed === "object" && parsed !== null ? parsed : {};
-    const listed: unknown = Build.DEPENDENCIES_FIELD in manifest ? manifest[Build.DEPENDENCIES_FIELD] : undefined;
-    const dependencies = { ...(typeof listed === "object" ? listed : null), ...Object.fromEntries(archives) };
-    await this.writeFileAsync(Build.PACKAGE_MANIFEST_FILE_NAME, `${JSON.stringify({ ...manifest, [Build.DEPENDENCIES_FIELD]: dependencies }, null, Build.MANIFEST_INDENTATION)}\n`);
+    await this.executeActionAsync(packagesInfo, t => this.buildPackageAsync(t, commit));
   }
 
   private async listCopiesAsync(arguments_: readonly string[]): Promise<void> {
@@ -164,7 +104,7 @@ export class Build extends Script {
       await this.copyNoticesFileAsync(packageInfo);
       await this.buildAsync(packageInfo);
       await this.createPackageAsync(packageInfo);
-      await this.installPackageAsync(packageInfo);
+      await this.installPackagesAsync();
     });
   }
 
@@ -182,7 +122,8 @@ export class Build extends Script {
       throw new CommandFailedException(Build.packageManifestMissing(packageFilePath));
 
     const content = await this.readFileAsync(packageFilePath);
-    const manifest = { ...JSON.parse(content.replaceAll(Build.VERSION_PLACEHOLDER, Config.VERSION)), [Build.GIT_HEAD_FIELD]: commit };
+    const parsed: unknown = JSON.parse(content.replaceAll(Build.VERSION_PLACEHOLDER, Config.VERSION));
+    const manifest = { ...(typeof parsed === "object" ? parsed : null), [Build.GIT_HEAD_FIELD]: commit };
     await this.writeFileAsync(`${Config.BUILD_FOLDER}/${packageInfo.name}/${Build.PACKAGE_MANIFEST_FILE_NAME}`, `${JSON.stringify(manifest, null, Build.MANIFEST_INDENTATION)}\n`);
   }
 
@@ -216,8 +157,15 @@ export class Build extends Script {
       true);
   }
 
-  private async installPackageAsync(packageInfo: PackageInfo): Promise<void> {
-    await this.executeNPMCommandAsync([...Build.INSTALL_ARGUMENTS, `./${Config.PACKAGES_FOLDER}/${packageInfo.archiveName(Config.VERSION)}`], process.cwd(), true);
+  private async installPackagesAsync(): Promise<void> {
+    const archives: string[] = [];
+    for (const packageInfo of Config.PACKAGES_INFO) {
+      const archive = `./${Config.PACKAGES_FOLDER}/${packageInfo.archiveName(Config.VERSION)}`;
+      if (await this.pathExistsAsync(archive))
+        archives.push(archive);
+    }
+
+    await this.executeNPMCommandAsync([...Build.INSTALL_ARGUMENTS, ...archives], process.cwd(), true);
   }
 
   private static buildingPackage(packageName: string): string {
