@@ -1,0 +1,239 @@
+/**
+ * @license
+ * Copyright (c) Noldova.
+ *
+ * This source code is licensed under the license found in the
+ * LICENSE file in the root directory of this source tree.
+ *
+ * This script builds CONTEXT.
+ *
+ * @example
+ * npm run build - builds all projects.
+ * npm run build project1 project2 ... - builds specified projects.
+ * npm run build --silent -- --list-copies - builds nothing and prints each file the build copies into a package: its source, the package's name and its path inside the package, separated by tabs; the last line is "end of copies".
+ */
+
+import fs from "node:fs/promises";
+import path from "node:path";
+
+import CommandFailedException from "./command-failed.exception.ts";
+import Config from "./config.ts";
+import type PackageInfo from "./package-info.ts";
+import Script from "./script.ts";
+
+export class Build extends Script {
+  private static readonly BUILD_SCRIPT_PATH: string = "scripts/build.ts";
+  private static readonly CLEAN_INSTALL_ARGUMENTS: readonly string[] = ["ci", "--ignore-scripts"];
+  private static readonly GIT_HEAD_ARGUMENTS: readonly string[] = ["rev-parse", "--verify", "HEAD^{commit}"];
+  private static readonly GIT_HEAD_FIELD: string = "gitHead";
+  private static readonly GIT_PROGRAM: string = "git";
+  private static readonly ARCHIVE_SPECIFIER_PREFIX: string = "file:";
+  private static readonly DEPENDENCIES_FIELD: string = "dependencies";
+  private static readonly INSTALL_ARGUMENTS: readonly string[] = ["install", "--ignore-scripts", "--no-audit", "--no-fund"];
+  private static readonly INSTALL_FILE_NAMES: readonly string[] = ["package.json", "package-lock.json"];
+  private static readonly INSTALLING_PACKAGES: string = "Installing npm packages…";
+  private static readonly LICENSE_FILE_NAME: string = "LICENSE";
+  private static readonly LIST_COPIES_END_LINE: string = "end of copies";
+  private static readonly LIST_COPIES_OPTION: string = "--list-copies";
+  private static readonly LIST_COPIES_SEPARATOR: string = "\t";
+  private static readonly MANIFEST_INDENTATION: number = 2;
+  private static readonly NODE_MODULES_DIRECTORY_NAME: string = "node_modules";
+  private static readonly NO_PACKAGES: string = "No packages to build.";
+  private static readonly NOTICES_FILE_NAME: string = "THIRD-PARTY-NOTICES.txt";
+  private static readonly PACKAGE_MANIFEST_FILE_NAME: string = "package.json";
+  private static readonly RESTORE_DISCARD_FOLDER: string = "_build/restore.discard";
+  private static readonly RESTORE_FOLDER: string = "_build/restore";
+  private static readonly RESTORE_STAGING_FOLDER: string = "_build/restore.partial";
+  private static readonly VERSION_PLACEHOLDER: string = "__VERSION__";
+
+  public override async runAsync(): Promise<void> {
+    const arguments_ = process.argv.slice(2);
+    if (arguments_.includes(Build.LIST_COPIES_OPTION)) {
+      await this.listCopiesAsync(arguments_);
+      return;
+    }
+
+    const commit = await this.readHeadCommitAsync();
+    await this.restoreInstallFilesAsync();
+    await this.npmInstallAsync();
+    await this.createOutputDirectoriesAsync();
+
+    const packagesInfo = await this.getPackagesInfoAsync();
+    if (packagesInfo.length === 0) {
+      await this.writeLogAsync(Build.NO_PACKAGES);
+      return;
+    }
+
+    await this.backUpInstallFilesAsync();
+    try {
+      await this.listUnbuiltArchivesAsync(packagesInfo);
+      await this.executeActionAsync(packagesInfo, t => this.buildPackageAsync(t, commit));
+    }
+    finally {
+      await this.restoreInstallFilesAsync();
+    }
+  }
+
+  private async backUpInstallFilesAsync(): Promise<void> {
+    await fs.rm(Build.RESTORE_STAGING_FOLDER, { recursive: true, force: true });
+    await fs.mkdir(Build.RESTORE_STAGING_FOLDER, { recursive: true });
+    for (const fileName of Build.INSTALL_FILE_NAMES)
+      if (await this.pathExistsAsync(fileName))
+        await fs.copyFile(fileName, path.join(Build.RESTORE_STAGING_FOLDER, fileName));
+
+    await fs.rename(Build.RESTORE_STAGING_FOLDER, Build.RESTORE_FOLDER);
+  }
+
+  private async restoreInstallFilesAsync(): Promise<void> {
+    if (!(await this.pathExistsAsync(Build.RESTORE_FOLDER)))
+      return;
+
+    for (const fileName of Build.INSTALL_FILE_NAMES) {
+      const copy = path.join(Build.RESTORE_FOLDER, fileName);
+      if (await this.pathExistsAsync(copy))
+        await fs.copyFile(copy, fileName);
+      else
+        await fs.rm(fileName, { force: true });
+    }
+
+    await fs.rm(Build.RESTORE_DISCARD_FOLDER, { recursive: true, force: true });
+    await fs.rename(Build.RESTORE_FOLDER, Build.RESTORE_DISCARD_FOLDER);
+    await fs.rm(Build.RESTORE_DISCARD_FOLDER, { recursive: true, force: true });
+  }
+
+  private async listUnbuiltArchivesAsync(packagesInfo: readonly PackageInfo[]): Promise<void> {
+    const archives: [string, string][] = [];
+    for (const packageInfo of Config.PACKAGES_INFO.filter(t => !packagesInfo.includes(t))) {
+      const archive = `${Config.PACKAGES_FOLDER}/${packageInfo.archiveName(Config.VERSION)}`;
+      if (await this.pathExistsAsync(archive))
+        archives.push([packageInfo.packageName, `${Build.ARCHIVE_SPECIFIER_PREFIX}${archive}`]);
+    }
+
+    if (archives.length === 0)
+      return;
+
+    const manifest = JSON.parse(await this.readFileAsync(Build.PACKAGE_MANIFEST_FILE_NAME)) as Record<string, unknown>;
+    const dependencies = { ...(manifest[Build.DEPENDENCIES_FIELD] as Record<string, string> | undefined), ...Object.fromEntries(archives) };
+    await this.writeFileAsync(Build.PACKAGE_MANIFEST_FILE_NAME, `${JSON.stringify({ ...manifest, [Build.DEPENDENCIES_FIELD]: dependencies }, null, Build.MANIFEST_INDENTATION)}\n`);
+  }
+
+  private async listCopiesAsync(arguments_: readonly string[]): Promise<void> {
+    if (arguments_.length !== 1)
+      throw new CommandFailedException(Build.listCopiesAlone(Build.LIST_COPIES_OPTION));
+
+    const lines: string[] = [];
+    for (const packageInfo of Config.PACKAGES_INFO) {
+      const copies: (readonly [string, string])[] = [[Build.LICENSE_FILE_NAME, Build.LICENSE_FILE_NAME], ...Build.listCompiledCopies(packageInfo)];
+      const noticesFilePath = `${Build.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Build.NOTICES_FILE_NAME}`;
+      if (await this.pathExistsAsync(noticesFilePath))
+        copies.push([noticesFilePath, Build.NOTICES_FILE_NAME]);
+
+      lines.push(...copies.map(([source, filePath]) => [source, packageInfo.packageName, filePath].join(Build.LIST_COPIES_SEPARATOR)));
+    }
+
+    process.stdout.write(`${[...lines, Build.LIST_COPIES_END_LINE].join("\n")}\n`);
+  }
+
+  private async readHeadCommitAsync(): Promise<string> {
+    const result = await this.readProcessAsync(Build.GIT_PROGRAM, Build.GIT_HEAD_ARGUMENTS, process.cwd());
+    if (!result.isSuccessful)
+      throw new CommandFailedException(Build.headCommitUnreadable(result.errorOutput.trim()));
+
+    return result.output.trim();
+  }
+
+  private async npmInstallAsync(): Promise<void> {
+    if (!(await this.pathExistsAsync(Build.NODE_MODULES_DIRECTORY_NAME))) {
+      await this.writeLogAsync(Build.INSTALLING_PACKAGES);
+      await this.executeNPMCommandAsync(Build.CLEAN_INSTALL_ARGUMENTS, process.cwd());
+    }
+  }
+
+  private async createOutputDirectoriesAsync(): Promise<void> {
+    await this.createDirectoryAsync(Config.BUILD_FOLDER);
+    await this.createDirectoryAsync(Config.PACKAGES_FOLDER);
+  }
+
+  private async buildPackageAsync(packageInfo: PackageInfo, commit: string): Promise<void> {
+    await this.runStepAsync(Build.buildingPackage(packageInfo.packageName), async () => {
+      await this.createPackageDirectoryAsync(packageInfo);
+      await this.writePackageFileAsync(packageInfo, commit);
+      await this.copyLicenseFileAsync(packageInfo);
+      await this.copyNoticesFileAsync(packageInfo);
+      await this.buildAsync(packageInfo);
+      await this.createPackageAsync(packageInfo);
+      await this.installPackageAsync(packageInfo);
+    });
+  }
+
+  private async createPackageDirectoryAsync(packageInfo: PackageInfo): Promise<void> {
+    const directoryName = `${Config.BUILD_FOLDER}/${packageInfo.name}`;
+
+    await this.removeDirectoryAsync(directoryName);
+    await this.createDirectoryAsync(directoryName);
+  }
+
+  private async writePackageFileAsync(packageInfo: PackageInfo, commit: string): Promise<void> {
+    const packageFilePath = `${Build.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Build.PACKAGE_MANIFEST_FILE_NAME}`;
+
+    if (await this.pathExistsAsync(packageFilePath) === false)
+      throw new CommandFailedException(Build.packageManifestMissing(packageFilePath));
+
+    const content = await this.readFileAsync(packageFilePath);
+    const manifest = { ...JSON.parse(content.replaceAll(Build.VERSION_PLACEHOLDER, Config.VERSION)), [Build.GIT_HEAD_FIELD]: commit };
+    await this.writeFileAsync(`${Config.BUILD_FOLDER}/${packageInfo.name}/${Build.PACKAGE_MANIFEST_FILE_NAME}`, `${JSON.stringify(manifest, null, Build.MANIFEST_INDENTATION)}\n`);
+  }
+
+  private async copyLicenseFileAsync(packageInfo: PackageInfo): Promise<void> {
+    await this.copyFileAsync(Build.LICENSE_FILE_NAME, `${Config.BUILD_FOLDER}/${packageInfo.name}/${Build.LICENSE_FILE_NAME}`);
+  }
+
+  private async copyNoticesFileAsync(packageInfo: PackageInfo): Promise<void> {
+    const noticesFilePath = `${Build.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Build.NOTICES_FILE_NAME}`;
+
+    if (await this.pathExistsAsync(noticesFilePath))
+      await this.copyFileAsync(noticesFilePath, `${Config.BUILD_FOLDER}/${packageInfo.name}/${Build.NOTICES_FILE_NAME}`);
+  }
+
+  private async buildAsync(packageInfo: PackageInfo): Promise<void> {
+    const buildScriptPath = `${Build.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Build.BUILD_SCRIPT_PATH}`;
+    if (!await this.pathExistsAsync(buildScriptPath)) {
+      await this.compilePackageAsync(packageInfo);
+      return;
+    }
+
+    const buildClassImport = await import(`../${buildScriptPath}`);
+    await new buildClassImport.Build().runAsync(packageInfo);
+  }
+
+  private async createPackageAsync(packageInfo: PackageInfo): Promise<void> {
+    const packageDirectory = `${Config.BUILD_FOLDER}/${packageInfo.name}`;
+    await this.executeNPMCommandAsync(
+      ["pack", "--silent", "--pack-destination", path.resolve(Config.PACKAGES_FOLDER)],
+      path.resolve(packageDirectory),
+      true);
+  }
+
+  private async installPackageAsync(packageInfo: PackageInfo): Promise<void> {
+    await this.executeNPMCommandAsync([...Build.INSTALL_ARGUMENTS, `./${Config.PACKAGES_FOLDER}/${packageInfo.archiveName(Config.VERSION)}`], process.cwd(), true);
+  }
+
+  private static buildingPackage(packageName: string): string {
+    return `Building "${packageName}"...`;
+  }
+
+  private static listCopiesAlone(option: string): string {
+    return `Option ${option} takes no other value.`;
+  }
+
+  private static headCommitUnreadable(errorOutput: string): string {
+    return `Git can't read the checkout's head commit, which the build records as each package's ${Build.GIT_HEAD_FIELD}: ${errorOutput}`;
+  }
+
+  private static packageManifestMissing(packageFilePath: string): string {
+    return `Missing ${Build.PACKAGE_MANIFEST_FILE_NAME} in "${packageFilePath}" package.`;
+  }
+}
+
+const builder = new Build();
+await builder.runAsEntryPointAsync();
