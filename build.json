@@ -1,0 +1,14 @@
+{
+  "packages": [
+    { "name": "noldova.context.core" },
+    { "name": "noldova.context.collections" },
+    { "name": "noldova.context.exceptions" },
+    { "name": "noldova.context.text" },
+    { "name": "noldova.context.json" },
+    { "name": "noldova.context.testing" },
+    { "name": "noldova.context.diagnostics" },
+    { "name": "noldova.context.parsers", "path": "parsers/noldova.context.parsers" },
+    { "name": "noldova.context.parsers.regex", "path": "parsers/noldova.context.parsers.regex", "pre": "src/parsers/noldova.context.parsers.regex/scripts/verify.ts" },
+    { "name": "noldova.context.parsers.typescript", "path": "parsers/noldova.context.parsers.typescript", "pre": "src/parsers/noldova.context.parsers.typescript/scripts/verify.ts" }
+  ]
+}

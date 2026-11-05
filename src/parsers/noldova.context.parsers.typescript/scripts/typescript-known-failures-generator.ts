@@ -15,7 +15,7 @@ import TypeScriptConformanceLayout from "./typescript-conformance-layout.ts";
 
 export default class TypeScriptKnownFailuresGenerator extends Script {
   private static readonly GENERATOR_ENTRY_PATH: string = "conformance/generate-known-failures.js";
-  private static readonly TEST_BUILD_DIRECTORY: string = path.posix.join(Config.BUILD_FOLDER, "noldova.context.parsers.typescript.tests");
+  private static readonly TEST_BUILD_DIRECTORY: string = path.posix.join(Config.TESTS_FOLDER, "noldova.context.parsers.typescript");
   private static readonly TEST_TSCONFIG_PATH: string = path.posix.join(TypeScriptConformanceLayout.TESTS_DIRECTORY, "tsconfig.json");
 
   public override async runAsync(): Promise<void> {

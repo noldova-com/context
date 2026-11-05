@@ -2,7 +2,7 @@
   "extends": "../../../../tsconfig-base.json",
   "compilerOptions": {
     "rootDir": ".",
-    "outDir": "../../../../_build/node/noldova.context.parsers",
+    "outDir": "../../../../_build/packages/noldova.context.parsers",
     "sourceMap": true
   }
 }

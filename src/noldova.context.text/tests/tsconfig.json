@@ -3,6 +3,6 @@
   "compilerOptions": {
     "types": ["node"],
     "rootDir": ".",
-    "outDir": "../../../_build/node/noldova.context.text.tests"
+    "outDir": "../../../_build/tests/noldova.context.text"
   }
 }
