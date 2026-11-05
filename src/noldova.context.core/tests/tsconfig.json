@@ -2,6 +2,6 @@
   "extends": "../../../tsconfig-base.json",
   "compilerOptions": {
     "rootDir": ".",
-    "outDir": "../../../_build/tests/noldova.context.core"
+    "outDir": "../../../_build/node/noldova.context.core.tests"
   }
 }

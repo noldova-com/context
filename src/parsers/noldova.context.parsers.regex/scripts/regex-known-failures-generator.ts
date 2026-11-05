@@ -15,7 +15,7 @@ import RegexConformanceLayout from "./regex-conformance-layout.ts";
 
 export default class RegexKnownFailuresGenerator extends Script {
   private static readonly GENERATOR_ENTRY_PATH: string = "conformance/generate-known-failures.js";
-  private static readonly TEST_BUILD_DIRECTORY: string = path.posix.join(Config.TESTS_FOLDER, "noldova.context.parsers.regex");
+  private static readonly TEST_BUILD_DIRECTORY: string = path.posix.join(Config.BUILD_FOLDER, "noldova.context.parsers.regex.tests");
   private static readonly TEST_TSCONFIG_PATH: string = path.posix.join(RegexConformanceLayout.TESTS_DIRECTORY, "tsconfig.json");
 
   public override async runAsync(): Promise<void> {
