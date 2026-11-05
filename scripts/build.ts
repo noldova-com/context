@@ -28,7 +28,7 @@ export class Build extends Script {
   private static readonly GIT_HEAD_FIELD: string = "gitHead";
   private static readonly GIT_PROGRAM: string = "git";
   private static readonly ARCHIVE_SPECIFIER_PREFIX: string = "file:";
-  private static readonly DEPENDENCIES_FIELD: string = "dependencies";
+  private static readonly DEPENDENCIES_FIELD: "dependencies" = "dependencies";
   private static readonly INSTALL_ARGUMENTS: readonly string[] = ["install", "--ignore-scripts", "--no-audit", "--no-fund"];
   private static readonly INSTALL_FILE_NAMES: readonly string[] = ["package.json", "package-lock.json"];
   private static readonly INSTALLING_PACKAGES: string = "Installing npm packages…";
@@ -112,8 +112,10 @@ export class Build extends Script {
     if (archives.length === 0)
       return;
 
-    const manifest = JSON.parse(await this.readFileAsync(Build.PACKAGE_MANIFEST_FILE_NAME)) as Record<string, unknown>;
-    const dependencies = { ...(manifest[Build.DEPENDENCIES_FIELD] as Record<string, string> | undefined), ...Object.fromEntries(archives) };
+    const parsed: unknown = JSON.parse(await this.readFileAsync(Build.PACKAGE_MANIFEST_FILE_NAME));
+    const manifest: object = typeof parsed === "object" && parsed !== null ? parsed : {};
+    const listed: unknown = Build.DEPENDENCIES_FIELD in manifest ? manifest[Build.DEPENDENCIES_FIELD] : undefined;
+    const dependencies = { ...(typeof listed === "object" ? listed : null), ...Object.fromEntries(archives) };
     await this.writeFileAsync(Build.PACKAGE_MANIFEST_FILE_NAME, `${JSON.stringify({ ...manifest, [Build.DEPENDENCIES_FIELD]: dependencies }, null, Build.MANIFEST_INDENTATION)}\n`);
   }
 

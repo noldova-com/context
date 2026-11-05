@@ -44,7 +44,7 @@ export default abstract class Script {
       if (!(error instanceof CommandFailedException) && !(await Script.isJsonExceptionAsync(error)))
         throw error;
 
-      console.error((error as Error).message);
+      console.error(error instanceof Error ? error.message : String(error));
       process.exitCode = 1;
     }
   }
