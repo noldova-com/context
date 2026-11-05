@@ -6,7 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type JsonObjectReader from "../../../../scripts/json-object.reader.ts";
+import type { JsonReader } from "@noldova/context.json";
+
 import TypeScriptVendoredSectionRecord from "./typescript-vendored-section-record.ts";
 
 export default class TypeScriptVendoredSuite {
@@ -18,8 +19,8 @@ export default class TypeScriptVendoredSuite {
     this.diagnosticBaselines = diagnosticBaselines;
   }
 
-  public static read(reader: JsonObjectReader): TypeScriptVendoredSuite {
+  public static read(reader: JsonReader): TypeScriptVendoredSuite {
     return new TypeScriptVendoredSuite(
-      TypeScriptVendoredSectionRecord.read(reader.object("cases")), TypeScriptVendoredSectionRecord.read(reader.object("diagnosticBaselines")));
+      TypeScriptVendoredSectionRecord.read(reader.readObject("cases")), TypeScriptVendoredSectionRecord.read(reader.readObject("diagnosticBaselines")));
   }
 }

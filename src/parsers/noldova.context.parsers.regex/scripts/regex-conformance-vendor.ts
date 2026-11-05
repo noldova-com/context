@@ -10,7 +10,8 @@ import { createHash } from "node:crypto";
 import { cp, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import JsonObjectReader from "../../../../scripts/json-object.reader.ts";
+import { JsonReader } from "@noldova/context.json";
+
 import Script from "../../../../scripts/script.ts";
 import RegexConformanceLayout from "./regex-conformance-layout.ts";
 import RegexConformanceProvenance from "./regex-conformance-provenance.ts";
@@ -46,7 +47,7 @@ export default class RegexConformanceVendor extends Script {
   private static readonly COMMIT_REQUIRED: string = "Name the Test262 commit to vendor as 40 lowercase hexadecimal digits: npm run vendor:regex -- <commit>.";
   private static readonly TREE_TRUNCATED: string = "GitHub truncated a Test262 tree listing; the intake would be incomplete.";
 
-  private readonly trees: Map<string, JsonObjectReader> = new Map();
+  private readonly trees: Map<string, JsonReader> = new Map();
 
   public override async runAsync(): Promise<void> {
     const commit = process.argv[2];
@@ -54,7 +55,7 @@ export default class RegexConformanceVendor extends Script {
       throw new Error(RegexConformanceVendor.COMMIT_REQUIRED);
 
     await this.writeLogAsync(`Listing Test262 ${commit}...`);
-    const treeSha = (await this.fetchJsonAsync(`${RegexConformanceVendor.COMMITS_PATH}/${commit}`)).object("tree").string("sha");
+    const treeSha = (await this.fetchJsonAsync(`${RegexConformanceVendor.COMMITS_PATH}/${commit}`)).readObject("tree").readString("sha");
     const roots: RegexVendoredRoot[] = [];
     const files: RegexVendoredFile[] = [];
     for (const root of RegexConformanceVendor.ROOTS) {
@@ -86,23 +87,23 @@ export default class RegexConformanceVendor extends Script {
       sha = await this.findEntryAsync(sha, segment, RegexConformanceVendor.TREE_TYPE);
 
     const listing = await this.fetchJsonAsync(`${RegexConformanceVendor.TREES_PATH}/${sha}${RegexConformanceVendor.RECURSIVE_QUERY}`);
-    if (listing.optionalBoolean("truncated") === true)
+    if (listing.hasField("truncated") && listing.readBoolean("truncated"))
       throw new Error(RegexConformanceVendor.TREE_TRUNCATED);
 
-    return listing.objects("tree")
-      .filter(t => t.string("type") === RegexConformanceVendor.BLOB_TYPE)
-      .map(t => new RegexVendoredFile(path.posix.join(root.upstreamRoot, t.string("path")), path.posix.join(root.localRoot, t.string("path")), t.string("sha")))
+    return listing.readObjectArray("tree")
+      .filter(t => t.readString("type") === RegexConformanceVendor.BLOB_TYPE)
+      .map(t => new RegexVendoredFile(path.posix.join(root.upstreamRoot, t.readString("path")), path.posix.join(root.localRoot, t.readString("path")), t.readString("sha")))
       .toSorted((left, right) => left.localPath < right.localPath ? -1 : left.localPath > right.localPath ? 1 : 0);
   }
 
   private async findEntryAsync(treeSha: string, name: string, type: string): Promise<string> {
     const tree = this.trees.get(treeSha) ?? await this.fetchJsonAsync(`${RegexConformanceVendor.TREES_PATH}/${treeSha}`);
     this.trees.set(treeSha, tree);
-    const entry = tree.objects("tree").find(t => t.string("path") === name && t.string("type") === type);
+    const entry = tree.readObjectArray("tree").find(t => t.readString("path") === name && t.readString("type") === type);
     if (entry === undefined)
       throw new Error(RegexConformanceVendor.entryMissing(name));
 
-    return entry.string("sha");
+    return entry.readString("sha");
   }
 
   private async downloadAsync(commit: string, files: readonly RegexVendoredFile[]): Promise<void> {
@@ -130,7 +131,7 @@ export default class RegexConformanceVendor extends Script {
     await writeFile(target, bytes);
   }
 
-  private async fetchJsonAsync(resource: string): Promise<JsonObjectReader> {
+  private async fetchJsonAsync(resource: string): Promise<JsonReader> {
     const url = `${RegexConformanceVendor.GITHUB_API}/${RegexConformanceVendor.REPOSITORY}/${resource}`;
     const response = await fetch(url, {
       headers: {
@@ -141,7 +142,7 @@ export default class RegexConformanceVendor extends Script {
     if (!response.ok)
       throw new Error(RegexConformanceVendor.requestFailed(url, response.status));
 
-    return JsonObjectReader.parse(await response.text(), url);
+    return JsonReader.parse(await response.text(), url);
   }
 
   private static entryMissing(name: string): string {

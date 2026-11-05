@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type JsonObjectReader from "../../../../scripts/json-object.reader.ts";
+import type { JsonReader } from "@noldova/context.json";
 
 export default class TypeScriptExpectedRetry {
   public readonly path: string;
@@ -17,7 +17,7 @@ export default class TypeScriptExpectedRetry {
     this.reasons = reasons;
   }
 
-  public static read(reader: JsonObjectReader): TypeScriptExpectedRetry {
-    return new TypeScriptExpectedRetry(reader.string("path"), reader.strings("reasons"));
+  public static read(reader: JsonReader): TypeScriptExpectedRetry {
+    return new TypeScriptExpectedRetry(reader.readString("path"), reader.readStringArray("reasons"));
   }
 }

@@ -116,6 +116,7 @@ A new counterexample requires a regression test and a repair, not a broader inte
 Every imported suite has one shape, in the test project of the package it measures, under `tests/conformance/`: `cases/` holds the upstream files as they are, `licenses/` their licenses, `expected/` the answer for every case with a `MANIFEST.json` naming what produced it and sealing it by hash, `known-failures.json` the ledger of applicable cases the package does not yet match, and `PROVENANCE.json` the pinned upstream, its roots, and its counts, beside a README, a `.gitattributes` preserving upstream bytes, and a `CERTIFICATION.md` recording the run that reproduced the intake.
 A suite adds only what its answers need, as TypeScript adds its baselines, diagnostic definitions, and libraries.
 One command per suite, `npm run vendor:<suite> -- <version>`, replaces the intake and its answers, and `npm run generate:<suite>-known-failures` rewrites the ledger, which under unchanged answers only shrinks.
+Both run after `npm run build`, which installs the packages their scripts read with, such as `@noldova/context.json`.
 One runner test class registers one test per applicable case and fails on a new difference and on a known failure that now matches.
 
 The Regex package's suite is Test262's regular-expression roots, `built-ins/RegExp`, `language/literals/regexp`, and `annexB/built-ins/RegExp`, at a pinned commit, and its answers are Test262's own, read from the cases with the pinned TypeScript's syntax tree and nothing executed.
