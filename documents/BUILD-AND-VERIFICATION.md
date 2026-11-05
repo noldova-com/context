@@ -43,8 +43,9 @@ Loose compiler output alone is not a completed build.
 
 ### Scripts
 
-`npm run build` and `npm test` run the `installed`, `build` and `test` steps of the pinned `@noldova/tools.pipelines.github`, which reads `build.json`; the packages compile into `_build/packages/` and their tests into `_build/tests/`.
-The `build` script is the one inline shell workflow: `(pipelines installed || npm ci --ignore-scripts) && pipelines build`, grouped so a POSIX shell and Windows' `cmd` read it alike.
+`npm run build` and `npm test` run the `installed`, `build` and `test` steps of `@noldova/tools.pipelines.github`, which reads `build.json`; the packages compile into `_build/packages/` and their tests into `_build/tests/`.
+The tool runs from `.pipelines/node_modules`, which `.pipelines/package.json` pins and `.pipelines/package-lock.json` locks, because it uses CONTEXT's own packages and must never load the copies this repository builds beside its own.
+The `build` and `pipelines` scripts are the only inline shell workflows: `build` installs each `node_modules` only when it differs from its lock, then builds, with each `||` grouped so a POSIX shell and Windows' `cmd` read it alike.
 The other npm commands select TypeScript entry points and pass arguments; the pinned Node runtime executes those files directly, with no inline shell workflow.
 Do not add a TypeScript runner while Node can execute the required entry points.
 Node, npm, TypeScript, and Node declarations are exact bootstrap requirements in `package.json`.
