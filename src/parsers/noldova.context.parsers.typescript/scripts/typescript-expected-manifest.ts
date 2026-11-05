@@ -6,7 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import JsonObjectReader from "../../../../scripts/json-object.reader.ts";
+import { JsonReader } from "@noldova/context.json";
+
 import TypeScriptExpectedManifestTotals from "./typescript-expected-manifest-totals.ts";
 import TypeScriptExpectedRetry from "./typescript-expected-retry.ts";
 import TypeScriptVendoredSources from "./typescript-vendored-sources.ts";
@@ -40,20 +41,20 @@ export default class TypeScriptExpectedManifest {
   }
 
   public static parse(json: string, identity: string): TypeScriptExpectedManifest {
-    const reader = JsonObjectReader.parse(json, identity);
-    if (reader.integer("schemaVersion") !== TypeScriptExpectedManifest.SCHEMA_VERSION)
+    const reader = JsonReader.parse(json, identity);
+    if (reader.readInteger("schemaVersion") !== TypeScriptExpectedManifest.SCHEMA_VERSION)
       throw new Error(TypeScriptExpectedManifest.MANIFEST_MALFORMED);
 
     const manifest = new TypeScriptExpectedManifest(
-      reader.string("typescriptVersion"),
-      TypeScriptVendoredSources.read(reader.object("sources")),
-      reader.object("compilerOptions").value,
-      reader.string("compilerOptionsSha256"),
-      reader.integer("unitSplittingVersion"),
-      TypeScriptExpectedManifestTotals.read(reader.object("totals")),
-      reader.objects("retries").map(t => TypeScriptExpectedRetry.read(t)),
-      reader.string("resultsSha256"));
-    if (JSON.stringify(manifest) !== JSON.stringify(reader.value))
+      reader.readString("typescriptVersion"),
+      TypeScriptVendoredSources.read(reader.readObject("sources")),
+      reader.readObject("compilerOptions").toJson(),
+      reader.readString("compilerOptionsSha256"),
+      reader.readInteger("unitSplittingVersion"),
+      TypeScriptExpectedManifestTotals.read(reader.readObject("totals")),
+      reader.readObjectArray("retries").map(t => TypeScriptExpectedRetry.read(t)),
+      reader.readString("resultsSha256"));
+    if (JSON.stringify(manifest) !== JSON.stringify(reader.toJson()))
       throw new Error(TypeScriptExpectedManifest.MANIFEST_MALFORMED);
 
     return manifest;

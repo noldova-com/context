@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type JsonObjectReader from "../../../../scripts/json-object.reader.ts";
+import type { JsonReader } from "@noldova/context.json";
 
 export default class TypeScriptExpectedManifestTotals {
   public readonly caseFiles: number;
@@ -23,10 +23,10 @@ export default class TypeScriptExpectedManifestTotals {
     this.diagnostics = diagnostics;
   }
 
-  public static read(reader: JsonObjectReader): TypeScriptExpectedManifestTotals {
-    const reasons = reader.object("inapplicableByReason");
+  public static read(reader: JsonReader): TypeScriptExpectedManifestTotals {
+    const reasons = reader.readObject("inapplicableByReason");
 
     return new TypeScriptExpectedManifestTotals(
-      reader.integer("caseFiles"), reader.integer("applicable"), Object.fromEntries(reasons.names.map(t => [t, reasons.integer(t)] as const)), reader.integer("diagnostics"));
+      reader.readInteger("caseFiles"), reader.readInteger("applicable"), Object.fromEntries(Object.keys(reasons.toJson()).map(t => [t, reasons.readInteger(t)] as const)), reader.readInteger("diagnostics"));
   }
 }

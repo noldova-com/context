@@ -6,7 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import JsonObjectReader from "../../../../scripts/json-object.reader.ts";
+import { JsonReader } from "@noldova/context.json";
+
 import TypeScriptVendoredCorpus from "./typescript-vendored-corpus.ts";
 import TypeScriptVendoredDiagnostics from "./typescript-vendored-diagnostics.ts";
 import TypeScriptVendoredLibraryRecord from "./typescript-vendored-library-record.ts";
@@ -46,19 +47,19 @@ export default class TypeScriptConformanceProvenance {
   }
 
   public static parse(text: string, identity: string): TypeScriptConformanceProvenance {
-    const reader = JsonObjectReader.parse(text, identity);
-    const schemaVersion = reader.integer("schemaVersion");
+    const reader = JsonReader.parse(text, identity);
+    const schemaVersion = reader.readInteger("schemaVersion");
     if (schemaVersion !== TypeScriptConformanceProvenance.SCHEMA_VERSION)
       throw new Error(TypeScriptConformanceProvenance.schemaUnsupported(identity, schemaVersion));
 
     const provenance = new TypeScriptConformanceProvenance(
-      reader.string("typescriptVersion"),
-      TypeScriptVendoredSources.read(reader.object("sources")),
-      TypeScriptVendoredCorpus.read(reader.object("corpus")),
-      TypeScriptVendoredLibraryRecord.read(reader.object("standardLibrary")),
-      TypeScriptVendoredDiagnostics.read(reader.object("diagnostics")),
-      TypeScriptVendoredLicenses.read(reader.object("licenses")));
-    if (JSON.stringify(provenance) !== JSON.stringify(reader.value))
+      reader.readString("typescriptVersion"),
+      TypeScriptVendoredSources.read(reader.readObject("sources")),
+      TypeScriptVendoredCorpus.read(reader.readObject("corpus")),
+      TypeScriptVendoredLibraryRecord.read(reader.readObject("standardLibrary")),
+      TypeScriptVendoredDiagnostics.read(reader.readObject("diagnostics")),
+      TypeScriptVendoredLicenses.read(reader.readObject("licenses")));
+    if (JSON.stringify(provenance) !== JSON.stringify(reader.toJson()))
       throw new Error(TypeScriptConformanceProvenance.notWrittenByTheVendor(identity));
 
     return provenance;

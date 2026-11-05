@@ -11,6 +11,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { JsonException } from "@noldova/context.json";
+
 import CommandFailedException from "./command-failed.exception.ts";
 import ProcessResult from "./process-result.ts";
 
@@ -33,7 +35,7 @@ export default abstract class Script {
       await this.runAsync();
     }
     catch (error) {
-      if (!(error instanceof CommandFailedException))
+      if (!(error instanceof CommandFailedException) && !(error instanceof JsonException))
         throw error;
 
       console.error(error.message);

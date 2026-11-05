@@ -6,12 +6,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type JsonObjectReader from "../../../../scripts/json-object.reader.ts";
+import { JsonException, type JsonReader } from "@noldova/context.json";
+
 import type TypeScriptDiagnosticDefinition from "./typescript-diagnostic-definition.ts";
 import type TypeScriptVendoredCatalog from "./typescript-vendored-catalog.ts";
 
 export default class TypeScriptVendoredComposition {
   private static readonly BASE: string = "classic";
+  private static readonly INTEGERS_EXPECTED: string = "Expected an array of integers.";
   private static readonly KEY: string = "code";
   private static readonly OVERLAY: string = "native";
 
@@ -46,8 +48,16 @@ export default class TypeScriptVendoredComposition {
     return [...definitions.values()].sort((left, right) => left.code - right.code);
   }
 
-  public static read(reader: JsonObjectReader): TypeScriptVendoredComposition {
+  public static read(reader: JsonReader): TypeScriptVendoredComposition {
     return new TypeScriptVendoredComposition(
-      reader.string("base"), reader.string("overlay"), reader.string("key"), reader.integers("overriddenCodes"), reader.integer("entries"));
+      reader.readString("base"), reader.readString("overlay"), reader.readString("key"), TypeScriptVendoredComposition.readIntegers(reader, "overriddenCodes"), reader.readInteger("entries"));
+  }
+
+  private static readIntegers(reader: JsonReader, name: string): readonly number[] {
+    const values = reader.readValue(name);
+    if (!Array.isArray(values) || !values.every(t => Number.isInteger(t)))
+      throw new JsonException(TypeScriptVendoredComposition.INTEGERS_EXPECTED, `${reader.path}.${name}`);
+
+    return values as readonly number[];
   }
 }
