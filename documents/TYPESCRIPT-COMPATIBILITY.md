@@ -74,6 +74,7 @@ The cases are every file from both pinned case roots before applicability classi
 Every vendored file retains its upstream bytes and copyright, is never hand-edited, and receives no Noldova header; a reference upgrade replaces the complete affected intake.
 
 `npm run vendor:typescript -- <version>` performs the intake: it fetches each upstream source at that version's pin from its authority, replaces every vendored directory with the declared selection, records the pin, roots, and counts in `PROVENANCE.json`, and regenerates the expected diagnostics below with `npm run generate:typescript-expected-diagnostics`, discarding any checkpoint of an earlier run.
+These commands, like `npm run generate:typescript-diagnostics` below, run after `npm run build`, which installs the packages their scripts read with, such as `@noldova/context.json`.
 Run again under an unchanged pin, it must reproduce the committed intake and expected diagnostics byte-identically, the manifest excepted only for the attempts it seals for a case it had to ask again.
 That rerun certifies that the intake is the pinned upstream selection, unchanged, and that the expected diagnostics are reproducible from it under the canonical invocation; it does not show that the splitting rule or the extraction matches the reference harness.
 The intake's `CERTIFICATION.md` records each such run.

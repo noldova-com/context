@@ -9,7 +9,8 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
-import JsonObjectReader from "../../../../scripts/json-object.reader.ts";
+import { JsonReader } from "@noldova/context.json";
+
 import TypeScriptDiagnosticDefinitionCategory from "./typescript-diagnostic-definition-category.ts";
 import TypeScriptDiagnosticDefinition from "./typescript-diagnostic-definition.ts";
 
@@ -49,34 +50,38 @@ export default class TypeScriptVendoredCatalog {
 
   public static read(filePath: string): TypeScriptVendoredCatalog {
     const bytes = readFileSync(filePath);
-    const catalog = JsonObjectReader.parse(bytes.toString(), filePath);
+    const catalog = JsonReader.parse(bytes.toString(), filePath);
     const definitions: TypeScriptDiagnosticDefinition[] = [];
     const codes = new Set<number>();
 
-    for (const messageTemplate of catalog.names) {
-      const definition = catalog.object(messageTemplate);
-      for (const propertyName of definition.names)
+    for (const messageTemplate of Object.keys(catalog.toJson())) {
+      const definition = catalog.readObject(messageTemplate);
+      for (const propertyName of Object.keys(definition.toJson()))
         if (!TypeScriptVendoredCatalog.ALLOWED_DEFINITION_FIELDS.includes(propertyName))
           throw new Error(TypeScriptVendoredCatalog.unknownDefinitionField(filePath, messageTemplate, propertyName));
 
-      const code = definition.integer(TypeScriptVendoredCatalog.CODE_PROPERTY_NAME);
+      const code = definition.readInteger(TypeScriptVendoredCatalog.CODE_PROPERTY_NAME);
       if (codes.has(code))
         throw new Error(TypeScriptVendoredCatalog.duplicateCode(filePath, code));
 
       codes.add(code);
       TypeScriptVendoredCatalog.validatePlaceholders(messageTemplate, code);
-      definition.optionalBoolean(TypeScriptVendoredCatalog.COMPATIBILITY_PYRAMID_PROPERTY_NAME);
-      definition.optionalString(TypeScriptVendoredCatalog.LOCALE_NOTES_PROPERTY_NAME);
+      TypeScriptVendoredCatalog.readOptionalBoolean(definition, TypeScriptVendoredCatalog.COMPATIBILITY_PYRAMID_PROPERTY_NAME);
+      definition.readOptionalString(TypeScriptVendoredCatalog.LOCALE_NOTES_PROPERTY_NAME);
       definitions.push(new TypeScriptDiagnosticDefinition(
         messageTemplate,
         code,
-        TypeScriptDiagnosticDefinitionCategory.of(definition.string(TypeScriptVendoredCatalog.CATEGORY_PROPERTY_NAME)),
-        definition.optionalBoolean(TypeScriptVendoredCatalog.REPORTS_UNNECESSARY_PROPERTY_NAME) === true,
-        definition.optionalBoolean(TypeScriptVendoredCatalog.REPORTS_DEPRECATED_PROPERTY_NAME) === true));
+        TypeScriptDiagnosticDefinitionCategory.of(definition.readString(TypeScriptVendoredCatalog.CATEGORY_PROPERTY_NAME)),
+        TypeScriptVendoredCatalog.readOptionalBoolean(definition, TypeScriptVendoredCatalog.REPORTS_UNNECESSARY_PROPERTY_NAME) === true,
+        TypeScriptVendoredCatalog.readOptionalBoolean(definition, TypeScriptVendoredCatalog.REPORTS_DEPRECATED_PROPERTY_NAME) === true));
     }
 
     return new TypeScriptVendoredCatalog(definitions, codes,
       createHash(TypeScriptVendoredCatalog.HASH_ALGORITHM).update(bytes).digest(TypeScriptVendoredCatalog.HASH_ENCODING));
+  }
+
+  private static readOptionalBoolean(reader: JsonReader, name: string): boolean | undefined {
+    return reader.hasField(name) ? reader.readBoolean(name) : undefined;
   }
 
   private static validatePlaceholders(messageTemplate: string, code: number): void {

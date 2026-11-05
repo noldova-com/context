@@ -9,7 +9,8 @@ expected diagnostics, and the reference invocation.
 
 `npm run vendor:typescript -- <version>` writes this intake: it fetches the
 pinned upstream sources, replaces every vendored directory, and regenerates
-the expected diagnostics. `PROVENANCE.json` records the exact upstream
+the expected diagnostics. It runs after `npm run build`, which installs
+`@noldova/context.json`, the package its scripts read JSON with. `PROVENANCE.json` records the exact upstream
 commits, and each section's source and local roots; it records file counts for
 the cases, baselines, definitions, and standard library, and hashes for the
 two diagnostic-definition files.

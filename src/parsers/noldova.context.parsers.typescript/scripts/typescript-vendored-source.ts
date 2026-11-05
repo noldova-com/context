@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type JsonObjectReader from "../../../../scripts/json-object.reader.ts";
+import type { JsonReader } from "@noldova/context.json";
 
 export default class TypeScriptVendoredSource {
   public readonly repository: string;
@@ -19,7 +19,7 @@ export default class TypeScriptVendoredSource {
     this.commit = commit;
   }
 
-  public static read(reader: JsonObjectReader): TypeScriptVendoredSource {
-    return new TypeScriptVendoredSource(reader.string("repository"), reader.optionalString("tag"), reader.string("commit"));
+  public static read(reader: JsonReader): TypeScriptVendoredSource {
+    return new TypeScriptVendoredSource(reader.readString("repository"), reader.readOptionalString("tag"), reader.readString("commit"));
   }
 }

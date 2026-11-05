@@ -11,7 +11,8 @@ against the git blob hash the pinned tree names, replaces `cases/` and
 `licenses/`, records the commit, roots, and file counts in `PROVENANCE.json`,
 and reads the expected patterns again. `CERTIFICATION.md` records the run that
 reproduced the intake byte-identically, and `.gitattributes` preserves
-upstream bytes.
+upstream bytes. It runs after `npm run build`, which installs
+`@noldova/context.json`, the package its script reads JSON with.
 
 `cases/` holds the upstream test files as they are, under their Test262 paths
 without the leading `test/`: `annexB/built-ins/RegExp`, `built-ins/RegExp`,

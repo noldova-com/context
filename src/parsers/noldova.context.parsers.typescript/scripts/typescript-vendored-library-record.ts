@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type JsonObjectReader from "../../../../scripts/json-object.reader.ts";
+import type { JsonReader } from "@noldova/context.json";
 
 export default class TypeScriptVendoredLibraryRecord {
   public readonly source: string;
@@ -34,14 +34,14 @@ export default class TypeScriptVendoredLibraryRecord {
     this.files = files;
   }
 
-  public static read(reader: JsonObjectReader): TypeScriptVendoredLibraryRecord {
+  public static read(reader: JsonReader): TypeScriptVendoredLibraryRecord {
     return new TypeScriptVendoredLibraryRecord(
-      reader.string("source"),
-      reader.string("sourcePackagePattern"),
-      reader.string("sourcePackageVersion"),
-      reader.string("upstreamRoot"),
-      reader.string("selection"),
-      reader.string("localRoot"),
-      reader.integer("files"));
+      reader.readString("source"),
+      reader.readString("sourcePackagePattern"),
+      reader.readString("sourcePackageVersion"),
+      reader.readString("upstreamRoot"),
+      reader.readString("selection"),
+      reader.readString("localRoot"),
+      reader.readInteger("files"));
   }
 }

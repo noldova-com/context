@@ -12,7 +12,8 @@ import path from "node:path";
 
 import { API } from "typescript/unstable/sync";
 
-import JsonObjectReader from "../../../../scripts/json-object.reader.ts";
+import { JsonReader } from "@noldova/context.json";
+
 import Script from "../../../../scripts/script.ts";
 import RegexConformanceCase from "./regex-conformance-case.ts";
 import RegexConformanceLayout from "./regex-conformance-layout.ts";
@@ -59,14 +60,14 @@ export default class RegexExpectedPatternsGenerator extends Script {
     if (!await this.pathExistsAsync(RegexExpectedPatternsGenerator.MANIFEST_PATH) || !await this.pathExistsAsync(RegexExpectedPatternsGenerator.PATTERNS_PATH))
       throw new Error(RegexExpectedPatternsGenerator.EXPECTED_MISSING);
 
-    const manifest = JsonObjectReader.parse(await this.readFileAsync(RegexExpectedPatternsGenerator.MANIFEST_PATH), RegexExpectedPatternsGenerator.MANIFEST_PATH);
-    if (manifest.string("typescriptVersion") !== await this.readTypeScriptVersionAsync())
+    const manifest = JsonReader.parse(await this.readFileAsync(RegexExpectedPatternsGenerator.MANIFEST_PATH), RegexExpectedPatternsGenerator.MANIFEST_PATH);
+    if (manifest.readString("typescriptVersion") !== await this.readTypeScriptVersionAsync())
       throw new Error(RegexExpectedPatternsGenerator.EXPECTED_PIN_OUTDATED);
 
-    if (manifest.integer("readingVersion") !== RegexExpectedPatternsGenerator.READING_VERSION)
+    if (manifest.readInteger("readingVersion") !== RegexExpectedPatternsGenerator.READING_VERSION)
       throw new Error(RegexExpectedPatternsGenerator.EXPECTED_READING_OUTDATED);
 
-    if (manifest.string("patternsSha256") !== RegexExpectedPatternsGenerator.hash(await this.readFileAsync(RegexExpectedPatternsGenerator.PATTERNS_PATH)))
+    if (manifest.readString("patternsSha256") !== RegexExpectedPatternsGenerator.hash(await this.readFileAsync(RegexExpectedPatternsGenerator.PATTERNS_PATH)))
       throw new Error(RegexExpectedPatternsGenerator.EXPECTED_PATTERNS_ALTERED);
   }
 
