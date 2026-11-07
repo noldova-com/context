@@ -51,6 +51,7 @@ export class Resources {
   public static readonly testDataMarkDescription: string = "Noldova.Context.Testing.TestData";
   public static readonly testMethodMarkDescription: string = "Noldova.Context.Testing.TestMethod";
   public static readonly skipMarkDescription: string = "Noldova.Context.Testing.Skip";
+  public static readonly timeoutMarkDescription: string = "Noldova.Context.Testing.Timeout";
   public static readonly javascriptFileSuffix: string = ".js";
   public static readonly coverageFileSuffix: string = ".json";
   public static readonly fileUrlPrefix: string = "file://";
@@ -117,6 +118,7 @@ export class Resources {
   public static readonly categoryFilterPrefix: string = "category:";
   public static readonly categoryMarkInvalid: string = "A category mark must carry a non-empty collection of non-whitespace string names.";
   public static readonly skipReasonInvalid: string = "A skip mark must carry a non-whitespace string reason.";
+  public static readonly timeoutMarkInvalid: string = "A timeout mark must carry a positive integer of milliseconds within the timer limit.";
   public static readonly testDataMarkInvalid: string = "A test-data mark must carry a non-empty collection of test-data entries.";
   public static readonly testDataIdentityInvalid: string = "Test data and its index must either both be present or both be absent.";
   public static readonly testDataIndexInvalid: string = "The test-data index must be a non-negative integer.";
@@ -246,6 +248,14 @@ export class Resources {
 
   public static skipWithoutTestMethod(memberName: string, className: string, filePath: string): string {
     return `Method "${memberName}" of "${className}" in "${filePath}" carries @Skip but is not marked with @TestMethod.`;
+  }
+
+  public static timeoutOnExport(exportName: string, filePath: string): string {
+    return `Export "${exportName}" in "${filePath}" carries @Timeout, which only a method marked with @TestMethod can carry.`;
+  }
+
+  public static timeoutWithoutTestMethod(memberName: string, className: string, filePath: string): string {
+    return `Method "${memberName}" of "${className}" in "${filePath}" carries @Timeout but is not marked with @TestMethod.`;
   }
 
   public static staticTestMetadataInvalid(memberName: string, className: string, filePath: string): string {
