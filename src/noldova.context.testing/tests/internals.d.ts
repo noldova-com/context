@@ -109,6 +109,13 @@ declare module "@noldova/context.testing/models/execution/test-worker-run.js" {
   }
 }
 
+declare module "@noldova/context.testing/models/execution/test-timeout-limit.js" {
+  export class TestTimeoutLimit {
+    public static isValid(timeoutMilliseconds: unknown): timeoutMilliseconds is number;
+    public static throwIfInvalid(timeoutMilliseconds: number): void;
+  }
+}
+
 declare module "@noldova/context.testing/models/execution/test-worker-message.js" {
   import type { TestWorkerMessageKind } from "@noldova/context.testing/enums/test-worker-message-kind.js";
   import type { TestWorkerResult } from "@noldova/context.testing/models/execution/test-worker-result.js";
@@ -122,9 +129,10 @@ declare module "@noldova/context.testing/models/execution/test-worker-message.js
     public readonly classCount: number;
     public readonly methodCount: number;
     public readonly discoveredCount: number;
+    public readonly timeoutMilliseconds: number;
     public static imported(filePath: string): TestWorkerMessage;
     public static ready(classCount: number, methodCount: number, discoveredCount: number): TestWorkerMessage;
-    public static started(classIndex: number, methodIndex: number): TestWorkerMessage;
+    public static started(classIndex: number, methodIndex: number, timeoutMilliseconds: number): TestWorkerMessage;
     public static methodCompleted(classIndex: number, methodIndex: number, result: TestWorkerResult): TestWorkerMessage;
     public static timedOut(classIndex: number, methodIndex: number, filePath: string): TestWorkerMessage;
     public static classCompleted(classIndex: number, filePath: string): TestWorkerMessage;

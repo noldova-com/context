@@ -120,7 +120,7 @@ export class TestRunSupervisorTests {
     const blocking = new ScriptedWorker(worker => {
       for (let methodIndex = 0; methodIndex < stoppedMethodIndex; methodIndex++)
         TestRunSupervisorTests.completeMethod(worker, methodIndex, TestOutcome.Passed);
-      worker.send(TestWorkerMessage.started(0, stoppedMethodIndex));
+      worker.send(TestWorkerMessage.started(0, stoppedMethodIndex, TestRunSupervisorTests.TIMEOUT_MILLISECONDS));
       clock.fire(clock.latestTimer);
     });
     const resuming = new ScriptedWorker(worker => {
@@ -143,6 +143,69 @@ export class TestRunSupervisorTests {
     Assert.areEqual([0, 1, 2].map(t => `method${t} ${t === stoppedMethodIndex ? TestOutcome.Failed : TestOutcome.Passed}`).join(),
       totals.classResults.flatMap(t => t.methodResults.map(u => `${u.methodName} ${u.outcome}`)).join());
     Assert.areEqual(2, totals.passed);
+    Assert.areEqual(1, totals.failed);
+  }
+
+  @TestMethod
+  public async waitsPastTheRunsLimitForATestWithALongerLimitOfItsOwnAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const started = Promise.withResolvers<void>();
+    const finishing = Promise.withResolvers<void>();
+    let created = 0;
+    const worker = new ScriptedWorker(slow => {
+      slow.send(TestWorkerMessage.started(0, 0, 5_000));
+      started.resolve();
+      void finishing.promise.then(() => {
+        slow.send(TestWorkerMessage.methodCompleted(0, 0, TestRunSupervisorTests.result("SlowFixtureTests")));
+        slow.send(TestWorkerMessage.classCompleted(0, "SlowFixtureTests.test.js"));
+      });
+    });
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+      undefined, () => {
+        created++;
+        return worker;
+      }, clock).runAsync();
+    worker.send(TestWorkerMessage.ready(1, 1, 1));
+    await started.promise;
+
+    clock.advance(5_249);
+    finishing.resolve();
+    const totals = await running;
+
+    Assert.areEqual(1, totals.passed);
+    Assert.areEqual(0, worker.terminateCount);
+    Assert.areEqual(1, created);
+  }
+
+  @TestMethod
+  public async stopsATestWithAShorterLimitOfItsOwnAtThatLimitAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const started = Promise.withResolvers<void>();
+    const blocking = new ScriptedWorker(worker => {
+      worker.send(TestWorkerMessage.started(0, 0, 50));
+      started.resolve();
+    });
+    const resuming = new ScriptedWorker(worker => {
+      TestRunSupervisorTests.completeMethod(worker, 0, TestOutcome.Failed);
+      worker.send(TestWorkerMessage.classCompleted(0, "StoppedFixtureTests.test.js"));
+    });
+    const scripted = [blocking, resuming];
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+      undefined, () => {
+        const worker = scripted.shift() ?? new ScriptedWorker(() => undefined);
+        queueMicrotask(() => worker.send(TestWorkerMessage.ready(1, 1, 1)));
+        return worker;
+      }, clock).runAsync();
+    await started.promise;
+
+    clock.advance(299);
+    const terminatedBeforeTheLimit = blocking.terminateCount;
+    clock.advance(1);
+    const totals = await running;
+
+    Assert.areEqual(0, terminatedBeforeTheLimit);
+    Assert.areEqual(1, blocking.terminateCount);
+    Assert.areEqual("0.0 true", TestRunSupervisorTests.describeRuns(resuming));
     Assert.areEqual(1, totals.failed);
   }
 
@@ -174,7 +237,7 @@ export class TestRunSupervisorTests {
     const secondFinishing = Promise.withResolvers<void>();
     const first = new ScriptedWorker(worker => TestRunSupervisorTests.completeClass(worker, 0, "FirstTests"));
     const second = new ScriptedWorker(worker => {
-      worker.send(TestWorkerMessage.started(1, 0));
+      worker.send(TestWorkerMessage.started(1, 0, 10_000));
       void secondFinishing.promise.then(() => {
         worker.send(TestWorkerMessage.methodCompleted(1, 0, TestRunSupervisorTests.result("SecondTests")));
         worker.send(TestWorkerMessage.classCompleted(1, "SecondTests.test.js"));
@@ -267,7 +330,7 @@ export class TestRunSupervisorTests {
   @TestMethod
   public async failsTheRunWithTheListenersOwnErrorAsync(isTimedOut: boolean): Promise<void> {
     const worker = new ScriptedWorker(listening => {
-      listening.send(TestWorkerMessage.started(0, 0));
+      listening.send(TestWorkerMessage.started(0, 0, TestRunSupervisorTests.TIMEOUT_MILLISECONDS));
       listening.send(TestWorkerMessage.methodCompleted(0, 0, TestRunSupervisorTests.result("ListeningFixtureTests")));
       listening.send(isTimedOut ? TestWorkerMessage.timedOut(0, 0, "listening-fixture.test.js")
         : TestWorkerMessage.classCompleted(0, "listening-fixture.test.js"));
@@ -285,7 +348,8 @@ export class TestRunSupervisorTests {
   @TestData("ClassCompleted")
   @TestMethod
   public async failsTheRunWhenItsWorkerCompletesWhatItDidNotReportAsync(kind: string): Promise<void> {
-    const worker = new ScriptedWorker(misbehaving => misbehaving.emit("message", { ...TestWorkerMessage.started(0, 0).toData(), kind }));
+    const worker = new ScriptedWorker(misbehaving => misbehaving.emit("message",
+      { ...TestWorkerMessage.started(0, 0, TestRunSupervisorTests.TIMEOUT_MILLISECONDS).toData(), kind, timeoutMilliseconds: 0 }));
     const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
       undefined, () => worker, new FakeClock()).runAsync();
     worker.send(TestWorkerMessage.ready(1, 1, 1));
@@ -299,7 +363,7 @@ export class TestRunSupervisorTests {
   public async waitsForAWorkerThatKeepsImportingItsTestFilesAsync(): Promise<void> {
     const clock = new FakeClock();
     const worker = new ScriptedWorker(importing => {
-      importing.send(TestWorkerMessage.started(0, 0));
+      importing.send(TestWorkerMessage.started(0, 0, TestRunSupervisorTests.TIMEOUT_MILLISECONDS));
       importing.send(TestWorkerMessage.methodCompleted(0, 0, TestRunSupervisorTests.result("ImportingFixtureTests")));
       importing.send(TestWorkerMessage.classCompleted(0, "importing-fixture.test.js"));
     });
@@ -335,7 +399,7 @@ export class TestRunSupervisorTests {
   @TestMethod
   public async ignoresAnErrorFromAWorkerItIsStoppingAsync(): Promise<void> {
     const worker = new ScriptedWorker(stopping => {
-      stopping.send(TestWorkerMessage.started(0, 0));
+      stopping.send(TestWorkerMessage.started(0, 0, TestRunSupervisorTests.TIMEOUT_MILLISECONDS));
       stopping.send(TestWorkerMessage.methodCompleted(0, 0, TestRunSupervisorTests.result("StoppingFixtureTests")));
       stopping.send(TestWorkerMessage.timedOut(0, 0, "stopping-fixture.test.js"));
       stopping.emit("error", new Error("The worker failed after it timed out."));
@@ -400,13 +464,13 @@ export class TestRunSupervisorTests {
   }
 
   private static completeClass(worker: ScriptedWorker, classIndex: number, className: string): void {
-    worker.send(TestWorkerMessage.started(classIndex, 0));
+    worker.send(TestWorkerMessage.started(classIndex, 0, TestRunSupervisorTests.TIMEOUT_MILLISECONDS));
     worker.send(TestWorkerMessage.methodCompleted(classIndex, 0, TestRunSupervisorTests.result(className)));
     worker.send(TestWorkerMessage.classCompleted(classIndex, `${className}.test.js`));
   }
 
   private static completeMethod(worker: ScriptedWorker, methodIndex: number, outcome: TestOutcome): void {
-    worker.send(TestWorkerMessage.started(0, methodIndex));
+    worker.send(TestWorkerMessage.started(0, methodIndex, TestRunSupervisorTests.TIMEOUT_MILLISECONDS));
     worker.send(TestWorkerMessage.methodCompleted(0, methodIndex, TestRunSupervisorTests.result("StoppedFixtureTests", `method${methodIndex}`, outcome)));
   }
 

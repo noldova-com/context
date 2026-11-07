@@ -10,6 +10,7 @@ import { nameof } from "@noldova/context.core";
 import { ArgumentException, ArgumentOutOfRangeException } from "@noldova/context.exceptions";
 
 import { Resources } from "../../resources.js";
+import { TestTimeoutLimit } from "../execution/test-timeout-limit.js";
 
 export class DiscoveredTestMethod {
   public readonly methodName: string;
@@ -17,6 +18,7 @@ export class DiscoveredTestMethod {
   public readonly testData: readonly unknown[];
   public readonly skipReason: string | undefined;
   public readonly categories: readonly string[];
+  public readonly timeoutMilliseconds: number | undefined;
   public readonly displayName: string;
 
   public constructor(
@@ -24,7 +26,8 @@ export class DiscoveredTestMethod {
     testDataIndex: number | undefined,
     testData: readonly unknown[],
     skipReason: string | undefined,
-    categories: readonly string[] = []) {
+    categories: readonly string[] = [],
+    timeoutMilliseconds?: number) {
     ArgumentException.throwIfNullOrWhitespace(methodName, nameof<DiscoveredTestMethod>(t => t.methodName));
     if (Object.isUndefined(testDataIndex)) {
       if (testData.length > 0)
@@ -42,12 +45,15 @@ export class DiscoveredTestMethod {
       ArgumentException.throwIfNullOrWhitespace(skipReason, nameof<DiscoveredTestMethod>(t => t.skipReason));
     for (const category of categories)
       ArgumentException.throwIfNullOrWhitespace(category, nameof<DiscoveredTestMethod>(t => t.categories));
+    if (!Object.isUndefined(timeoutMilliseconds))
+      TestTimeoutLimit.throwIfInvalid(timeoutMilliseconds);
 
     this.methodName = methodName;
     this.testDataIndex = testDataIndex;
     this.testData = [...testData];
     this.skipReason = skipReason;
     this.categories = [...new Set(categories)];
+    this.timeoutMilliseconds = timeoutMilliseconds;
     this.displayName = Object.isUndefined(this.testDataIndex) ? this.methodName : `${this.methodName}[${this.testDataIndex}]`;
   }
 }

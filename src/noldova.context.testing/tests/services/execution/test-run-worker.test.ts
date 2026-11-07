@@ -49,6 +49,7 @@ export class TestRunWorkerTests {
 
     Assert.areEqual("Imported hanging-fixture.test.js,Ready 1.2,Started 0.0,MethodCompleted 0.0,TimedOut 0.0",
       messages.map(t => TestRunWorkerTests.describe(t)).join());
+    Assert.areEqual(100, messages[2]?.timeoutMilliseconds);
     Assert.areEqual(TestOutcome.Failed, messages[3]!.result?.methodResult.outcome);
     Assert.isInstanceOf(messages[3]!.result?.methodResult.failure, TestTimeoutException);
     Assert.areEqual("", messages[4]!.filePath);
@@ -74,6 +75,7 @@ export class TestRunWorkerTests {
 
     Assert.areEqual("Imported hanging-fixture.test.js,Ready 1.2,Started 0.1,MethodCompleted 0.1,ClassCompleted 0",
       messages.map(t => TestRunWorkerTests.describe(t)).join());
+    Assert.areEqual(4000, messages[2]?.timeoutMilliseconds);
     Assert.areEqual(TestOutcome.Passed, messages[3]!.result?.methodResult.outcome);
     Assert.areEqual("hanging-fixture.test.js", messages[4]!.filePath);
   }

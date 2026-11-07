@@ -26,7 +26,7 @@ export class TestingApiTests {
       "CoverageResult", "DiscoveredTestClass", "DiscoveredTestMethod", "FileCoverage", "LineRange",
       "ParallelTestRunner", "Skip", "SourceMap", "MappedSourceLine", "TestClass", "TestClassResult", "TestConsoleReporter", "TestData", "TestDiscovery",
       "TestExecutor", "TestingException", "TestMethod", "TestMethodResult", "TestOutcome",
-      "TestProject", "TestReportWriter", "TestRunner", "TestRunResult", "TestRunTotals", "TestSelection", "TestTimeoutException",
+      "TestProject", "TestReportWriter", "TestRunner", "TestRunResult", "TestRunTotals", "TestSelection", "TestTimeoutException", "Timeout",
     ];
 
     Assert.areEqual(exportNames.sort().join(","), Object.keys(api).sort().join(","));

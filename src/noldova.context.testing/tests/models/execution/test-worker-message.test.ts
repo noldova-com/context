@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { Assert, TestClass, TestingException, TestMethod, TestMethodResult, TestOutcome } from "@noldova/context.testing";
+import { Assert, TestClass, TestData, TestingException, TestMethod, TestMethodResult, TestOutcome } from "@noldova/context.testing";
 import { TestWorkerMessageKind } from "@noldova/context.testing/enums/test-worker-message-kind.js";
 import { TestWorkerMessage } from "@noldova/context.testing/models/execution/test-worker-message.js";
 import { TestWorkerResult } from "@noldova/context.testing/models/execution/test-worker-result.js";
@@ -33,11 +33,25 @@ export class TestWorkerMessageTests {
 
   @TestMethod
   public carriesAStartedTest(): void {
-    const message = TestWorkerMessage.from(structuredClone(TestWorkerMessage.started(2, 5).toData()));
+    const message = TestWorkerMessage.from(structuredClone(TestWorkerMessage.started(2, 5, 750).toData()));
 
     Assert.areEqual(TestWorkerMessageKind.Started, message.kind);
     Assert.areEqual(2, message.classIndex);
     Assert.areEqual(5, message.methodIndex);
+    Assert.areEqual(750, message.timeoutMilliseconds);
+  }
+
+  @TestData(0)
+  @TestData(2_147_483_398)
+  @TestMethod
+  public rejectsAStartedTestWithoutAValidTimeLimit(timeoutMilliseconds: number): void {
+    Assert.throws(() => TestWorkerMessage.from({ ...TestWorkerMessage.started(2, 5, 750).toData(), timeoutMilliseconds }), TestingException);
+  }
+
+  @TestMethod
+  public rejectsATimeLimitOnAnyOtherMessage(): void {
+    Assert.throws(() => TestWorkerMessage.from({ ...TestWorkerMessage.ready(4, 12, 30).toData(), timeoutMilliseconds: 750 }), TestingException);
+    Assert.areEqual(0, TestWorkerMessage.from(TestWorkerMessage.ready(4, 12, 30).toData()).timeoutMilliseconds);
   }
 
   @TestMethod

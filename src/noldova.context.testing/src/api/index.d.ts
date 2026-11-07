@@ -141,6 +141,34 @@ export declare function TestMethod(value: Function): void;
 export declare function Skip(reason: string): (value: Function) => void;
 
 /**
+ * Gives a test method its own time limit, which the executor uses for each
+ * of its invocations instead of the run's limit, longer or shorter. An
+ * invocation that runs past it fails with a {@link TestTimeoutException}
+ * carrying that limit, as one past the run's limit does. Discovery rejects a
+ * timeout mark on a class or on a method without the TestMethod mark;
+ * Timeout does not turn an otherwise unmarked method into a test.
+ *
+ * @param timeoutMilliseconds The method's positive integer limit in milliseconds, at most 2147483397, which leaves the 250 milliseconds the
+ *   run's main thread waits past a limit within the timer limit.
+ * @returns The decorator that sets the limit of a marked test method.
+ * @throws ArgumentOutOfRangeException if the limit is not a positive integer or exceeds 2147483397.
+ *
+ * @example
+ * ```ts
+ * import { TestClass, TestMethod, Timeout } from "@noldova/context.testing";
+ *
+ * @TestClass
+ * export class ProcessListTests {
+ *   @Timeout(60_000)
+ *   @TestMethod
+ *   public async listsTheProcessesTwiceAsync(): Promise<void> { }
+ * }
+ * // The run's other tests keep the run's limit.
+ * ```
+ */
+export declare function Timeout(timeoutMilliseconds: number): (value: Function) => void;
+
+/**
  * The exception that is thrown when a test assertion fails. Carries the
  * expected and actual values beside the message.
  *
@@ -753,8 +781,10 @@ export declare class TestRunResult extends TestRunTotals {
  *
  * const ordinary = new DiscoveredTestMethod("passes", undefined, [], undefined);
  * const row = new DiscoveredTestMethod("measures", 0, ["abc", 3], undefined, ["Unit"]);
+ * const slow = new DiscoveredTestMethod("listsProcessesAsync", undefined, [], undefined, [], 60_000);
  * Assert.areEqual("passes", ordinary.displayName);
  * Assert.areEqual("measures[0]", row.displayName);
+ * Assert.areEqual(60_000, slow.timeoutMilliseconds);
  * ```
  */
 export declare class DiscoveredTestMethod {
@@ -787,6 +817,12 @@ export declare class DiscoveredTestMethod {
   public readonly categories: readonly string[];
 
   /**
+   * The method's own time limit in milliseconds, from its Timeout mark, or
+   * undefined when it runs under the run's limit.
+   */
+  public readonly timeoutMilliseconds: number | undefined;
+
+  /**
    * The method name followed by its data index when this is a parameterized
    * invocation.
    */
@@ -801,8 +837,9 @@ export declare class DiscoveredTestMethod {
    * @param testData The row's arguments. Non-empty exactly when testDataIndex is present. The array is copied; its values remain shared.
    * @param skipReason A non-whitespace reason when skipped, or undefined otherwise.
    * @param categories Optional non-whitespace category names. Defaults to empty; duplicates are removed in first-occurrence order and the array is copied.
+   * @param timeoutMilliseconds The method's own positive integer time limit in milliseconds, at most 2147483397; undefined, the default, for the run's limit.
    * @throws ArgumentException if the name, reason, or categories are blank, or the row data and index disagree.
-   * @throws ArgumentOutOfRangeException if the data index is negative or fractional.
+   * @throws ArgumentOutOfRangeException if the data index is negative or fractional, or the time limit is not a positive integer or exceeds 2147483397.
    *
    * See {@link DiscoveredTestMethod} for usage examples.
    */
@@ -811,7 +848,8 @@ export declare class DiscoveredTestMethod {
     testDataIndex: number | undefined,
     testData: readonly unknown[],
     skipReason: string | undefined,
-    categories?: readonly string[]);
+    categories?: readonly string[],
+    timeoutMilliseconds?: number);
 }
 
 /**
@@ -1150,14 +1188,32 @@ export declare class TestExecutor {
   public constructor(timeoutMilliseconds: number, clock?: IClock);
 
   /**
+   * The time limit an invocation runs under: the method's own, when it has
+   * one, or the executor's.
+   *
+   * @param method The invocation whose limit to read.
+   * @returns The limit in milliseconds.
+   *
+   * @example
+   * ```ts
+   * import { Assert, DiscoveredTestMethod, TestExecutor } from "@noldova/context.testing";
+   *
+   * const executor = new TestExecutor(1000);
+   * Assert.areEqual(1000, executor.getTimeoutMilliseconds(new DiscoveredTestMethod("passes", undefined, [], undefined)));
+   * Assert.areEqual(60_000, executor.getTimeoutMilliseconds(new DiscoveredTestMethod("waits", undefined, [], undefined, [], 60_000)));
+   * ```
+   */
+  public getTimeoutMilliseconds(method: DiscoveredTestMethod): number;
+
+  /**
    * Executes every method invocation of every class in order and returns its
    * independent result.
    *
    * @param testClasses The already discovered, validated classes in execution order. May be empty.
    * @param progressListener Optional listener told of each invocation as it starts and finishes and of each class's result as soon as that class
    *   finishes, in execution order and before the next class starts.
-   * @param stoppedMethods Invocations a supervisor stopped because they overran the timeout; each is recorded as a Failed result carrying a
-   *   {@link TestTimeoutException} and a duration of the timeout, without running it again. Defaults to none.
+   * @param stoppedMethods Invocations a supervisor stopped because they overran their time limit; each is recorded as a Failed result carrying a
+   *   {@link TestTimeoutException} and a duration of that limit, without running it again. Defaults to none.
    * @param isStopping Optional check that stops the run: the executor calls it before each invocation, and once it returns `true` the
    *   executor starts no further invocation, completes a class only when its last invocation has finished, and returns the results of the
    *   classes that completed. The listener's `onMethodCompleted` may make it return `true` to stop after that invocation.

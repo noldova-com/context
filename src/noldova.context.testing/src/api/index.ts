@@ -13,6 +13,7 @@ export { Skip } from "../decorators/skip.js";
 export { TestClass } from "../decorators/test-class.js";
 export { TestData } from "../decorators/test-data.js";
 export { TestMethod } from "../decorators/test-method.js";
+export { Timeout } from "../decorators/timeout.js";
 export { TestOutcome } from "../enums/test-outcome.js";
 export { AssertFailedException } from "../exceptions/assert-failed.exception.js";
 export { TestTimeoutException } from "../exceptions/test-timeout.exception.js";
