@@ -237,7 +237,7 @@ export class TestRunSupervisorTests {
     const secondFinishing = Promise.withResolvers<void>();
     const first = new ScriptedWorker(worker => TestRunSupervisorTests.completeClass(worker, 0, "FirstTests"));
     const second = new ScriptedWorker(worker => {
-      worker.send(TestWorkerMessage.started(1, 0, TestRunSupervisorTests.TIMEOUT_MILLISECONDS));
+      worker.send(TestWorkerMessage.started(1, 0, 10_000));
       void secondFinishing.promise.then(() => {
         worker.send(TestWorkerMessage.methodCompleted(1, 0, TestRunSupervisorTests.result("SecondTests")));
         worker.send(TestWorkerMessage.classCompleted(1, "SecondTests.test.js"));
@@ -348,7 +348,8 @@ export class TestRunSupervisorTests {
   @TestData("ClassCompleted")
   @TestMethod
   public async failsTheRunWhenItsWorkerCompletesWhatItDidNotReportAsync(kind: string): Promise<void> {
-    const worker = new ScriptedWorker(misbehaving => misbehaving.emit("message", { ...TestWorkerMessage.started(0, 0, TestRunSupervisorTests.TIMEOUT_MILLISECONDS).toData(), kind }));
+    const worker = new ScriptedWorker(misbehaving => misbehaving.emit("message",
+      { ...TestWorkerMessage.started(0, 0, TestRunSupervisorTests.TIMEOUT_MILLISECONDS).toData(), kind, timeoutMilliseconds: 0 }));
     const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
       undefined, () => worker, new FakeClock()).runAsync();
     worker.send(TestWorkerMessage.ready(1, 1, 1));
