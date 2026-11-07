@@ -158,6 +158,51 @@ export class TestExecutorTests {
   }
 
   @TestMethod
+  public async runsAMethodWithALongerLimitOfItsOwnPastTheRunsLimitUntilItsOwnAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const executing = new TestExecutor(100, clock).executeAsync([this.discoveredClassWithLimit("hangsAsync", 300)]);
+    clock.advance(299);
+    clock.advance(1);
+    const methodResult = (await executing)[0]?.methodResults[0];
+
+    Assert.isDefined(methodResult);
+    Assert.areEqual(TestOutcome.Failed, methodResult.outcome);
+    const failure = methodResult.failure;
+    Assert.isInstanceOf(failure, TestTimeoutException);
+    Assert.areEqual(300, failure.timeoutMilliseconds);
+    Assert.areEqual(300, methodResult.durationMilliseconds);
+  }
+
+  @TestMethod
+  public async passesAMethodThatFinishesWithinAShorterLimitOfItsOwnAsync(): Promise<void> {
+    const methodResult = (await new TestExecutor(5000).executeAsync([this.discoveredClassWithLimit("resolvesLaterAsync", 1000)]))[0]?.methodResults[0];
+
+    Assert.isDefined(methodResult);
+    Assert.areEqual(TestOutcome.Passed, methodResult.outcome);
+  }
+
+  @TestMethod
+  public async recordsAStoppedMethodWithItsOwnLimitAsync(): Promise<void> {
+    const testClass = this.discoveredClassWithLimit("hangsAsync", 300);
+
+    const methodResult = (await new TestExecutor(100).executeAsync([testClass], undefined, new Set(testClass.methods)))[0]?.methodResults[0];
+
+    Assert.isDefined(methodResult);
+    const failure = methodResult.failure;
+    Assert.isInstanceOf(failure, TestTimeoutException);
+    Assert.areEqual(300, failure.timeoutMilliseconds);
+    Assert.areEqual(300, methodResult.durationMilliseconds);
+  }
+
+  @TestMethod
+  public readsAMethodsOwnLimitOrTheRuns(): void {
+    const executor = new TestExecutor(100);
+
+    Assert.areEqual(300, executor.getTimeoutMilliseconds(new DiscoveredTestMethod("hangsAsync", undefined, [], undefined, [], 300)));
+    Assert.areEqual(100, executor.getTimeoutMilliseconds(new DiscoveredTestMethod("hangsAsync", undefined, [], undefined)));
+  }
+
+  @TestMethod
   public async reportsANonCallableMethodAsAFrameworkFailureAsync(): Promise<void> {
     const testClass = this.discoveredClass(["missing"], undefined);
     const classResults = await new TestExecutor(1000).executeAsync([testClass]);
@@ -274,6 +319,11 @@ export class TestExecutorTests {
       ExecutionFixture,
       skipReason,
       methodNames.map(t => new DiscoveredTestMethod(t, undefined, [], undefined)));
+  }
+
+  private discoveredClassWithLimit(methodName: string, timeoutMilliseconds: number): DiscoveredTestClass {
+    return new DiscoveredTestClass("TestPackage", "ExecutionFixtureTests", "inline://fixture", ExecutionFixture, undefined,
+      [new DiscoveredTestMethod(methodName, undefined, [], undefined, [], timeoutMilliseconds)]);
   }
 
   private async executeAsync(methodNames: readonly string[]): Promise<Map<string, TestOutcome>> {

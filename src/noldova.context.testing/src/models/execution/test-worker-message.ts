@@ -11,6 +11,7 @@ import { nameof } from "@noldova/context.core";
 import { TestWorkerMessageKind } from "../../enums/test-worker-message-kind.js";
 import { TestingException } from "../../exceptions/testing.exception.js";
 import { Resources } from "../../resources.js";
+import { TestTimeoutLimit } from "./test-timeout-limit.js";
 import { TestWorkerRecord } from "./test-worker-record.js";
 import { TestWorkerResult } from "./test-worker-result.js";
 
@@ -25,9 +26,11 @@ export class TestWorkerMessage {
   public readonly classCount: number;
   public readonly methodCount: number;
   public readonly discoveredCount: number;
+  // The started test's time limit, by which the main thread times it; 0 in every other message.
+  public readonly timeoutMilliseconds: number;
 
   private constructor(kind: TestWorkerMessageKind, classIndex: number, methodIndex: number, filePath: string, result: TestWorkerResult | undefined,
-    classCount: number, methodCount: number, discoveredCount: number) {
+    classCount: number, methodCount: number, discoveredCount: number, timeoutMilliseconds: number = 0) {
     this.kind = kind;
     this.classIndex = classIndex;
     this.methodIndex = methodIndex;
@@ -36,6 +39,7 @@ export class TestWorkerMessage {
     this.classCount = classCount;
     this.methodCount = methodCount;
     this.discoveredCount = discoveredCount;
+    this.timeoutMilliseconds = timeoutMilliseconds;
   }
 
   public static imported(filePath: string): TestWorkerMessage {
@@ -46,8 +50,8 @@ export class TestWorkerMessage {
     return new TestWorkerMessage(TestWorkerMessageKind.Ready, 0, 0, String.empty, undefined, classCount, methodCount, discoveredCount);
   }
 
-  public static started(classIndex: number, methodIndex: number): TestWorkerMessage {
-    return new TestWorkerMessage(TestWorkerMessageKind.Started, classIndex, methodIndex, String.empty, undefined, 0, 0, 0);
+  public static started(classIndex: number, methodIndex: number, timeoutMilliseconds: number): TestWorkerMessage {
+    return new TestWorkerMessage(TestWorkerMessageKind.Started, classIndex, methodIndex, String.empty, undefined, 0, 0, 0, timeoutMilliseconds);
   }
 
   public static methodCompleted(classIndex: number, methodIndex: number, result: TestWorkerResult): TestWorkerMessage {
@@ -69,6 +73,10 @@ export class TestWorkerMessage {
       throw new TestingException(Resources.testWorkerDataInvalid);
 
     const result = record.value(nameof<TestWorkerMessage>(t => t.result));
+    const timeoutMilliseconds = record.count(nameof<TestWorkerMessage>(t => t.timeoutMilliseconds));
+    if (kind === TestWorkerMessageKind.Started ? !TestTimeoutLimit.isValid(timeoutMilliseconds) : timeoutMilliseconds !== 0)
+      throw new TestingException(Resources.testWorkerDataInvalid);
+
     return new TestWorkerMessage(
       kind,
       record.count(nameof<TestWorkerMessage>(t => t.classIndex)),
@@ -77,7 +85,8 @@ export class TestWorkerMessage {
       Object.isUndefined(result) ? result : TestWorkerResult.from(result),
       record.count(nameof<TestWorkerMessage>(t => t.classCount)),
       record.count(nameof<TestWorkerMessage>(t => t.methodCount)),
-      record.count(nameof<TestWorkerMessage>(t => t.discoveredCount)));
+      record.count(nameof<TestWorkerMessage>(t => t.discoveredCount)),
+      timeoutMilliseconds);
   }
 
   public toData(): object {
@@ -90,6 +99,7 @@ export class TestWorkerMessage {
       classCount: this.classCount,
       methodCount: this.methodCount,
       discoveredCount: this.discoveredCount,
+      timeoutMilliseconds: this.timeoutMilliseconds,
     };
   }
 

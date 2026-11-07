@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { Assert, Category, Skip, TestClass, TestData, TestDiscovery, TestMethod } from "@noldova/context.testing";
+import { Assert, Category, Skip, TestClass, TestData, TestDiscovery, TestMethod, Timeout } from "@noldova/context.testing";
 
 @TestClass
 export class TestMarksTests {
@@ -48,6 +48,17 @@ export class TestMarksTests {
 
     Assert.areEqual(1, symbols.length);
     Assert.areEqual<string | undefined>("Noldova.Context.Testing.TestData", symbols[0]?.description);
+  }
+
+  @TestMethod
+  public stampsAUniqueTimeoutMarkWithItsLimit(): void {
+    const sample = (): void => { };
+    Timeout(500)(sample);
+    const symbols = Object.getOwnPropertySymbols(sample);
+
+    Assert.areEqual(1, symbols.length);
+    Assert.areEqual<string | undefined>("Noldova.Context.Testing.Timeout", symbols[0]?.description);
+    Assert.areEqual<unknown>(500, Object.getOwnPropertyDescriptor(sample, symbols[0] ?? Symbol.iterator)?.value);
   }
 
   @TestMethod

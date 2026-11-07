@@ -19,6 +19,7 @@ import { TestingException } from "../../exceptions/testing.exception.js";
 import type { IClock } from "../../interfaces/i-clock.js";
 import type { ITestProgressListener } from "../../interfaces/i-test-progress-listener.js";
 import type { TestProject } from "../../models/discovery/test-project.js";
+import { TestTimeoutLimit } from "../../models/execution/test-timeout-limit.js";
 import { TestWorkerMessage } from "../../models/execution/test-worker-message.js";
 import { TestWorkerRun } from "../../models/execution/test-worker-run.js";
 import { TestWorkerStart } from "../../models/execution/test-worker-start.js";
@@ -97,10 +98,7 @@ export class TestRunSupervisor {
   }
 
   public static throwIfLimitsInvalid(timeoutMilliseconds: number, workerCount: number): void {
-    ArgumentOutOfRangeException.throwIfNotPositiveInteger(timeoutMilliseconds, Resources.timeoutMillisecondsParameter, Resources.timeoutInvalid);
-    if (timeoutMilliseconds + Resources.testWorkerGraceMilliseconds > Resources.maximumTimeoutMilliseconds)
-      throw new ArgumentOutOfRangeException(Resources.timeoutMillisecondsParameter, timeoutMilliseconds, Resources.timeoutTooLarge);
-
+    TestTimeoutLimit.throwIfInvalid(timeoutMilliseconds);
     ArgumentOutOfRangeException.throwIfNotPositiveInteger(workerCount, Resources.workerCountParameter, Resources.workerCountInvalid);
   }
 
@@ -207,7 +205,7 @@ export class TestRunSupervisor {
         }
         else if (message.kind === TestWorkerMessageKind.Started) {
           started = message;
-          arm();
+          arm(message.timeoutMilliseconds + Resources.testWorkerGraceMilliseconds);
         }
         else if (message.kind === TestWorkerMessageKind.MethodCompleted) {
           this.completeMethod(message);

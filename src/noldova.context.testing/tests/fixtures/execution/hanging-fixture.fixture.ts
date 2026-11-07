@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { TestClass, TestMethod } from "@noldova/context.testing";
+import { TestClass, TestMethod, Timeout } from "@noldova/context.testing";
 
 @TestClass
 export class HangingFixtureTests {
@@ -15,6 +15,7 @@ export class HangingFixtureTests {
     await new Promise<void>(() => { });
   }
 
+  @Timeout(4000)
   @TestMethod
   public passes(): void { }
 }

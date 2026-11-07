@@ -33,7 +33,10 @@ export class AdditionTests {
 }
 ```
 
-Each `TestData` row runs and is reported as a test of its own.
+Each `TestData` row runs and is reported as a test of its own. A method that
+needs a time limit of its own, longer or shorter than the run's, carries
+`@Timeout(milliseconds)` beside `@TestMethod`; every other test keeps the run's
+limit.
 
 ### Run tests
 
