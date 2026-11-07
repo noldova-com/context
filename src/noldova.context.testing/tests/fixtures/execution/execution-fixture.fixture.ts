@@ -54,6 +54,10 @@ export class ExecutionFixture {
     });
   }
 
+  public async resolvesWithAsync(settled: Promise<void>): Promise<void> {
+    await settled;
+  }
+
   public async rejectsAsync(): Promise<void> {
     throw new Error("rejected");
   }

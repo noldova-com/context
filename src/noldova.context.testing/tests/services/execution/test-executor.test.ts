@@ -174,11 +174,19 @@ export class TestExecutorTests {
   }
 
   @TestMethod
-  public async passesAMethodThatFinishesWithinAShorterLimitOfItsOwnAsync(): Promise<void> {
-    const methodResult = (await new TestExecutor(5000).executeAsync([this.discoveredClassWithLimit("resolvesLaterAsync", 1000)]))[0]?.methodResults[0];
+  public async passesAMethodThatFinishesPastTheRunsLimitWithinItsOwnAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const settling = Promise.withResolvers<void>();
+    const testClass = new DiscoveredTestClass("TestPackage", "ExecutionFixtureTests", "inline://fixture", ExecutionFixture, undefined,
+      [new DiscoveredTestMethod("resolvesWithAsync", 0, [settling.promise], undefined, [], 300)]);
+    const executing = new TestExecutor(100, clock).executeAsync([testClass]);
+    clock.advance(200);
+    settling.resolve();
+    const methodResult = (await executing)[0]?.methodResults[0];
 
     Assert.isDefined(methodResult);
     Assert.areEqual(TestOutcome.Passed, methodResult.outcome);
+    Assert.areEqual(200, methodResult.durationMilliseconds);
   }
 
   @TestMethod
