@@ -7,7 +7,7 @@
  */
 
 import { ArgumentException, ArgumentOutOfRangeException } from "@noldova/context.exceptions";
-import { Assert, DiscoveredTestMethod, TestClass, TestMethod } from "@noldova/context.testing";
+import { Assert, DiscoveredTestMethod, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
 @TestClass
 export class DiscoveredTestMethodTests {
@@ -65,5 +65,21 @@ export class DiscoveredTestMethodTests {
   @TestMethod
   public rejectsAnInvalidCategory(): void {
     Assert.throws(() => new DiscoveredTestMethod("behaves", undefined, [], undefined, [" "]), ArgumentException);
+  }
+
+  @TestMethod
+  public carriesItsOwnTimeLimitOrNone(): void {
+    const method = new DiscoveredTestMethod("behaves", undefined, [], undefined, [], 2_147_483_397);
+
+    Assert.areEqual<number | undefined>(2_147_483_397, method.timeoutMilliseconds);
+    Assert.isUndefined(new DiscoveredTestMethod("behaves", undefined, [], undefined).timeoutMilliseconds);
+  }
+
+  @TestData(0)
+  @TestData(1.5)
+  @TestData(2_147_483_398)
+  @TestMethod
+  public rejectsATimeLimitThatIsNotAPositiveIntegerWithinTheTimerLimit(timeoutMilliseconds: number): void {
+    Assert.throws(() => new DiscoveredTestMethod("behaves", undefined, [], undefined, [], timeoutMilliseconds), ArgumentOutOfRangeException);
   }
 }

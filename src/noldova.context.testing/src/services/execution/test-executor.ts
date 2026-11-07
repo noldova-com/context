@@ -47,6 +47,11 @@ export class TestExecutor {
     this.clock = clock;
   }
 
+  // The time limit a method runs under: its own, when it declares one, or the run's.
+  public getTimeoutMilliseconds(method: DiscoveredTestMethod): number {
+    return method.timeoutMilliseconds ?? this.timeoutMilliseconds;
+  }
+
   public async executeAsync(testClasses: readonly DiscoveredTestClass[], progressListener?: ITestProgressListener,
     stoppedMethods: ReadonlySet<DiscoveredTestMethod> = new Set(), isStopping?: () => boolean): Promise<TestClassResult[]> {
     const ownsRejectionListener = !process.listeners(Resources.unhandledRejectionEvent).includes(TestExecutor.ON_UNHANDLED_REJECTION);
@@ -88,8 +93,8 @@ export class TestExecutor {
       method.testDataIndex,
       method.testData,
       TestOutcome.Failed,
-      this.timeoutMilliseconds,
-      new TestTimeoutException(this.timeoutMilliseconds),
+      this.getTimeoutMilliseconds(method),
+      new TestTimeoutException(this.getTimeoutMilliseconds(method)),
       undefined);
   }
 
@@ -163,9 +168,10 @@ export class TestExecutor {
     if (!Object.isFunction(testMethod))
       throw new TestingException(Resources.methodNotCallable(method.methodName, testClass.className));
 
+    const timeoutMilliseconds = this.getTimeoutMilliseconds(method);
     let timeoutHandle: number | undefined;
     const timeoutPromise = new Promise<never>((_resolve, reject) => {
-      timeoutHandle = this.clock.setTimeout(() => reject(new TestTimeoutException(this.timeoutMilliseconds)), this.timeoutMilliseconds);
+      timeoutHandle = this.clock.setTimeout(() => reject(new TestTimeoutException(timeoutMilliseconds)), timeoutMilliseconds);
     });
 
     try {

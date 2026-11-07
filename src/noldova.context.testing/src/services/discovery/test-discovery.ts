@@ -22,6 +22,7 @@ import { TestMarks } from "../../models/decorators/test-marks.js";
 import { DiscoveredTestClass } from "../../models/discovery/discovered-test-class.js";
 import { DiscoveredTestMethod } from "../../models/discovery/discovered-test-method.js";
 import type { TestProject } from "../../models/discovery/test-project.js";
+import { TestTimeoutLimit } from "../../models/execution/test-timeout-limit.js";
 import { Resources } from "../../resources.js";
 
 export class TestDiscovery {
@@ -50,6 +51,8 @@ export class TestDiscovery {
     for (const exportName of Object.keys(moduleExports).sort()) {
       const exportedValue = this.getOwnDataProperty(moduleExports, exportName);
       const isNamed = exportName.endsWith(Resources.testClassSuffix);
+      if (Object.isFunction(exportedValue) && Object.hasOwn(exportedValue, TestMarks.TIMEOUT))
+        throw new TestingException(Resources.timeoutOnExport(exportName, filePath));
 
       if (!this.isMarkedTestClass(exportedValue)) {
         if (this.hasCategories(exportedValue))
@@ -120,6 +123,9 @@ export class TestDiscovery {
         if (Object.isFunction(member) && Object.hasOwn(member, TestMarks.SKIP))
           throw new TestingException(Resources.skipWithoutTestMethod(memberName, className, filePath));
 
+        if (Object.isFunction(member) && Object.hasOwn(member, TestMarks.TIMEOUT))
+          throw new TestingException(Resources.timeoutWithoutTestMethod(memberName, className, filePath));
+
         continue;
       }
 
@@ -127,12 +133,13 @@ export class TestDiscovery {
         throw new TestingException(Resources.generatorTestMethodInvalid(memberName, className, filePath));
 
       const skipReason = this.getSkipReason(member);
+      const timeoutMilliseconds = this.getTimeoutMilliseconds(member);
       const categories = [...classCategories, ...methodCategories];
       if (Object.isUndefined(testDataEntries)) {
         if (member.length > 0)
           throw new TestingException(Resources.testMethodRequiresData(memberName, className, filePath));
 
-        methods.push(new DiscoveredTestMethod(memberName, undefined, [], skipReason, categories));
+        methods.push(new DiscoveredTestMethod(memberName, undefined, [], skipReason, categories, timeoutMilliseconds));
         continue;
       }
 
@@ -149,7 +156,7 @@ export class TestDiscovery {
             member.length,
             testDataEntry.values.length));
 
-        methods.push(new DiscoveredTestMethod(memberName, index, testDataEntry.values, skipReason, categories));
+        methods.push(new DiscoveredTestMethod(memberName, index, testDataEntry.values, skipReason, categories, timeoutMilliseconds));
       }
     }
 
@@ -240,6 +247,17 @@ export class TestDiscovery {
     return reason;
   }
 
+  private getTimeoutMilliseconds(value: Function): number | undefined {
+    if (!Object.hasOwn(value, TestMarks.TIMEOUT))
+      return undefined;
+
+    const timeoutMilliseconds = this.getOwnDataProperty(value, TestMarks.TIMEOUT);
+    if (!TestTimeoutLimit.isValid(timeoutMilliseconds))
+      throw new TestingException(Resources.timeoutMarkInvalid);
+
+    return timeoutMilliseconds;
+  }
+
   private descriptorHasTestMetadata(descriptor: PropertyDescriptor): boolean {
     return this.hasTestMetadata(descriptor.value)
       || this.hasTestMetadata(descriptor.get)
@@ -248,7 +266,8 @@ export class TestDiscovery {
 
   private hasTestMetadata(value: unknown): boolean {
     return Object.isFunction(value)
-      && (this.isMarkedTestMethod(value) || this.hasTestData(value) || this.hasCategories(value) || Object.hasOwn(value, TestMarks.SKIP));
+      && (this.isMarkedTestMethod(value) || this.hasTestData(value) || this.hasCategories(value) || Object.hasOwn(value, TestMarks.SKIP)
+        || Object.hasOwn(value, TestMarks.TIMEOUT));
   }
 
   private getOwnDataProperty(value: object, propertyKey: PropertyKey): unknown {

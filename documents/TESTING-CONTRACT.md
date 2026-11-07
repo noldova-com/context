@@ -42,6 +42,7 @@ Symbol-named and generator test methods are unsupported and fail discovery; they
 `@TestData` is valid only on an instance method also marked with `@TestMethod`; methods declaring runtime parameters without data fail discovery.
 Default and rest forms that do not expose a fixed runtime arity are not data-test inputs.
 `@Category` is valid only on a class marked with `@TestClass` or an instance method marked with `@TestMethod`; empty, whitespace, static, unmarked, and corrupt uses fail discovery.
+`@Timeout(milliseconds)` is valid only on an instance method marked with `@TestMethod`, and gives each of its invocations that time limit instead of the run's; a limit that is not a positive integer within the timer limit less the main thread's grace throws, and a class, static, unmarked, or corrupt use fails discovery.
 Using either decorator outside its permitted targets fails discovery.
 
 ## 3. Execution
@@ -50,6 +51,7 @@ Each method or data row runs on a fresh instance of its test class; no state flo
 Synchronous and asynchronous methods are supported: a returned promise is awaited, and a rejection, thrown exception, or unhandled rejection attributable to the test is a failure.
 Work that never settles fails loudly; a hang is never success or silence.
 The runner owns the timeout mechanism and reports it with the failure; later unhandled rejections remain attributed to their originating test.
+A test runs under its own `@Timeout` limit when it has one, and under the run's limit otherwise; the run's limit never changes for one test, and a test past its own limit times out as one past the run's limit does.
 The command-line run isolates tests in parallel worker threads, one per available processor and at least two by default, that its main thread times per test: the workers take whole test classes from one shared queue, and the run reports each class in discovery order, whichever worker finishes it first.
 Its summary's time is the run's elapsed time, not the sum of its tests' durations.
 A test that overruns its timeout, whether it never settles or runs synchronous code that never ends, stops its worker: the worker reports the timeout and starts no further test, and the main thread ends a worker that does not report in time.

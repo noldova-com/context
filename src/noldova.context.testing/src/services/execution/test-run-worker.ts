@@ -105,7 +105,7 @@ export class TestRunWorker implements ITestProgressListener {
   public onMethodStarted(_testClass: DiscoveredTestClass, method: DiscoveredTestMethod): void {
     this.methodIndex++;
     this.isRunningStoppedMethod = this.stoppedMethods.has(method);
-    this.post(TestWorkerMessage.started(this.classIndex, this.methodIndex));
+    this.post(TestWorkerMessage.started(this.classIndex, this.methodIndex, this.executor.getTimeoutMilliseconds(method)));
   }
 
   public onMethodCompleted(methodResult: TestMethodResult): void {
