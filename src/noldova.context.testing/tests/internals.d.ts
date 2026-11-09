@@ -186,7 +186,7 @@ declare module "@noldova/context.testing/services/execution/test-run-supervisor.
     public get elapsedMilliseconds(): number;
     public constructor(timeoutMilliseconds: number, testProjects: readonly TestProject[], filters: readonly string[],
       progressListener: ITestProgressListener | undefined, workerUrl?: URL, workerCount?: number, startLimitMilliseconds?: number,
-      createWorker?: (url: URL, options: WorkerOptions) => Worker, clock?: IClock);
+      createWorker?: (url: URL, options: WorkerOptions) => Worker, clock?: IClock, coverageDirectory?: string);
     public static defaultWorkerCount(): number;
     public static throwIfLimitsInvalid(timeoutMilliseconds: number, workerCount: number): void;
     public runAsync(): Promise<TestRunResult>;

@@ -74,6 +74,10 @@ A targeted run never represents the complete gate.
 The runner performs no product bootstrap: it initializes no Runtime, loads no arbitrary product packages, and installs no environment shims.
 A test needing an environment builds it through precisely named fixtures owned by its project.
 
+The data providers' shared behavior is tested once, in Data.Sql's test project, which depends on both providers: each provider test is a data test with one row per provider, so a provider passes exactly the tests the other passes, migrations and the change feed included.
+Each provider's own test project tests only what is its own, such as opening its database, its dialect and its value reading.
+The PostgreSQL tests reach a server through the fixture `PostgreSQLServer`, which reads the connection string from the `NOLDOVA_CONTEXT_POSTGRESQL_URL` environment variable and gives each test class its own schema, dropped at the end; without the variable those tests fail, never skip, so the complete gate needs a server on every target.
+
 ## 4. Assertions
 
 `Assert` is a class-first vocabulary with exact-value semantics (`areEqual` uses SameValue, never truthiness) and TypeScript `asserts` narrowing where applicable.
@@ -97,6 +101,10 @@ Coverage is measured through the pinned Node runtime's V8 facility and enforced 
 Source maps must be valid flat Source Map v3 documents within the subset the pinned TypeScript bootstrap emits; only a mapped segment on the same generated line supplies an original position.
 Non-executable files appear in the inventory as not applicable without entering counts.
 A skip that removes the sole coverage of production code fails the gate.
+Each run lists, in the coverage folder, its main thread and each worker that ended by itself; a listed thread without a coverage profile fails the analysis, since V8 drops a profile it cannot serialize with only a line on that thread's standard error.
+A worker the run stops, such as one whose test does not end, writes no profile and is not listed; stopped workers occur only in failing runs.
+Context's own tests that stop workers or runs on purpose start them without coverage collection, so no profile is ever cut off while it is written.
+The reported block total varies between runs, because V8 omits a block whose count equals its parent's and the counts depend on how classes spread across workers; every reported block is still covered or uncovered as measured.
 Exclusions are explicit, justified, and reported.
 A catch that handles one exception type rethrows every other, and that rethrow is reached with a failing test double: the only accepted broken double, which proves nothing beyond propagation, since a failing collaborator is not supported input.
 The coverage command supplies each project's canonical identity, installed production directory, and source directory explicitly; results carry that identity and a project-relative path.

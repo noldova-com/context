@@ -9,6 +9,10 @@
 // This file uses Node APIs and will change when we replace Node.
 
 import { once } from "node:events";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { threadId } from "node:worker_threads";
 
 import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
 import {
@@ -22,6 +26,7 @@ import { TestRunSupervisor } from "@noldova/context.testing/services/execution/t
 import { FakeClock } from "../../fixtures/execution/fake-clock.fixture.js";
 import { RecordingTestProgress } from "../../fixtures/execution/recording-test-progress.fixture.js";
 import { ScriptedWorker } from "../../fixtures/execution/scripted-worker.fixture.js";
+import { WithoutCoverage } from "../../fixtures/execution/without-coverage.fixture.js";
 
 @TestClass
 export class TestRunSupervisorTests {
@@ -64,6 +69,58 @@ export class TestRunSupervisorTests {
 
     Assert.areEqual(1, result.passed);
     Assert.areEqual(42, supervisor.elapsedMilliseconds);
+  }
+
+  @TestMethod
+  public async listsItsThreadAndEachWorkerThatEndedByItselfForTheCoverageAsync(): Promise<void> {
+    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-threads-"));
+    try {
+      const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"));
+      const workerThreadId = worker.threadId;
+      const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+        undefined, () => worker, new FakeClock(), coverageDirectory).runAsync();
+      worker.send(TestWorkerMessage.ready(1, 1, 1));
+      await running;
+
+      Assert.areEqual(`${threadId}\n${workerThreadId}\n`, await TestRunSupervisorTests.readThreadListAsync(coverageDirectory));
+    }
+    finally {
+      await rm(coverageDirectory, { recursive: true, force: true });
+    }
+  }
+
+  @TestMethod
+  public async leavesAWorkerItStoppedOutOfTheCoverageThreadListAsync(): Promise<void> {
+    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-threads-"));
+    try {
+      const worker = new ScriptedWorker(timingOut => {
+        TestRunSupervisorTests.completeMethod(timingOut, 0, TestOutcome.Failed);
+        timingOut.send(TestWorkerMessage.timedOut(0, 0, "StoppedFixtureTests.test.js"));
+      });
+      const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+        undefined, () => worker, new FakeClock(), coverageDirectory).runAsync();
+      worker.send(TestWorkerMessage.ready(1, 1, 1));
+      await running;
+
+      Assert.areEqual(1, worker.terminateCount);
+      Assert.areEqual(`${threadId}\n`, await TestRunSupervisorTests.readThreadListAsync(coverageDirectory));
+    }
+    finally {
+      await rm(coverageDirectory, { recursive: true, force: true });
+    }
+  }
+
+  @TestMethod
+  public async listsNoThreadWhenTheRunTakesNoCoverageAsync(): Promise<void> {
+    const result = await WithoutCoverage.runAsync(() => {
+      const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"));
+      const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+        undefined, () => worker, new FakeClock()).runAsync();
+      worker.send(TestWorkerMessage.ready(1, 1, 1));
+      return running;
+    });
+
+    Assert.areEqual(1, result.passed);
   }
 
   @TestMethod
@@ -461,6 +518,13 @@ export class TestRunSupervisorTests {
 
     Assert.isFalse(isFailedWhileStopping);
     Assert.isTrue(isFailed);
+  }
+
+  private static async readThreadListAsync(coverageDirectory: string): Promise<string> {
+    const fileNames = await readdir(coverageDirectory);
+    Assert.areEqual(1, fileNames.length);
+    Assert.isTrue(fileNames.every(t => t.startsWith(`threads-${process.pid}-`) && t.endsWith(".txt")), fileNames.join());
+    return readFile(join(coverageDirectory, fileNames.join()), "utf8");
   }
 
   private static completeClass(worker: ScriptedWorker, classIndex: number, className: string): void {

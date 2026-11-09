@@ -2055,7 +2055,8 @@ export declare class CoverageAnalyzer {
    * position no report claims counts as uncovered; a missing source map falls
    * back to generated coordinates, while a malformed report, source map, or
    * source path outside its declared project root fails the analysis. An empty
-   * inventory fails.
+   * inventory fails, and so does a thread a test run listed in the directory
+   * as ended by itself that wrote no report.
    *
    * @param coverageDirectory The non-whitespace directory of V8 coverage JSON reports from the matching build.
    * @param projects The non-empty explicit production-project inventory, with installed and original-source roots.

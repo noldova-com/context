@@ -15,6 +15,7 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { EntryRun } from "../../fixtures/execution/entry-run.fixture.js";
 import { FixtureTestProject } from "../../fixtures/execution/fixture-test-project.fixture.js";
+import { WithoutCoverage } from "../../fixtures/execution/without-coverage.fixture.js";
 
 @TestClass
 export class TestRunEntryPointTests {
@@ -24,7 +25,7 @@ export class TestRunEntryPointTests {
     try {
       await writeFile(join(rootDirectory, "empty.test.js"), "export {};\n");
 
-      const entryRun = await this.runEntryAsync("TestPackage", rootDirectory);
+      const entryRun = await WithoutCoverage.runAsync(() => this.runEntryAsync("TestPackage", rootDirectory));
 
       Assert.areEqual(1, entryRun.exitCode);
       Assert.isTrue(entryRun.errorOutput.includes("TestingException"));

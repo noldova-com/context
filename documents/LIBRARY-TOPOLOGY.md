@@ -1,6 +1,6 @@
 # CONTEXT library topology
 
-**Scope:** Framework-library ownership, package topology, global identities, extensions, support classification, and TypeScript declaration mapping
+**Scope:** Framework-library ownership, package topology, global identities, extensions, support classification, TypeScript declaration mapping, and the data packages' host boundary
 
 ## 1. One source of truth
 
@@ -44,6 +44,10 @@ Package size never justifies moving an unrelated responsibility into Core.
 | `noldova.context.collections` | Collection algorithms, Map, Set, weak collections, readonly views, and collection iterators |
 | `noldova.context.text` | Additional text abstractions, accepted String augmentations, and ECMAScript URI encoding functions |
 | `noldova.context.json` | JSON parsing and serialization |
+| `noldova.context.data` | The provider-independent data model: data sources, connections, transactions, migrations and their history, the change feed, and `DbContext` with its options (section 7) |
+| `noldova.context.data.sql` | The SQL implementation of the data model: the schema model, the migration builder, the SQL dialect, and SQL connections, transactions, migration history and change feed |
+| `noldova.context.data.sql.sqlite` | The SQLite provider: its dialect, its connection, and `useSQLite` |
+| `noldova.context.data.sql.postgresql` | The PostgreSQL provider: its dialect, its connection, `usePostgreSQL`, and the PostgreSQL client it talks to its server through (section 7.5) |
 
 Experimental resource-management and Temporal surfaces extend these owners or belong to separately accepted packages.
 ECMAScript years and TypeScript `lib.*.d.ts` filenames never become package identities.
@@ -59,6 +63,10 @@ The accepted direct library dependencies are:
 | Collections | Core |
 | Text | Core, Exceptions, Collections |
 | JSON | Core, Exceptions |
+| Data | Core, Exceptions |
+| Data.Sql | Core, Exceptions, Data |
+| Data.Sql.SQLite | Core, Exceptions, Data, Data.Sql |
+| Data.Sql.PostgreSQL | Core, Exceptions, Data, Data.Sql |
 
 `PACKAGE-CONTRACT.md` owns graph validation and source-import permissions.
 During partial stage-zero implementation, a package declares only the dependencies its implemented slice uses.
@@ -90,7 +98,7 @@ The stable portable environment composes the accepted stable packages.
 Web and Worker environments are optional and share common Web packages rather than duplicating identities.
 ESNext behavior is experimental until explicitly adopted into the stable environment.
 Script Host is not an adopted Runtime environment; its vendored declarations remain conformance evidence.
-Node APIs are not TypeScript built-ins and require a separate future framework or package decision.
+Node APIs are not TypeScript built-ins and require a separate future framework or package decision; section 7 records the one package decision taken so far, the data providers'.
 The exact framework identities and the complete Web package topology remain deferred.
 
 Implementation of a standard-library global begins with the complete surface inventory defined by `TYPESCRIPT-COMPATIBILITY.md`.
@@ -115,3 +123,73 @@ A campaign remains in progress until every applicable upstream entry is implemen
 Deprecation does not authorize removal, an extra compiler error, or behavior change under the pinned TypeScript surface.
 The deprecated status required for semantic tooling is public `.ctxl` metadata; explanatory documentation and replacement prose may travel in `.ctxd`.
 The compiler emits a diagnostic only when accepted TypeScript behavior requires one, and the language server presents the same fact from package metadata.
+
+## 7. Data packages and their host boundary
+
+The data packages are framework code: a portable data model, a SQL layer that stores it in tables, and one provider package for each database engine.
+
+### 7.1 Portable model and host providers
+
+Data and Data.Sql are portable: they import no host module and perform no I/O.
+Everything that reaches a database is an abstract member a provider implements: a connection's open, close and statements, a transaction's commit and rollback, and the dialect's SQL forms.
+
+A provider package is the only place a database engine or the network is reached.
+During the Node bootstrap, the SQLite provider uses `node:sqlite`, `node:fs` and `node:path`, and the PostgreSQL provider reaches its server only through `node:net` and `node:tls`, with `node:crypto` for its SCRAM-SHA-256 sign-in, behind the same host boundary as `node:sqlite`.
+Each file that imports one of them carries the Node note in `TESTING-CONTRACT.md` section 1.
+When the Runtime owns files and networking, each provider moves onto the Runtime's contracts, and neither the portable packages nor a provider's public API changes for it.
+
+No provider belongs to a framework composition: an application takes the one it uses as an ordinary package dependency, and a portable package never depends on a provider.
+No CONTEXT package depends on a third-party package: the PostgreSQL client is CONTEXT's own code, as section 7.5 says.
+
+### 7.2 Asynchronous operations
+
+A network database can't answer synchronously, so every data operation that reaches a database is asynchronous, on SQLite too, so that an application's code is the same on both engines.
+Executing, inserting and querying, beginning, committing and rolling back a transaction, migrating, closing, and appending to and reading the change feed each return a `Promise` and take the `Async` suffix.
+Opening a connection stays synchronous and never waits on a network, so a context still opens its database in its constructor: SQLite opens its file, creating its folder, when the connection opens, and PostgreSQL connects on the connection's first operation.
+Connections, transactions and contexts implement `AsyncDisposable`, so a caller writes `await using`.
+The SQLite provider settles each promise from `node:sqlite`'s synchronous call, so its results and their order are those of the synchronous calls.
+Building a schema, a migration or a query does no I/O and stays synchronous.
+
+A connection is one session whose operations take turns.
+A transaction holds the connection from its start until it commits or rolls back, and any operation started meanwhile, from any caller, statements and other transactions alike, waits for its turn, so two callers never share a transaction.
+Inside a transaction's action, everything goes through the transaction the action receives: its statements, a nested transaction through its `runInTransactionAsync`, which joins it, and the change feed, given the transaction.
+Never call the connection inside an action: that call waits for a turn that comes only after the action ends, so it never settles.
+The portable packages can't tell an action's own calls from another caller's without a host's asynchronous context, so the transaction is passed explicitly.
+
+### 7.3 Dialects
+
+The SQL in Data.Sql, its own tables' included, is written once and rendered through the dialect, which owns every form the two engines spell differently:
+- an identifier: quoted with double quotes, which both engines accept, so a mixed-case name such as `entityId` keeps its case in PostgreSQL;
+- a column type: an integer is SQLite's `INTEGER` and PostgreSQL's `BIGINT`, and text is `TEXT` in both;
+- a generated key: SQLite's `INTEGER PRIMARY KEY AUTOINCREMENT` and PostgreSQL's `BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY`;
+- a transaction's begin: SQLite's `BEGIN IMMEDIATE`, which takes the file's write lock at once, and PostgreSQL's `BEGIN`;
+- a lock until the transaction ends: none in SQLite, whose transactions already hold the write lock from their begin, and PostgreSQL's `pg_advisory_xact_lock`.
+
+The rest belongs to the provider's session, which runs the statements:
+- a parameter: every query writes `?`, which SQLite takes as it is, and the PostgreSQL session rewrites to `$1`, `$2`, so the queries of an application stay the same on both;
+- an insert's new key: SQLite's last-row identifier, and PostgreSQL's `lastval()`, read in the same session right after the insert.
+
+The PostgreSQL rewrite scans the statement as the server's lexer does: it leaves `?` alone inside quoted text (`'…'`, `E'…'` with its backslash escapes), quoted identifiers, dollar-quoted text (`$$…$$` and `$tag$…$tag$`), and `--` and `/* */` comments, nested ones included.
+It refuses with `DataException`, rather than guess, PostgreSQL's own operators spelled with a question mark: `?|` and `?&`, any `?` joined to another operator character (such as the geometric `?-` and `?#`), and `?` used as the `jsonb` operator, which it tells from a parameter by what comes before it: a parameter follows an operator, a comma, an opening parenthesis or a keyword, and an operator follows an operand, such as a column name, a literal or a closing parenthesis.
+It also refuses a statement whose count of placeholders differs from its count of parameters.
+An application that needs those operators calls their functions instead, such as `jsonb_exists`.
+
+Both insert keys read the last key the session generated, so they assume that the insert fires no trigger that inserts into another table with a generated key; the framework's own tables have no triggers.
+
+A value read from a database is text, a number, or null, in both providers.
+The PostgreSQL provider reads a `BIGINT` as a number when it is a safe integer and throws `DataException` otherwise, as the SQLite provider throws for a value of another kind.
+
+### 7.4 Connections, migrations and the change feed
+
+A SQL connection runs its statements on one session a provider supplies, and its transactions over the same session. A PostgreSQL connection holds one server session for its whole life, reserved from the client's pool, so a transaction and the order of its statements behave as on one SQLite file handle; the data source's location is the server's connection string, which the provider never writes into a message, an exception or a log.
+Migrating takes a lock first, so that several processes starting at once apply each migration once: SQLite's write lock on its file, which `BEGIN IMMEDIATE` takes and a busy timeout of five seconds waits for, and PostgreSQL's transaction-scoped advisory lock.
+Appending to the change feed takes the same kind of lock until the transaction ends, so the feed's sequence numbers become visible in order and a reader of the changes after a sequence never skips one that commits later.
+
+### 7.5 The PostgreSQL client
+
+The PostgreSQL provider's client is a port of postgres.js (`porsager/postgres`) at its `v4.1.0` tag, commit `d84da749342240a4c1fb44e4f9a6b22d2350fb7b`, rewritten in CONTEXT's style: classes, `Resources`, the package's exceptions, and the code rules in `ARCHITECTURE.md`.
+postgres.js is under the Unlicense and has no dependencies, so the port owes no notice; the package's README names the source, its tag and commit, and what changed from it.
+
+The port keeps the wire protocol and the behavior the provider needs, from `src/`: the connection, the pool, the entry point's options and client, the type conversions, the sign-in with SCRAM-SHA-256 and TLS, the protocol messages, queries, the socket, errors, and results.
+It leaves out what the provider doesn't use: `subscribe.js` (logical replication), `large.js` (large objects), `cf.js` (Cloudflare sockets), and `build.js` (the tagged-template query builder), since Data.Sql renders every statement as text with parameters; with them go the diagnostics channels, COPY streams, and the options that read files, such as a password file or certificate paths.
+The client is internal to the package: the provider's connection is its only user, and the package's public API is the provider's.
