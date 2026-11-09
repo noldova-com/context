@@ -27,14 +27,17 @@ export class SqlMigratorTests {
     Assert.areEqual("20260908130000_Notes", applied.join(","));
     Assert.areEqual(0, appliedAgain.length);
     Assert.areEqual("20260908130000_Notes", (await migrator.getAppliedMigrationsAsync()).join(","));
-    Assert.areEqual("BEGIN", connection.statements[2]);
-    Assert.areEqual("LOCK __migrations", connection.statements[3]);
-    Assert.isTrue(connection.statements[4]?.startsWith("CREATE TABLE IF NOT EXISTS \"__migrations\"") === true);
-    Assert.isTrue(connection.statements[5]?.startsWith("SELECT \"id\" FROM \"__migrations\"") === true);
-    Assert.areEqual("CREATE TABLE \"notes\" (\"id\" TEXT NOT NULL, \"text\" TEXT NOT NULL, PRIMARY KEY (\"id\"))", connection.statements[6]);
-    Assert.areEqual("CREATE INDEX \"IX_notes_text\" ON \"notes\" (\"text\")", connection.statements[7]);
-    Assert.isTrue(connection.statements[8]?.startsWith("INSERT INTO \"__migrations\"") === true);
-    Assert.areEqual("COMMIT", connection.statements[9]);
+    Assert.areEqual("BEGIN", connection.statements[0]);
+    Assert.areEqual("LOCK __migrations", connection.statements[1]);
+    Assert.areEqual("COMMIT", connection.statements[4]);
+    Assert.areEqual("BEGIN", connection.statements[5]);
+    Assert.areEqual("LOCK __migrations", connection.statements[6]);
+    Assert.isTrue(connection.statements[7]?.startsWith("CREATE TABLE IF NOT EXISTS \"__migrations\"") === true);
+    Assert.isTrue(connection.statements[8]?.startsWith("SELECT \"id\" FROM \"__migrations\"") === true);
+    Assert.areEqual("CREATE TABLE \"notes\" (\"id\" TEXT NOT NULL, \"text\" TEXT NOT NULL, PRIMARY KEY (\"id\"))", connection.statements[9]);
+    Assert.areEqual("CREATE INDEX \"IX_notes_text\" ON \"notes\" (\"text\")", connection.statements[10]);
+    Assert.isTrue(connection.statements[11]?.startsWith("INSERT INTO \"__migrations\"") === true);
+    Assert.areEqual("COMMIT", connection.statements[12]);
   }
 
   @TestMethod

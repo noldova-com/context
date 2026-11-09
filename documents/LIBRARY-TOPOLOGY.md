@@ -183,7 +183,8 @@ The PostgreSQL provider reads a `BIGINT` as a number when it is a safe integer a
 
 A SQL connection runs its statements on one session a provider supplies, and its transactions over the same session. A PostgreSQL connection holds one server session for its whole life, reserved from the client's pool, so a transaction and the order of its statements behave as on one SQLite file handle; the data source's location is the server's connection string, which the provider never writes into a message, an exception or a log.
 Migrating takes a lock first, so that several processes starting at once apply each migration once: SQLite's write lock on its file, which `BEGIN IMMEDIATE` takes and a busy timeout of five seconds waits for, and PostgreSQL's transaction-scoped advisory lock.
-Appending to the change feed takes the same kind of lock until the transaction ends, so the feed's sequence numbers become visible in order and a reader of the changes after a sequence never skips one that commits later.
+Appending to the change feed, and reading it, take the same kind of lock until the transaction ends, so the feed's sequence numbers become visible in order and a reader of the changes after a sequence never skips one that commits later.
+Reading the migration history takes the migration lock too, and both create their table under their lock, since two PostgreSQL sessions running `CREATE TABLE IF NOT EXISTS` for the same table at once can both try to create it, and one then fails.
 
 ### 7.5 The PostgreSQL client
 

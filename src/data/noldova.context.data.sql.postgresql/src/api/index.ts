@@ -6,4 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "../extensions/db-context-options-builder.extensions.js";
+
+export { PostgreSQLConnection } from "../models/postgresql-connection.js";
 export { PostgreSQLDialect } from "../services/postgresql-dialect.js";
+export { PostgreSQLProvider } from "../services/postgresql-provider.js";

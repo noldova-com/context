@@ -1,8 +1,8 @@
 # noldova.context.data.sql.postgresql
 
-The PostgreSQL provider of `noldova.context.data.sql`. So far it holds the
-dialect, which spells PostgreSQL's transactions, column types, generated
-keys, and advisory locks; the connection and the provider follow.
+The PostgreSQL provider of `noldova.context.data.sql`: its dialect, which
+spells PostgreSQL's transactions, column types, generated keys, and advisory
+locks, its connection, its provider, and `usePostgreSQL`.
 
 ## Install
 
@@ -13,10 +13,16 @@ npm install @noldova/context.data.sql.postgresql
 ## Use
 
 ```ts
-import { PostgreSQLDialect } from "@noldova/context.data.sql.postgresql";
+import { DbContextOptionsBuilder } from "@noldova/context.data";
+import "@noldova/context.data.sql.postgresql";
 
-const dialect = new PostgreSQLDialect();
+await using context = new NotesContext(new DbContextOptionsBuilder().usePostgreSQL("postgres://notes@localhost:5432/notes"));
+await context.database.migrateAsync();
 ```
+
+The location is the server's connection string, and the data source is
+named after its database. Parameters the client doesn't read itself, such as
+`search_path`, go to the server when the session starts.
 
 The declaration file `api/index.d.ts` documents every member with its
 contract.

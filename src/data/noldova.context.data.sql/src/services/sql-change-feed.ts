@@ -32,23 +32,29 @@ export class SqlChangeFeed extends ChangeFeed<SqlTransaction> {
   }
 
   protected override async readAfterCoreAsync(sequence: number, limit: number, transaction: SqlTransaction | undefined): Promise<readonly Change[]> {
-    const target = transaction ?? this.connection;
-    await this.prepareAsync(target);
-    return (await target.queryAsync(new SqlQuery(Resources.selectChangesAfter, [sequence, limit]))).map(t => SqlChangeFeed.toChange(t));
+    if (Object.isUndefined(transaction))
+      return this.connection.runInTransactionAsync(async t => this.readAfterInAsync(t, sequence, limit));
+
+    return this.readAfterInAsync(transaction, sequence, limit);
+  }
+
+  private async readAfterInAsync(transaction: SqlTransaction, sequence: number, limit: number): Promise<readonly Change[]> {
+    await this.prepareAsync(transaction);
+    return (await transaction.queryAsync(new SqlQuery(Resources.selectChangesAfter, [sequence, limit]))).map(t => SqlChangeFeed.toChange(t));
   }
 
   private async appendInAsync(transaction: SqlTransaction, entity: string, entityId: string, operation: ChangeOperation, payload: string): Promise<Change> {
-    for (const statement of this.connection.dialect.formatLock(Resources.changesTable))
-      await transaction.executeAsync(new SqlQuery(statement));
     await this.prepareAsync(transaction);
     const createdAt = new Date().toISOString();
     const sequence = await transaction.insertAsync(new SqlQuery(Resources.insertChange, [entity, entityId, operation, payload, createdAt]));
     return new Change(sequence, entity, entityId, operation, payload, createdAt);
   }
 
-  private async prepareAsync(target: SqlConnection | SqlTransaction): Promise<void> {
-    await target.executeAsync(new SqlQuery(Resources.formatCreateChangesTable(this.connection.dialect.formatIdentityColumnType())));
-    await target.executeAsync(new SqlQuery(Resources.createChangesIndex));
+  private async prepareAsync(transaction: SqlTransaction): Promise<void> {
+    for (const statement of this.connection.dialect.formatLock(Resources.changesTable))
+      await transaction.executeAsync(new SqlQuery(statement));
+    await transaction.executeAsync(new SqlQuery(Resources.formatCreateChangesTable(this.connection.dialect.formatIdentityColumnType())));
+    await transaction.executeAsync(new SqlQuery(Resources.createChangesIndex));
   }
 
   private static toChange(record: DataRecord): Change {

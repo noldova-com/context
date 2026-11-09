@@ -16,6 +16,8 @@ import { RecordingConnection } from "../fixtures/recording-connection.fixture.js
 export class SqlChangeFeedTests {
   private static readonly createTable: string = "CREATE TABLE IF NOT EXISTS \"__changes\" (\"sequence\" INTEGER PRIMARY KEY, \"entity\" TEXT NOT NULL, \"entityId\" TEXT NOT NULL, \"operation\" TEXT NOT NULL, \"payload\" TEXT NOT NULL, \"createdAt\" TEXT NOT NULL)";
   private static readonly createIndex: string = "CREATE INDEX IF NOT EXISTS \"IX___changes_entity_entityId\" ON \"__changes\" (\"entity\", \"entityId\")";
+  private static readonly select: string =
+    "SELECT \"sequence\", \"entity\", \"entityId\", \"operation\", \"payload\", \"createdAt\" FROM \"__changes\" WHERE \"sequence\" > ? ORDER BY \"sequence\" LIMIT ?";
   private static readonly insert: string = "INSERT INTO \"__changes\" (\"entity\", \"entityId\", \"operation\", \"payload\", \"createdAt\") VALUES (?, ?, ?, ?, ?)";
 
   @TestMethod
@@ -63,12 +65,8 @@ export class SqlChangeFeedTests {
     Assert.areEqual(2, inTransaction.length);
     Assert.areEqual(ChangeOperation.Delete, changes[0]?.operation);
     Assert.areEqual("{\"id\":\"a\"}", changes[0]?.payload);
-    Assert.areEqual(SqlChangeFeedTests.createTable, connection.statements[0]);
-    Assert.areEqual(SqlChangeFeedTests.createIndex, connection.statements[1]);
-    Assert.isTrue(connection.statements[2]?.startsWith(
-      "SELECT \"sequence\", \"entity\", \"entityId\", \"operation\", \"payload\", \"createdAt\" FROM \"__changes\" WHERE \"sequence\" > ?") === true);
-    Assert.areEqual("BEGIN", connection.statements[3]);
-    Assert.areEqual("COMMIT", connection.statements[7]);
+    const read = ["BEGIN", "LOCK __changes", SqlChangeFeedTests.createTable, SqlChangeFeedTests.createIndex, SqlChangeFeedTests.select, "COMMIT"];
+    Assert.areEqual([...read, ...read].join("|"), connection.statements.join("|"));
   }
 
   @TestMethod
