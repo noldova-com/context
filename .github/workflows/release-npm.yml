@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   release:
-    uses: noldova-com/.github/.github/workflows/release-npm.yml@6b27763a50e08e1a12bdcd276005f04c6e99ffd7 # v2.9.0
+    uses: noldova-com/.github/.github/workflows/release-npm.yml@269c765773c2ab484edc93d14054151c4a1ad39a # v2.10.0
     permissions:
       contents: write
       packages: write
@@ -38,7 +38,7 @@ jobs:
 
   dependents:
     needs: release
-    uses: noldova-com/.github/.github/workflows/update-dependents.yml@6b27763a50e08e1a12bdcd276005f04c6e99ffd7 # v2.9.0
+    uses: noldova-com/.github/.github/workflows/update-dependents.yml@269c765773c2ab484edc93d14054151c4a1ad39a # v2.10.0
     permissions:
       contents: read
       packages: read
