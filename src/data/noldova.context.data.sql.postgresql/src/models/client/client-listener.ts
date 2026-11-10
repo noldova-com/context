@@ -69,6 +69,8 @@ export class ClientListener {
 
     if (this.channels.get(name) === channel)
       this.channels.delete(name);
+    this.options.timers.clearTimeout(channel.timer);
+    channel.timer = null;
     if (this.channels.size === 0)
       this.release();
     const pool = this.pool;

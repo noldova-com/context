@@ -19,17 +19,35 @@ import { ArgumentException } from "@noldova/context.exceptions";
 import { ChannelBinding } from "@noldova/context.data.sql.postgresql/enums/channel-binding.js";
 import { SslMode } from "@noldova/context.data.sql.postgresql/enums/ssl-mode.js";
 import { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
+import { SystemCertificates } from "@noldova/context.data.sql.postgresql/models/system-certificates.js";
 import { PostgreSQLSocket } from "@noldova/context.data.sql.postgresql/models/postgresql-socket.js";
 import { SessionStarter } from "@noldova/context.data.sql.postgresql/services/session-starter.js";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { FakeServer } from "../fixtures/fake-server.fixture.js";
+import { FixedCertificates } from "../fixtures/fixed-certificates.fixture.js";
 import { Released } from "../fixtures/released.fixture.js";
 import { TestCertificate } from "../fixtures/test-certificate.fixture.js";
 
 @TestClass
 export class TlsOptionsReaderTests {
   private static readonly passphrase: string = "violet-lantern-73";
+
+  @TestMethod
+  public async trustsTheSystemRootsWithoutARootFileAsync(): Promise<void> {
+    const root = TestCertificate.authority("Test Root");
+    const server = await TlsOptionsReaderTests.startAsync(root.issue("server", TestCertificate.ipAddress("127.0.0.1")));
+    try {
+      await TlsOptionsReaderTests.connectAsync(TlsOptionsReaderTests.options(server, SslMode.VerifyFull, null, null, null, null, new FixedCertificates([root.certificate])));
+      const refused = await Assert.throwsAsync(
+        () => new SessionStarter(TlsOptionsReaderTests.options(server, SslMode.VerifyFull, null, null, null, null, new FixedCertificates([]))).startAsync(), Error);
+
+      Assert.areEqual("UNABLE_TO_VERIFY_LEAF_SIGNATURE", "code" in refused ? refused.code : undefined);
+    }
+    finally {
+      await TlsOptionsReaderTests.closeAsync(server);
+    }
+  }
 
   @TestMethod
   public async verifyCaTrustsAServerTheRootSignedWhateverItsNameAsync(): Promise<void> {
@@ -58,7 +76,7 @@ export class TlsOptionsReaderTests {
           () => new SessionStarter(TlsOptionsReaderTests.options(other, SslMode.VerifyFull, path("root.pem"))).startAsync(), Error);
         await TlsOptionsReaderTests.connectAsync(TlsOptionsReaderTests.options(named, SslMode.VerifyFull, path("root.pem")));
 
-        Assert.areEqual("ERR_TLS_CERT_ALTNAME_INVALID", Reflect.get(error, "code"));
+        Assert.areEqual("ERR_TLS_CERT_ALTNAME_INVALID", "code" in error ? error.code : undefined);
       });
 
       Assert.isTrue(named.peers[0]?.secure ?? false);
@@ -81,8 +99,8 @@ export class TlsOptionsReaderTests {
         const full = await Assert.throwsAsync(
           () => new SessionStarter(TlsOptionsReaderTests.options(server, SslMode.VerifyFull, path("root.pem"))).startAsync(), Error);
 
-        Assert.areEqual("UNABLE_TO_VERIFY_LEAF_SIGNATURE", Reflect.get(ca, "code"));
-        Assert.areEqual("UNABLE_TO_VERIFY_LEAF_SIGNATURE", Reflect.get(full, "code"));
+        Assert.areEqual("UNABLE_TO_VERIFY_LEAF_SIGNATURE", "code" in ca ? ca.code : undefined);
+        Assert.areEqual("UNABLE_TO_VERIFY_LEAF_SIGNATURE", "code" in full ? full.code : undefined);
       });
     }
     finally {
@@ -187,7 +205,7 @@ export class TlsOptionsReaderTests {
   @TestMethod
   public refusesACertificateWithoutItsKeyAndAKeyWithoutItsCertificate(): void {
     const create = (certificate: string | null, key: string | null): ConnectionOptions => new ConnectionOptions(
-      "127.0.0.1", 5432, "app", "app", "", SslMode.Require, ChannelBinding.Prefer, 0, new Map(), null, certificate, key, null);
+      "127.0.0.1", 5432, "app", "app", "", SslMode.Require, ChannelBinding.Prefer, 0, new Map(), new SystemCertificates(), null, certificate, key, null);
 
     const keyless = Assert.throws(() => create("/client.pem", null), ArgumentException);
     const certificateless = Assert.throws(() => create(null, "/client.key"), ArgumentException);
@@ -198,8 +216,8 @@ export class TlsOptionsReaderTests {
 
   private static options(
     server: FakeServer, sslMode: SslMode, root: string | null, certificate: string | null = null, key: string | null = null,
-    password: string | null = null): ConnectionOptions {
-    return new ConnectionOptions("127.0.0.1", server.port, "app", "app", "", sslMode, ChannelBinding.Prefer, 0, new Map(), root, certificate, key, password);
+    password: string | null = null, certificates: SystemCertificates = new SystemCertificates()): ConnectionOptions {
+    return new ConnectionOptions("127.0.0.1", server.port, "app", "app", "", sslMode, ChannelBinding.Prefer, 0, new Map(), certificates, root, certificate, key, password);
   }
 
   private static async startAsync(certificate: TestCertificate, authority: TestCertificate | null = null): Promise<FakeServer> {

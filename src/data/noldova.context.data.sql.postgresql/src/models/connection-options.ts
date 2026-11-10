@@ -12,6 +12,7 @@ import { ArgumentException } from "@noldova/context.exceptions";
 import type { ChannelBinding } from "../enums/channel-binding.js";
 import type { SslMode } from "../enums/ssl-mode.js";
 import { Resources } from "../resources.js";
+import type { SystemCertificates } from "./system-certificates.js";
 
 export class ConnectionOptions {
   public readonly host: string;
@@ -23,6 +24,7 @@ export class ConnectionOptions {
   public readonly channelBinding: ChannelBinding;
   public readonly connectTimeout: number;
   public readonly parameters: ReadonlyMap<string, string>;
+  public readonly systemCertificates: SystemCertificates;
   public readonly rootCertificate: string | null;
   public readonly sslCertificate: string | null;
   public readonly sslKey: string | null;
@@ -30,7 +32,7 @@ export class ConnectionOptions {
 
   public constructor(
     host: string, port: number, database: string, user: string, password: string, sslMode: SslMode, channelBinding: ChannelBinding,
-    connectTimeout: number, parameters: ReadonlyMap<string, string>, rootCertificate: string | null = null, sslCertificate: string | null = null,
+    connectTimeout: number, parameters: ReadonlyMap<string, string>, systemCertificates: SystemCertificates, rootCertificate: string | null = null, sslCertificate: string | null = null,
     sslKey: string | null = null, sslPassword: string | null = null) {
     if (Object.isNull(sslCertificate) && !Object.isNull(sslKey))
       throw new ArgumentException(Resources.sslKeyWithoutCertificate, Resources.sslCertOption);
@@ -46,6 +48,7 @@ export class ConnectionOptions {
     this.channelBinding = channelBinding;
     this.connectTimeout = connectTimeout;
     this.parameters = parameters;
+    this.systemCertificates = systemCertificates;
     this.rootCertificate = rootCertificate;
     this.sslCertificate = sslCertificate;
     this.sslKey = sslKey;

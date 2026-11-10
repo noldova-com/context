@@ -22,7 +22,7 @@ import Script from "./script.ts";
 
 export class Build extends Script {
   private static readonly BUILD_SCRIPT_PATH: string = "scripts/build.ts";
-  private static readonly BUILD_DEPENDENCIES_FIELD: string = "dependencies";
+  private static readonly BUILD_DEPENDENCIES_FIELD: "dependencies" = "dependencies";
   private static readonly CLEAN_INSTALL_ARGUMENTS: readonly string[] = ["ci", "--ignore-scripts"];
   private static readonly GIT_HEAD_ARGUMENTS: readonly string[] = ["rev-parse", "--verify", "HEAD^{commit}"];
   private static readonly GIT_HEAD_FIELD: string = "gitHead";
@@ -79,7 +79,7 @@ export class Build extends Script {
       return Config.PACKAGES_INFO.map(t => t.packageName);
 
     const manifest: unknown = JSON.parse(await this.readFileAsync(`${Build.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Build.PACKAGE_MANIFEST_FILE_NAME}`));
-    const dependencies: unknown = typeof manifest === "object" && manifest !== null ? Reflect.get(manifest, Build.BUILD_DEPENDENCIES_FIELD) : undefined;
+    const dependencies: unknown = typeof manifest === "object" && manifest !== null && Build.BUILD_DEPENDENCIES_FIELD in manifest ? manifest[Build.BUILD_DEPENDENCIES_FIELD] : undefined;
     return typeof dependencies === "object" && dependencies !== null ? Object.keys(dependencies) : [];
   }
 

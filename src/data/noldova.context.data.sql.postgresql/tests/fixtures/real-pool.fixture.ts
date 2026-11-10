@@ -13,6 +13,7 @@ import { SslMode } from "@noldova/context.data.sql.postgresql/enums/ssl-mode.js"
 import { BuiltQuery } from "@noldova/context.data.sql.postgresql/models/built-query.js";
 import { ClientOptions } from "@noldova/context.data.sql.postgresql/models/client-options.js";
 import { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
+import { SystemCertificates } from "@noldova/context.data.sql.postgresql/models/system-certificates.js";
 import { Result } from "@noldova/context.data.sql.postgresql/models/result.js";
 import type { PoolLease } from "@noldova/context.data.sql.postgresql/models/client/pool-lease.js";
 import { PostgreSQLPool } from "@noldova/context.data.sql.postgresql/models/client/postgresql-pool.js";
@@ -34,7 +35,7 @@ export class RealPool {
   public constructor(values: Partial<ClientOptions> = {}, parameters: ReadonlyMap<string, string> = new Map()) {
     const server = PostgreSQLServerFixture.current();
     this.options = new ClientOptions({ maxLifetime: null, ...values });
-    this.connection = new ConnectionOptions(server.host, server.port, server.database, server.user, "", SslMode.Disable, ChannelBinding.Prefer, 5, parameters);
+    this.connection = new ConnectionOptions(server.host, server.port, server.database, server.user, "", SslMode.Disable, ChannelBinding.Prefer, 5, parameters, new SystemCertificates());
     this.registry = new TypeRegistry(this.options);
     this.pool = new PostgreSQLPool(this.options, this.connection, this.registry, options => new SessionStarter(options, this.options.cancelTimeout));
   }

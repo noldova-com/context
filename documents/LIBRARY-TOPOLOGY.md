@@ -184,13 +184,14 @@ The PostgreSQL provider reads a `BIGINT` as a number when it is a safe integer a
 A SQL connection runs its statements on one session a provider supplies, and its transactions over the same session. A PostgreSQL connection holds one server session for its whole life, reserved from the client's pool, so a transaction and the order of its statements behave as on one SQLite file handle; the data source's location is the server's connection string, which the provider never writes into a message, an exception or a log.
 Migrating takes a lock first, so that several processes starting at once apply each migration once: SQLite's write lock on its file, which `BEGIN IMMEDIATE` takes and a busy timeout of five seconds waits for, and PostgreSQL's transaction-scoped advisory lock.
 Appending to the change feed, and reading it, take the same kind of lock until the transaction ends, so the feed's sequence numbers become visible in order and a reader of the changes after a sequence never skips one that commits later.
-Reading the migration history takes the migration lock too, and both create their table under their lock, since two PostgreSQL sessions running `CREATE TABLE IF NOT EXISTS` for the same table at once can both try to create it, and one then fails.
+Reading the migration history takes the migration lock too, and both create their table under their lock, in a transaction, since two PostgreSQL sessions running `CREATE TABLE IF NOT EXISTS` for the same table at once can both try to create it, and one then fails.
 
 ### 7.5 The PostgreSQL client
 
 The PostgreSQL provider's client is a port of postgres.js (`porsager/postgres`) at its `v4.1.0` tag, commit `d84da749342240a4c1fb44e4f9a6b22d2350fb7b`, rewritten in CONTEXT's style: classes, `Resources`, the package's exceptions, and the code rules in `ARCHITECTURE.md`.
 postgres.js is under the Unlicense and has no dependencies, so the port owes no notice; the package's README names the source, its tag and commit, and what changed from it.
 
-The port keeps the wire protocol and the behavior the provider needs, from `src/`: the connection, the pool, the entry point's options and client, the type conversions, the sign-in with SCRAM-SHA-256 and TLS, the protocol messages, queries, the socket, errors, and results.
-It leaves out what the provider doesn't use: `subscribe.js` (logical replication), `large.js` (large objects), `cf.js` (Cloudflare sockets), and `build.js` (the tagged-template query builder), since Data.Sql renders every statement as text with parameters; with them go the diagnostics channels, COPY streams, and the options that read files, such as a password file or certificate paths.
+The port keeps, from `src/`, the connection, the pool, the entry point's options and client, the type conversions, the sign-in with SCRAM-SHA-256 and TLS, the protocol messages, queries with their cursors and COPY streams, the socket, errors, and results.
+It leaves out `subscribe.js` (logical replication), `large.js` (large objects), `cf.js` (Cloudflare sockets), `diagnostics.js` (the diagnostics channels), and `build.js` (the tagged-template query builder), since Data.Sql renders every statement as text with parameters, and the password file.
+It reads the TLS certificate options, `sslrootcert`, `sslcert`, `sslkey` and `sslpassword`, from the files the connection string names.
 The client is internal to the package: the provider's connection is its only user, and the package's public API is the provider's.

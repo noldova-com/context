@@ -27,7 +27,7 @@ export class ParallelTestRunner {
   }
 
   public runAsync(testProjects: readonly TestProject[], filters: readonly string[] = [], progressListener?: ITestProgressListener): Promise<TestRunResult> {
-    return new TestRunSupervisor(this.timeoutMilliseconds, testProjects, filters, progressListener, undefined, this.workerCount, undefined, undefined,
-      this.clock).runAsync();
+    return new TestRunSupervisor(this.timeoutMilliseconds, testProjects, filters, progressListener, TestRunSupervisor.readCoverageDirectory(),
+      undefined, this.workerCount, undefined, undefined, this.clock).runAsync();
   }
 }

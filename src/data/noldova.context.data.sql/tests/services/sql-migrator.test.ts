@@ -6,8 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { DataException, Migrator } from "@noldova/context.data";
-import { SqlMigrator } from "@noldova/context.data.sql";
+import { ChangeOperation, DataException, Migrator } from "@noldova/context.data";
+import { SqlChangeFeed, SqlMigrator } from "@noldova/context.data.sql";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { NotesMigration } from "../fixtures/notes-migration.fixture.js";
@@ -15,6 +15,29 @@ import { RecordingConnection } from "../fixtures/recording-connection.fixture.js
 
 @TestClass
 export class SqlMigratorTests {
+  @TestMethod
+  public async createsEveryTableOnlyUnderTheLockInATransaction(): Promise<void> {
+    const connection = new RecordingConnection();
+    const feed = new SqlChangeFeed(connection);
+
+    await new SqlMigrator(connection, [new NotesMigration()]).migrateAsync();
+    await feed.readAfterAsync(0);
+    await feed.appendAsync("note", "a", ChangeOperation.Insert, "{}");
+
+    let locked = false;
+    const unlocked: string[] = [];
+    for (const statement of connection.statements) {
+      if (statement === "BEGIN" || statement === "COMMIT")
+        locked = false;
+      else if (statement.startsWith("LOCK"))
+        locked = true;
+      else if (statement.startsWith("CREATE") && !locked)
+        unlocked.push(statement);
+    }
+    Assert.areEqual(8, connection.statements.filter(t => t.startsWith("CREATE")).length);
+    Assert.areEqual(String.empty, unlocked.join("|"));
+  }
+
   @TestMethod
   public async appliesEachPendingMigrationInOneLockedTransaction(): Promise<void> {
     const connection = new RecordingConnection();
@@ -44,6 +67,7 @@ export class SqlMigratorTests {
   public async skipsAMigrationAnotherProcessRecordedBeforeTheLock(): Promise<void> {
     const connection = new RecordingConnection();
     connection.session.appliedOnLock = "20260908130000_Notes";
+    connection.session.locksBeforeApplied = 1;
     const migrator = new SqlMigrator(connection, [new NotesMigration()]);
 
     const applied = await migrator.migrateAsync();

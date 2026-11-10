@@ -119,6 +119,7 @@ export class Resources {
   public static readonly refusedQuery: string = "noldova.context: query could not be built";
   public static readonly rollback: string = "rollback";
   public static readonly rollbackToPrefix: string = "rollback to ";
+  public static readonly saslFirstMessageInvalid: string = "The server's SCRAM message has no salt or no positive iteration count.";
   public static readonly saslMechanismUnsupported: string = "The server offered no supported SASL mechanism.";
   public static readonly saslNonceMismatch: string = "The server nonce does not start with the client nonce.";
   public static readonly saslSignatureMismatch: string = "The server did not return the correct signature.";
@@ -157,7 +158,7 @@ export class Resources {
   public static readonly statementNameSuffix: string = "_";
   public static readonly stringEscape: string = "\\";
   public static readonly stringQuote: string = "'";
-  public static readonly systemCertificates: string = "system";
+  public static readonly systemCertificates: "system" = "system";
   public static readonly tableNameField: string = "table_name";
   public static readonly targetSessionAttrsOption: string = "target_session_attrs";
   public static readonly targetSessionAttrsParameterName: string = "targetSessionAttrs";
@@ -182,6 +183,7 @@ export class Resources {
   public static readonly unsafeTransaction: string = "Run transaction statements only in a transaction or on a reserved connection, or set max to 1.";
   public static readonly unsupportedOutcome: string = "The statement gave no single result; run one statement at a time.";
   public static readonly unsupportedValue: string = "The row holds a value that is neither text nor null.";
+  public static readonly unterminatedErrorField: string = "The server sent an error whose field has no terminator.";
   public static readonly userInfoSeparator: string = "@";
   public static readonly userMissing: string = "No user was given; give one in the connection string or in the user setting.";
   public static readonly userParameterName: string = "user";
@@ -232,6 +234,10 @@ export class Resources {
     return `The client for ${host}:${port} has ended, so it runs no more queries.`;
   }
 
+  public static formatIntegerOptionInvalid(name: string): string {
+    return `The connection string's ${name} is not a whole number of zero or more.`;
+  }
+
   public static formatInvalidMessageLength(length: number): string {
     return `The server sent a message with an invalid length (${length}).`;
   }
@@ -250,6 +256,10 @@ export class Resources {
 
   public static formatParameterCount(placeholders: number, parameters: number): string {
     return `The statement has ${placeholders} parameter placeholders but ${parameters} parameters.`;
+  }
+
+  public static formatPositionalParameter(offset: number): string {
+    return `The text at offset ${offset} is a positional parameter; mark every parameter with ? instead.`;
   }
 
   public static formatQueryTimeout(seconds: number): string {

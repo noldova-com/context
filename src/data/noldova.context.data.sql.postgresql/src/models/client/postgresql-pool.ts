@@ -428,11 +428,7 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
         shape => query.resolve(new StatementDescription("", built.text, shape.params, shape.columns ?? [])),
         (error: unknown) => query.reject(PostgreSQLPool.toError(error)));
     };
-    const job = this.createJob(query, describe);
-    if (Object.isNull(lease))
-      this.place(job, null);
-    else
-      job.run(lease.connection);
+    this.place(this.createJob(query, describe), lease);
   }
 
   private rejectUnbuilt(query: Query, error: Error, lease: PoolLease | null): void {

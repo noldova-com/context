@@ -207,4 +207,17 @@ export class ClientOptionsParserTests {
 
     Assert.areEqual("host", failure.parameterName);
   }
+
+  @TestMethod
+  @TestData("connect_timeout", "10s")
+  @TestData("connect_timeout", "-1")
+  @TestData("port", "")
+  @TestData("max", "1.5")
+  @TestData("idle_timeout", "99999999999999999999")
+  public refusesANumberOptionThatIsNotAWholeNumber(name: string, value: string): void {
+    const failure = Assert.throws(() => ClientOptionsParser.parse(`postgres://app@db.example/notes?${name}=${value}`), ArgumentException);
+
+    Assert.areEqual(name, failure.parameterName);
+    Assert.areEqual(`The connection string's ${name} is not a whole number of zero or more. (Parameter '${name}')`, failure.message);
+  }
 }

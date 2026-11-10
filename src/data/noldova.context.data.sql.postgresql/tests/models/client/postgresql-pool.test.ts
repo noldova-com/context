@@ -279,6 +279,19 @@ export class PostgreSQLPoolTests {
   }
 
   @TestMethod
+  public async refusesALeasedDescribeThatReachesThePoolAfterTheReleaseAsync(): Promise<void> {
+    const harness = new PoolHarness();
+    const lease = await harness.pool.acquireLeaseAsync(LeaseKind.Reserve);
+    const query = harness.leased(lease, "select 1").describe();
+
+    lease.release();
+    harness.pool.query(query, lease);
+
+    await Assert.throwsAsync(() => query.promise, UnsafeTransactionException);
+    Assert.areEqual(0, harness.pool.stats.leased);
+  }
+
+  @TestMethod
   public async describesAStatementAsync(): Promise<void> {
     const harness = new PoolHarness();
     const query = harness.query("select $1::int as x", [], [0]).describe().execute();

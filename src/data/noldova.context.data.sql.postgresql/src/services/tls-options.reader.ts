@@ -29,7 +29,7 @@ export class TlsOptionsReader {
       TlsOptionsReader.readKeyAsync(options.sslKey, options.sslPassword)
     ]);
     return {
-      secureContext: TlsOptionsReader.createContext({ ca, cert, key }),
+      secureContext: TlsOptionsReader.createContext({ ca: ca ?? options.systemCertificates.read(), cert, key }),
       rejectUnauthorized: options.sslMode === SslMode.VerifyCa || options.sslMode === SslMode.VerifyFull,
       ...options.sslMode === SslMode.VerifyCa ? { checkServerIdentity: () => undefined } : {}
     };

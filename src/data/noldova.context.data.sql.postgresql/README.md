@@ -2,7 +2,8 @@
 
 The PostgreSQL provider of `noldova.context.data.sql`: its dialect, which
 spells PostgreSQL's transactions, column types, generated keys, and advisory
-locks, its connection, its provider, and `usePostgreSQL`.
+locks, its connection, its provider, `usePostgreSQL`, and the internal
+PostgreSQL client its connection reaches the server through.
 
 ## Install
 
@@ -57,6 +58,31 @@ or the passphrase.
 Not supported yet: the `PG*` environment variables, the password file, the
 operating system's user name as the default user, several hosts and
 `target_session_attrs`, Unix-domain sockets, and direct SSL negotiation.
+
+## Source
+
+The client is a port of postgres.js (https://github.com/porsager/postgres)
+at its `v4.1.0` tag, commit `d84da749342240a4c1fb44e4f9a6b22d2350fb7b`,
+under the Unlicense; `THIRD-PARTY-NOTICES.txt` keeps its text. What changed
+from it:
+
+- `index.js` became `PostgreSQLClient`, with `ClientOptionsParser` for its
+  options; `pool.js` became `PostgreSQLPool` and its leases;
+  `connection.js`, `startup.js` and `socket.js` became the connection, the
+  session starter, the authenticator and the socket; `protocol.js` became
+  `services/protocol/`; `query.js` became `Query` and `ClientQuery`;
+  `types.js` became `services/types/` and `TypeRegistry`; `errors.js`
+  became the exceptions in `exceptions/`, each a `DataException`; and
+  `result.js` became `Result`.
+- Queries take text and values, `query`, `runUnsafe` and `runFile`, in place
+  of tagged templates, and builder methods such as `useCursor` and
+  `useValueRows` in place of the query's own options.
+- The TLS options are the connection string's `sslmode` and certificate
+  files, as above, in place of a Node `tls` options object.
+- `build.js`, `subscribe.js`, `large.js`, `cf.js` and `diagnostics.js` are
+  left out, and so are the environment variables and the password file.
+- The provider's own parts are new: the connection-string parser, the `?`
+  rewriter and the value converter.
 
 ## License
 

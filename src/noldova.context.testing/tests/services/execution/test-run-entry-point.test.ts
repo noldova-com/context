@@ -15,7 +15,6 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { EntryRun } from "../../fixtures/execution/entry-run.fixture.js";
 import { FixtureTestProject } from "../../fixtures/execution/fixture-test-project.fixture.js";
-import { WithoutCoverage } from "../../fixtures/execution/without-coverage.fixture.js";
 
 @TestClass
 export class TestRunEntryPointTests {
@@ -25,7 +24,7 @@ export class TestRunEntryPointTests {
     try {
       await writeFile(join(rootDirectory, "empty.test.js"), "export {};\n");
 
-      const entryRun = await WithoutCoverage.runAsync(() => this.runEntryAsync("TestPackage", rootDirectory));
+      const entryRun = await this.runEntryArgumentsAsync(["TestPackage", rootDirectory], "[]", undefined, false);
 
       Assert.areEqual(1, entryRun.exitCode);
       Assert.isTrue(entryRun.errorOutput.includes("TestingException"));
@@ -153,9 +152,12 @@ export class TestRunEntryPointTests {
     return this.runEntryArgumentsAsync([packageName, rootDirectory]);
   }
 
-  private runEntryArgumentsAsync(arguments_: readonly string[], filters: string | null = "[]", temporaryDirectory?: string): Promise<EntryRun> {
+  private runEntryArgumentsAsync(
+    arguments_: readonly string[], filters: string | null = "[]", temporaryDirectory?: string, coverage: boolean = true): Promise<EntryRun> {
     return new Promise<EntryRun>((resolve, reject) => {
       const environment = { ...process.env };
+      if (!coverage)
+        delete environment["NODE_V8_COVERAGE"];
       if (!Object.isUndefined(temporaryDirectory))
         for (const variable of ["TMPDIR", "TEMP", "TMP"])
           environment[variable] = temporaryDirectory;

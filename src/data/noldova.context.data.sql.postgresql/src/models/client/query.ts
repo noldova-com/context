@@ -109,20 +109,21 @@ export class Query implements PromiseLike<QueryOutcome> {
   }
 
   public complete(value: QueryOutcome): void {
-    this.clearTimer();
-    this.aborts?.();
-    this.active = false;
-    this.settled = true;
+    this.finish();
     this.deferred.resolve(value);
   }
 
   public fail(error: Error): void {
-    this.clearTimer();
     const failure = this.timedOut && Query.isTimeout(error) ? this.createLateError(error) : error;
+    this.finish();
+    this.deferred.reject(failure);
+  }
+
+  public finish(): void {
+    this.clearTimer();
     this.aborts?.();
     this.active = false;
     this.settled = true;
-    this.deferred.reject(failure);
   }
 
   public cancelAsync(): Promise<void> {

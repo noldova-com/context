@@ -19,6 +19,7 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { BackendMessages as M } from "../../fixtures/backend-messages.fixture.js";
 import { type FakePeer, FakeServer } from "../../fixtures/fake-server.fixture.js";
+import { LiveTimers } from "../../fixtures/live-timers.fixture.js";
 import { Released } from "../../fixtures/released.fixture.js";
 
 @TestClass
@@ -110,6 +111,46 @@ export class PostgreSQLClientFakeTests {
     });
 
     Assert.isTrue(attempts.includes(1));
+  }
+
+  @TestMethod
+  public async dropsTheBackoffTimerWhenTheLastListenerLeavesAsync(): Promise<void> {
+    const server = await FakeServer.startAsync();
+    let listens = 0;
+    server.onMessage = (peer, type, body) => {
+      const listen = PostgreSQLClientFakeTests.text(type, body)?.startsWith("listen") === true;
+      listens += listen ? 1 : 0;
+      if (listen && listens > 1)
+        peer.send(M.error("42501", "permission denied"), M.readyForQuery());
+      else
+        PostgreSQLClientFakeTests.answer(peer, type, body, [], () => null);
+    };
+    const timers = new LiveTimers();
+    const retried = Promise.withResolvers<void>();
+    const client = PostgreSQLClientFakeTests.client(server, {
+      timers,
+      backoff: () => {
+        retried.resolve();
+        return 60;
+      }
+    });
+    try {
+      const subscription = await client.listenAsync("again", () => undefined);
+      server.peers[0]?.destroy();
+      await retried.promise;
+      const waiting = timers.count(60000);
+
+      await subscription.unlistenAsync();
+
+      Assert.areEqual(1, waiting);
+      Assert.areEqual(0, timers.count(60000));
+    }
+    finally {
+      await client.endAsync(0);
+      await server.closeAsync();
+    }
+
+    Assert.isTrue(await Released.socketsAsync());
   }
 
   private static async relistenAsync(settings: ClientSettings): Promise<void> {

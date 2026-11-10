@@ -19,6 +19,7 @@ export class RecordingSession extends SqlSession {
   public readonly queryResults: DataRecord[] = [];
   public failingStatement: string | undefined = undefined;
   public appliedOnLock: string | undefined = undefined;
+  public locksBeforeApplied: number = 0;
   public closeCount: number = 0;
 
   public override get isOpen(): boolean {
@@ -31,7 +32,7 @@ export class RecordingSession extends SqlSession {
       throw new Error(query.text);
 
     this.statements.push(query.text);
-    if (query.text.startsWith("LOCK") && !Object.isUndefined(this.appliedOnLock))
+    if (query.text.startsWith("LOCK") && !Object.isUndefined(this.appliedOnLock) && this.locksBeforeApplied-- === 0)
       this.appliedIds.push(this.appliedOnLock);
     if (query.text.startsWith("INSERT INTO \"__migrations\"") && Object.isString(query.parameters[0]))
       this.appliedIds.push(query.parameters[0]);

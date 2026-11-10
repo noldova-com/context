@@ -12,6 +12,7 @@ import { DataException } from "@noldova/context.data";
 import { ChannelBinding } from "../enums/channel-binding.js";
 import { SslMode } from "../enums/ssl-mode.js";
 import { ConnectionOptions } from "../models/connection-options.js";
+import { SystemCertificates } from "../models/system-certificates.js";
 import { Resources } from "../resources.js";
 
 export class ConnectionStringParser {
@@ -45,6 +46,7 @@ export class ConnectionStringParser {
       ConnectionStringParser.parseEnum(Object.values(ChannelBinding), query.get(Resources.channelBindingOption), ChannelBinding.Prefer),
       ConnectionStringParser.parseInteger(query.get(Resources.connectTimeoutOption) ?? "", ConnectionStringParser.defaultConnectTimeout),
       parameters,
+      new SystemCertificates(),
       system ? null : root,
       query.get(Resources.sslCertOption) ?? null,
       query.get(Resources.sslKeyOption) ?? null,

@@ -15,6 +15,7 @@ import { ClientConfiguration } from "../models/client-configuration.js";
 import { ClientOptions } from "../models/client-options.js";
 import { ConnectionOptions } from "../models/connection-options.js";
 import { ParsedUrl } from "../models/parsed-url.js";
+import { SystemCertificates } from "../models/system-certificates.js";
 import { TransformOptions } from "../models/transform-options.js";
 import { Resources } from "../resources.js";
 import type { ClientSettings } from "../types/client-settings.js";
@@ -46,6 +47,7 @@ export class ClientOptionsParser {
   ]);
 
   private static readonly bracketed: RegExp = /^\[(?<host>[^\]]*)\](?::(?<port>\d*))?$/u;
+  private static readonly digits: RegExp = /^[0-9]+$/u;
   private static readonly plain: RegExp = /^(?<host>[^:]*)(?::(?<port>\d*))?$/u;
 
   public static parse(location: string | null, settings: ClientSettings = {}): ClientConfiguration {
@@ -60,7 +62,7 @@ export class ClientOptionsParser {
     if ((sslnegotiation ?? query.get(Resources.sslNegotiationOption)) === Resources.directNegotiation)
       throw new ArgumentException(Resources.directSslUnsupported, Resources.sslNegotiationParameterName);
 
-    const given = port ?? ClientOptionsParser.parseInteger(query.get(Resources.portOption)) ?? target[1] ?? ClientOptionsParser.defaultPort;
+    const given = port ?? ClientOptionsParser.parseInteger(query.get(Resources.portOption), Resources.portOption) ?? target[1] ?? ClientOptionsParser.defaultPort;
     const name = ClientOptionsParser.pickFirst(user, url.username);
     if (Object.isNull(name))
       throw new ArgumentException(Resources.userMissing, Resources.userParameterName);
@@ -74,8 +76,9 @@ export class ClientOptionsParser {
       ClientOptionsParser.pickFirst(password, url.password) ?? String.empty,
       ClientOptionsParser.parseSslMode(ssl ?? ClientOptionsParser.readSslSwitch(query)),
       ClientOptionsParser.parseBinding(channelBinding ?? query.get(Resources.channelBindingOption) ?? null),
-      connectTimeout ?? ClientOptionsParser.parseInteger(query.get(Resources.connectTimeoutOption)) ?? ClientOptionsParser.defaultConnectTimeout,
+      connectTimeout ?? ClientOptionsParser.parseInteger(query.get(Resources.connectTimeoutOption), Resources.connectTimeoutOption) ?? ClientOptionsParser.defaultConnectTimeout,
       ClientOptionsParser.mergeParameters(connection, query),
+      new SystemCertificates(),
       ClientOptionsParser.readRootCertificate(query),
       query.get(Resources.sslCertOption) ?? null,
       query.get(Resources.sslKeyOption) ?? null,
@@ -193,7 +196,7 @@ export class ClientOptionsParser {
   private static fromQuery(query: ReadonlyMap<string, string>): OptionValues {
     const values: OptionValues = {};
     for (const [name, key] of ClientOptionsParser.integers) {
-      const value = ClientOptionsParser.parseInteger(query.get(name));
+      const value = ClientOptionsParser.parseInteger(query.get(name), name);
       if (!Object.isUndefined(value))
         values[key] = value;
     }
@@ -219,8 +222,15 @@ export class ClientOptionsParser {
     return parameters;
   }
 
-  private static parseInteger(text: string | undefined): number | undefined {
-    return Object.isUndefined(text) ? undefined : Number(text);
+  private static parseInteger(text: string | undefined, name: string): number | undefined {
+    if (Object.isUndefined(text))
+      return undefined;
+
+    const value = Number(text);
+    if (!ClientOptionsParser.digits.test(text) || !Number.isSafeInteger(value))
+      throw new ArgumentException(Resources.formatIntegerOptionInvalid(name), name);
+
+    return value;
   }
 
   private static pickFirst(given: string | undefined, parsed: string): string | null {

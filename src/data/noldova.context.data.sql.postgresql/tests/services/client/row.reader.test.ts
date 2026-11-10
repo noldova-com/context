@@ -87,9 +87,9 @@ export class RowReaderTests {
     const row = RowReader.read(data, 0, columns, RowMode.Object, null);
 
     Assert.isInstanceOf(row, Object);
-    Assert.areEqual(7, Reflect.get(row, "id"));
-    Assert.isNull(Reflect.get(row, "note"));
-    Assert.areEqual("AB", Reflect.get(row, "code"));
+    Assert.areEqual(7, Object.isObject(row) && "id" in row ? row.id : undefined);
+    Assert.isNull(Object.isObject(row) && "note" in row ? row.note : undefined);
+    Assert.areEqual("AB", Object.isObject(row) && "code" in row ? row.code : undefined);
     Assert.areEqual("own", Object.getOwnPropertyDescriptor(row, "__proto__")?.value);
     Assert.areEqual(Object.prototype, Object.getPrototypeOf(row));
   }

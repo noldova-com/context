@@ -43,7 +43,7 @@ export class TestRunSupervisor {
   private readonly startLimitMilliseconds: number;
   private readonly createWorker: (url: URL, options: WorkerOptions) => Worker;
   private readonly clock: IClock;
-  private readonly coverageDirectory: string | undefined;
+  private readonly coverageDirectory: string | null;
   private readonly endedThreadIds: number[];
   private readonly runs: TestWorkerRun[];
   private readonly workers: Map<Worker, () => Promise<void>>;
@@ -58,11 +58,11 @@ export class TestRunSupervisor {
   private elapsedMillisecondsValue: number;
 
   public constructor(timeoutMilliseconds: number, testProjects: readonly TestProject[], filters: readonly string[],
-    progressListener: ITestProgressListener | undefined, workerUrl: URL = new URL(Resources.testRunWorkerFileName, import.meta.url),
+    progressListener: ITestProgressListener | undefined, coverageDirectory: string | null, workerUrl: URL = new URL(Resources.testRunWorkerFileName, import.meta.url),
     workerCount: number = TestRunSupervisor.defaultWorkerCount(),
     startLimitMilliseconds: number = Resources.testWorkerStartMilliseconds,
     createWorker: (url: URL, options: WorkerOptions) => Worker = (url, options) => new Worker(url, options),
-    clock: IClock = new SystemClock(), coverageDirectory: string | undefined = process.env[Resources.coverageVariable]) {
+    clock: IClock = new SystemClock()) {
     TestRunSupervisor.throwIfLimitsInvalid(timeoutMilliseconds, workerCount);
     ArgumentOutOfRangeException.throwIfNotPositiveInteger(startLimitMilliseconds, Resources.startLimitMillisecondsParameter, Resources.startLimitInvalid);
     if (startLimitMilliseconds > Resources.maximumTimeoutMilliseconds)
@@ -98,6 +98,10 @@ export class TestRunSupervisor {
 
   public get elapsedMilliseconds(): number {
     return this.elapsedMillisecondsValue;
+  }
+
+  public static readCoverageDirectory(): string | null {
+    return process.env[Resources.coverageVariable] ?? null;
   }
 
   public static defaultWorkerCount(): number {
@@ -247,7 +251,7 @@ export class TestRunSupervisor {
   }
 
   private async writeThreadListAsync(): Promise<void> {
-    if (Object.isUndefined(this.coverageDirectory))
+    if (Object.isNull(this.coverageDirectory))
       return;
 
     const threadIds = [threadId, ...this.endedThreadIds];

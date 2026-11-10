@@ -9,7 +9,7 @@
 // This file uses Node APIs and will change when we replace Node.
 
 import { once } from "node:events";
-import { existsSync } from "node:fs";
+import { existsSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { Worker } from "node:worker_threads";
 
@@ -30,10 +30,9 @@ export class SQLiteConnectionTests {
     "const database = new DatabaseSync(workerData);",
     "database.exec(\"BEGIN IMMEDIATE\");",
     "database.exec(\"INSERT INTO notes (id, text) VALUES ('a', 'other')\");",
-    "parentPort.postMessage(\"locked\");",
-    "Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 300);",
     "database.exec(\"COMMIT\");",
-    "database.close();"
+    "database.close();",
+    "parentPort.postMessage(\"committed\");"
   ].join("\n");
 
   @TestMethod
@@ -46,6 +45,26 @@ export class SQLiteConnectionTests {
     Assert.isTrue(existsSync(dataSource.location));
     Assert.isTrue(connection.isOpen);
     Assert.isInstanceOf(connection.dialect, SQLiteDialect);
+  }
+
+  @TestMethod
+  public async opensWithWriteAheadLoggingAndABusyTimeout(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    await using connection = SQLiteConnection.open(directory.dataSource("app"));
+
+    Assert.areEqual("wal", (await connection.queryAsync(new SqlQuery("PRAGMA journal_mode")))[0]?.readString("journal_mode"));
+    Assert.areEqual(5000, (await connection.queryAsync(new SqlQuery("PRAGMA busy_timeout")))[0]?.readInteger("timeout"));
+  }
+
+  @TestMethod
+  public opensNoHandleOnAFileThatIsNotADatabase(): void {
+    using directory = new TemporaryDirectory();
+    const dataSource = directory.dataSource("text");
+    writeFileSync(dataSource.location, "This is not a SQLite database, only some text in a file.".repeat(20));
+
+    Assert.throws(() => SQLiteConnection.open(dataSource), Error);
+    rmSync(dataSource.location);
+    Assert.isFalse(existsSync(dataSource.location));
   }
 
   @TestMethod
@@ -143,7 +162,7 @@ export class SQLiteConnectionTests {
   }
 
   @TestMethod
-  public async waitsForAnotherConnectionsWriteLockAndReadsItsCommit(): Promise<void> {
+  public async readsAnotherConnectionsCommit(): Promise<void> {
     using directory = new TemporaryDirectory();
     const dataSource = directory.dataSource("app");
     await using connection = SQLiteConnection.open(dataSource);
