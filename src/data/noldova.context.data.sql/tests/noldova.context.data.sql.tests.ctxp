@@ -5,7 +5,9 @@
   "frameworks": [],
   "dependencies": {
     "projects": [
-      "../src/noldova.context.data.sql.ctxp"
+      "../src/noldova.context.data.sql.ctxp",
+      "../../noldova.context.data.sql.postgresql/src/noldova.context.data.sql.postgresql.ctxp",
+      "../../noldova.context.data.sql.sqlite/src/noldova.context.data.sql.sqlite.ctxp"
     ],
     "packages": [
       "noldova.context.core",

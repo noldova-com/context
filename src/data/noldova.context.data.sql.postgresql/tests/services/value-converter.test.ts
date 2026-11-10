@@ -7,6 +7,7 @@
  */
 
 import { DataException } from "@noldova/context.data";
+import { Column } from "@noldova/context.data.sql.postgresql/models/column.js";
 import { ValueConverter } from "@noldova/context.data.sql.postgresql/services/value-converter.js";
 import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
@@ -52,5 +53,27 @@ export class ValueConverterTests {
     Assert.areEqual("42", ValueConverter.write(42));
     Assert.areEqual("-1.5", ValueConverter.write(-1.5));
     Assert.isNull(ValueConverter.write(null));
+  }
+
+  @TestMethod
+  public refusesAValueThatIsNeitherTextNorNull(): void {
+    const failure = Assert.throws(() => ValueConverter.read(25, 1), DataException);
+
+    Assert.areEqual("The row holds a value that is neither text nor null.", failure.message);
+  }
+
+  @TestMethod
+  public readsARowOfTextIntoARecordByColumn(): void {
+    const columns = [new Column("id", null, null, 0, 0, 20), new Column("text", null, null, 0, 0, 25)];
+
+    const record = ValueConverter.readRecord(columns, ["7", null]);
+
+    Assert.areEqual(7, record.readInteger("id"));
+    Assert.isNull(record.readNullableString("text"));
+  }
+
+  @TestMethod
+  public refusesARowThatIsNotAList(): void {
+    Assert.throws(() => ValueConverter.readRecord([], { id: "7" }), DataException);
   }
 }

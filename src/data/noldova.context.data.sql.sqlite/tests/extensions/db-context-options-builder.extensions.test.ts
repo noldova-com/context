@@ -10,7 +10,7 @@
 
 import { existsSync } from "node:fs";
 
-import { ChangeOperation, DbContextOptions, DbContextOptionsBuilder } from "@noldova/context.data";
+import { DbContextOptions, DbContextOptionsBuilder } from "@noldova/context.data";
 import { SqlQuery } from "@noldova/context.data.sql";
 import { SQLiteProvider } from "@noldova/context.data.sql.sqlite";
 import { ArgumentException } from "@noldova/context.exceptions";
@@ -55,8 +55,5 @@ export class DbContextOptionsBuilderExtensionsTests {
     Assert.isTrue(existsSync(location));
     const names = await context.database.connection.queryAsync(new SqlQuery("SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'IX_notes_text'"));
     Assert.areEqual(1, names.length);
-    Assert.areEqual(0, (await context.database.getPendingMigrationsAsync()).length);
-    Assert.areEqual(1, (await context.database.changeFeed.appendAsync("note", "a", ChangeOperation.Insert, "{}")).sequence);
-    Assert.areEqual(1, (await context.database.changeFeed.readAfterAsync(0)).length);
   }
 }

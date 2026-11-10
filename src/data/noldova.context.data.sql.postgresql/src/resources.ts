@@ -40,9 +40,6 @@ export class Resources {
   public static readonly commitStatement: string = "commit";
   public static readonly connectTimeout: string = "The connection to the PostgreSQL server timed out.";
   public static readonly connectTimeoutOption: string = "connect_timeout";
-  public static readonly connectionStringOptions: ReadonlySet<string> = new Set([
-    "channel_binding", "connect_timeout", "sslcert", "sslkey", "sslmode", "sslpassword", "sslrootcert"
-  ]);
   public static readonly constraintNameField: string = "constraint_name";
   public static readonly copyInProgress: string = "Queries cannot run while a COPY is in progress on the connection.";
   public static readonly copyStreamDestroyed: string = "The COPY stream was destroyed.";
@@ -72,15 +69,17 @@ export class Resources {
   public static readonly inferOption: string = "infer";
   public static readonly infinity: string = "infinity";
   public static readonly integerType: string = "BIGINT";
-  public static readonly invalidConnectionString: string = "The data source's location is not a PostgreSQL connection string of the form postgres://user:password@host:port/database.";
+  public static readonly invalidConnectionString: string = "The data source's location is not a PostgreSQL connection string of the form postgres://user:password@host:port/database, or it sets an option the client doesn't support.";
   public static readonly invalidStatementNameState: string = "26000";
   public static readonly kindColumn: string = "kind";
+  public static readonly lastValueColumn: string = "lastval";
   public static readonly lineCommentStart: string = "--";
   public static readonly lineEnd: string = "\n";
   public static readonly listSeparator: string = ", ";
   public static readonly listenPrefix: string = "listen ";
   public static readonly localSeverityField: string = "severity_local";
   public static readonly localhost: string = "localhost";
+  public static readonly locationParameterName: string = "location";
   public static readonly md5Prefix: string = "md5";
   public static readonly messageField: string = "message";
   public static readonly minusSign: string = "-";
@@ -130,8 +129,10 @@ export class Resources {
   public static readonly schemaSeparator: string = ".";
   public static readonly schemeSeparator: string = "://";
   public static readonly scramUser: string = "n=*,r=";
+  public static readonly selectLastValue: string = "SELECT lastval()";
   public static readonly serverError: string = "The server reported an error without a message.";
   public static readonly serverKey: string = "Server Key";
+  public static readonly sessionPoolSize: number = 1;
   public static readonly severalHostsUnsupported: string = "Connecting to one of several hosts is not supported; give one host.";
   public static readonly severityField: string = "severity";
   public static readonly shapeSeparator: string = ":";
@@ -177,6 +178,8 @@ export class Resources {
   public static readonly unlistenPrefix: string = "unlisten ";
   public static readonly unsafeInteger: string = "The row holds a BIGINT outside the range of safe integers.";
   public static readonly unsafeTransaction: string = "Run transaction statements only in a transaction or on a reserved connection, or set max to 1.";
+  public static readonly unsupportedOutcome: string = "The statement gave no single result, as a COPY does; the connection runs only statements that give one.";
+  public static readonly unsupportedValue: string = "The row holds a value that is neither text nor null.";
   public static readonly unterminatedErrorField: string = "The server sent an error whose field has no terminator.";
   public static readonly userInfoSeparator: string = "@";
   public static readonly userMissing: string = "No user was given; give one in the connection string or in the user setting.";

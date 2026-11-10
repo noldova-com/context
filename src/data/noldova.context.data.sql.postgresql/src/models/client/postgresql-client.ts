@@ -10,6 +10,7 @@ import "@noldova/context.core";
 import { ArgumentException } from "@noldova/context.exceptions";
 
 import { LeaseKind } from "../../enums/lease-kind.js";
+import type { ClientConfiguration } from "../client-configuration.js";
 import type { ClientOptions } from "../client-options.js";
 import type { ConnectionOptions } from "../connection-options.js";
 import type { PoolStats } from "../pool-stats.js";
@@ -55,7 +56,10 @@ export class PostgreSQLClient extends SqlRunner implements AsyncDisposable {
   }
 
   public static create(location: string | null = null, settings: ClientSettings = {}): PostgreSQLClient {
-    const configuration = ClientOptionsParser.parse(location, settings);
+    return PostgreSQLClient.createFrom(ClientOptionsParser.parse(location, settings));
+  }
+
+  public static createFrom(configuration: ClientConfiguration): PostgreSQLClient {
     const types = new TypeRegistry(configuration.options);
     if (types.named && !configuration.options.fetchTypes)
       throw new ArgumentException(Resources.namedTypesNeedFetch, Resources.typesParameterName);

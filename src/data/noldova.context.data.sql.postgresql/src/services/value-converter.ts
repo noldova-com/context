@@ -7,17 +7,27 @@
  */
 
 import "@noldova/context.core";
-import { DataException, type DataValue } from "@noldova/context.data";
+import { DataException, DataRecord, type DataValue } from "@noldova/context.data";
 
+import type { Column } from "../models/column.js";
 import { Resources } from "../resources.js";
 
 export class ValueConverter {
   private static readonly bigint: number = 20;
   private static readonly numbers: ReadonlySet<number> = new Set([21, 23, 26, 700, 701]);
 
-  public static read(type: number, text: string | null): DataValue {
+  public static readRecord(columns: readonly Column[], row: unknown): DataRecord {
+    if (!Array.isArray(row))
+      throw new DataException(Resources.unsupportedValue);
+
+    return new DataRecord(new Map(columns.map((column, index) => [column.name, ValueConverter.read(column.type, row[index])])));
+  }
+
+  public static read(type: number, text: unknown): DataValue {
     if (Object.isNull(text))
       return null;
+    if (!Object.isString(text))
+      throw new DataException(Resources.unsupportedValue);
     if (ValueConverter.numbers.has(type))
       return Number(text);
     if (type !== ValueConverter.bigint)
