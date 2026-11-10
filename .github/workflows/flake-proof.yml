@@ -41,7 +41,7 @@ permissions: {}
 jobs:
   versions:
     name: Versions
-    uses: noldova-com/.github/.github/workflows/versions.yml@5ec34adf19a09a3b607bb082fcc742323c9ea215 # v2.12.2
+    uses: noldova-com/.github/.github/workflows/versions.yml@ff6c15655ae882ff5c85353dc169b6772ae3cb0d # v2.13.0
     permissions: {}
 
   group:
@@ -71,7 +71,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ inputs.ref || github.ref_name }}-${{ needs.group.outputs.filter }}
       cancel-in-progress: false
-    uses: noldova-com/.github/.github/workflows/flake-proof.yml@5ec34adf19a09a3b607bb082fcc742323c9ea215 # v2.12.2
+    uses: noldova-com/.github/.github/workflows/flake-proof.yml@ff6c15655ae882ff5c85353dc169b6772ae3cb0d # v2.13.0
     permissions:
       contents: read
       packages: read
