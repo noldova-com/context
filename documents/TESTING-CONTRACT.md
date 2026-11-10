@@ -77,7 +77,7 @@ A test needing an environment builds it through precisely named fixtures owned b
 The data providers' shared behavior is tested once, in Data.Sql's test project, which depends on both providers: each provider test is a data test with one row per provider, so a provider passes exactly the tests the other passes, migrations and the change feed included.
 Each provider's own test project tests only what is its own, such as opening its database, its dialect and its value reading.
 The PostgreSQL tests reach a server through the connection string in the `NOLDOVA_CONTEXT_POSTGRESQL_URL` environment variable, which their projects' fixtures read, and a test that creates tables gets its own schema, dropped at its end; without the variable those tests fail, never skip, so the complete gate needs a server on every target.
-Those test classes share one server process, the one exception to the organization's testing standard that tests share no process: a server per class would cost seconds each, and the schema per class keeps the classes apart.
+A run starts one PostgreSQL server, and every PostgreSQL test of the run uses it; each table-creating test's own schema keeps it apart, so no test sees another's tables.
 
 ## 4. Assertions
 
