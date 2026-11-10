@@ -6,6 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// This file uses Node APIs and will change when we replace Node.
+
+import { getEventListeners } from "node:events";
+
 import { DataException } from "@noldova/context.data";
 import { RowMode } from "@noldova/context.data.sql.postgresql/enums/row-mode.js";
 import { CancelUnansweredException } from "@noldova/context.data.sql.postgresql/exceptions/cancel-unanswered.exception.js";
@@ -270,5 +274,21 @@ export class QueryTests {
     await Assert.throwsAsync(() => iterator.next(), DataException);
 
     Assert.isTrue(query.settled);
+  }
+
+  @TestMethod
+  public async stopsListeningToTheSignalOnceACursorEndsOrFailsAsync(): Promise<void> {
+    const handler = new FakeQueryHandler(new ClientOptions());
+    const ended = new AbortController();
+    const failed = new AbortController();
+    const ending = new Query(new BuiltQuery("select x from t", [], []), handler).useSignal(ended.signal);
+    const failing = new Query(new BuiltQuery("select x from t", [], []), handler).useSignal(failed.signal);
+    handler.onHandle = item => item === ending ? item.resolve(null) : item.reject(new DataException("failed"));
+
+    Assert.isTrue((await ending.iterateCursor()[Symbol.asyncIterator]().next()).done === true);
+    await Assert.throwsAsync(() => failing.iterateCursor()[Symbol.asyncIterator]().next(), DataException);
+
+    Assert.areEqual(0, getEventListeners(ended.signal, "abort").length);
+    Assert.areEqual(0, getEventListeners(failed.signal, "abort").length);
   }
 }

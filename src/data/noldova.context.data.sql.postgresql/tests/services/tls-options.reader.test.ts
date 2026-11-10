@@ -8,9 +8,11 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
+import { Buffer } from "node:buffer";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { getCACertificates } from "node:tls";
 import { inspect } from "node:util";
 
 import "@noldova/context.core";
@@ -21,6 +23,7 @@ import { SslMode } from "@noldova/context.data.sql.postgresql/enums/ssl-mode.js"
 import { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
 import { PostgreSQLSocket } from "@noldova/context.data.sql.postgresql/models/postgresql-socket.js";
 import { SessionStarter } from "@noldova/context.data.sql.postgresql/services/session-starter.js";
+import { TlsOptionsReader } from "@noldova/context.data.sql.postgresql/services/tls-options.reader.js";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { FakeServer } from "../fixtures/fake-server.fixture.js";
@@ -30,6 +33,14 @@ import { TestCertificate } from "../fixtures/test-certificate.fixture.js";
 @TestClass
 export class TlsOptionsReaderTests {
   private static readonly passphrase: string = "violet-lantern-73";
+
+  @TestMethod
+  public trustsTheOperatingSystemsRootsWithoutARootFile(): void {
+    const file = Buffer.from(TestCertificate.authority("Test Root").certificate);
+
+    Assert.areEqual(getCACertificates("system").join(), TlsOptionsReader.readRoots(undefined).toString());
+    Assert.areEqual(file, TlsOptionsReader.readRoots(file));
+  }
 
   @TestMethod
   public async verifyCaTrustsAServerTheRootSignedWhateverItsNameAsync(): Promise<void> {
@@ -58,7 +69,7 @@ export class TlsOptionsReaderTests {
           () => new SessionStarter(TlsOptionsReaderTests.options(other, SslMode.VerifyFull, path("root.pem"))).startAsync(), Error);
         await TlsOptionsReaderTests.connectAsync(TlsOptionsReaderTests.options(named, SslMode.VerifyFull, path("root.pem")));
 
-        Assert.areEqual("ERR_TLS_CERT_ALTNAME_INVALID", Reflect.get(error, "code"));
+        Assert.areEqual("ERR_TLS_CERT_ALTNAME_INVALID", "code" in error ? error.code : undefined);
       });
 
       Assert.isTrue(named.peers[0]?.secure ?? false);
@@ -81,8 +92,8 @@ export class TlsOptionsReaderTests {
         const full = await Assert.throwsAsync(
           () => new SessionStarter(TlsOptionsReaderTests.options(server, SslMode.VerifyFull, path("root.pem"))).startAsync(), Error);
 
-        Assert.areEqual("UNABLE_TO_VERIFY_LEAF_SIGNATURE", Reflect.get(ca, "code"));
-        Assert.areEqual("UNABLE_TO_VERIFY_LEAF_SIGNATURE", Reflect.get(full, "code"));
+        Assert.areEqual("UNABLE_TO_VERIFY_LEAF_SIGNATURE", "code" in ca ? ca.code : undefined);
+        Assert.areEqual("UNABLE_TO_VERIFY_LEAF_SIGNATURE", "code" in full ? full.code : undefined);
       });
     }
     finally {

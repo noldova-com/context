@@ -171,7 +171,66 @@ export class PostgreSQLConnectionPathTests {
     const waiting = harness.timers.scheduled;
     harness.timers.advance(5000);
     Assert.areEqual(0, error.index);
+    Assert.areEqual(0, waiting);
+    Assert.isFalse(harness.socket.destroyed);
+  }
+
+  @TestMethod
+  public async destroysTheConnectionWhenABatchCancelIsUnansweredAsync(): Promise<void> {
+    const harness = new ConnectionHarness();
+    const parts = [harness.unnamed("select 1"), harness.unnamed("select pg_sleep(10)")];
+    const batch = harness.plain("");
+    batch.parts = parts;
+    harness.connection.batch(batch, parts);
+    harness.written();
+    const settled = batch.then(() => null, (error: unknown) => error);
+
+    await harness.connection.cancelAsync(batch);
+    harness.receive(M.parseComplete(), M.parameterDescription([]), M.noData(), M.bindComplete(), M.commandComplete("SELECT 0"));
+    harness.timers.advance(5000);
+
+    Assert.isInstanceOf(await settled, Error);
+    Assert.isTrue(harness.socket.destroyed);
+  }
+
+  @TestMethod
+  public async dropsTheCancelTimerOfABatchThatCompletesAsync(): Promise<void> {
+    const harness = new ConnectionHarness();
+    const parts = [harness.unnamed("select 1"), harness.unnamed("select 2")];
+    const batch = harness.plain("");
+    batch.parts = parts;
+    harness.connection.batch(batch, parts);
+    harness.written();
+
+    await harness.connection.cancelAsync(batch);
+    const waiting = harness.timers.scheduled;
+    harness.receive(
+      M.parseComplete(), M.parameterDescription([]), M.noData(), M.bindComplete(), M.commandComplete("SELECT 0"),
+      M.parseComplete(), M.parameterDescription([]), M.noData(), M.bindComplete(), M.commandComplete("SELECT 0"),
+      M.readyForQuery());
+    await batch;
+
     Assert.areEqual(1, waiting);
+    Assert.areEqual(0, harness.timers.scheduled);
+    Assert.isFalse(harness.socket.destroyed);
+  }
+
+  @TestMethod
+  public async leavesTheConnectionOpenWhenTheCancelledQueryHasAlreadySettledAsync(): Promise<void> {
+    const harness = new ConnectionHarness();
+    const head = harness.unnamed("select pg_sleep(10)");
+    harness.connection.send(head);
+    harness.written();
+    const settled = head.then(() => null, (error: unknown) => error);
+
+    await harness.connection.cancelAsync(head);
+    const waiting = harness.timers.scheduled;
+    head.reject(new Error("timed out"));
+    await settled;
+    harness.timers.advance(5000);
+
+    Assert.areEqual(1, waiting);
+    Assert.areEqual(1, harness.starter.cancelled.length);
     Assert.isFalse(harness.socket.destroyed);
   }
 

@@ -38,12 +38,10 @@ export class CursorIterator implements AsyncIterableIterator<Result, undefined> 
       return previous.promise;
     };
     this.query.redirect(() => {
-      this.query.active = false;
-      this.query.settled = true;
+      this.query.finish();
       step.resolve({ done: true, value: undefined });
     }, error => {
-      this.query.active = false;
-      this.query.settled = true;
+      this.query.finish();
       step.reject(error);
     });
     this.query.execute();

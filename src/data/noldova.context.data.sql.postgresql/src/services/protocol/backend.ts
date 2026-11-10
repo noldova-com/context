@@ -11,6 +11,7 @@
 import type { Buffer } from "node:buffer";
 
 import "@noldova/context.core";
+import { DataException } from "@noldova/context.data";
 
 import { BackendKey } from "../../models/backend-key.js";
 import { CommandResult } from "../../models/command-result.js";
@@ -48,6 +49,9 @@ export class Backend {
     const fields = new Map<string, string>();
     for (let index = start + 5; index < end - 1;) {
       const zero = data.indexOf(0, index + 1);
+      if (zero === -1 || zero >= end)
+        throw new DataException(Resources.unterminatedErrorField);
+
       const code = data.readUInt8(index);
       fields.set(Backend.errorFields.get(code) ?? String.fromCharCode(code), data.toString("utf8", index + 1, zero));
       index = zero + 1;

@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { ChangeFeed, DatabaseFacade, DataSource, DbContextOptions } from "@noldova/context.data";
+import { ChangeFeed, DataException, DatabaseFacade, DataSource, DbContextOptions } from "@noldova/context.data";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { MemoryProvider } from "../fixtures/memory-provider.fixture.js";
@@ -27,5 +27,15 @@ export class DatabaseFacadeTests {
     Assert.areEqual("20260908130000_Notes", (await facade.migrateAsync()).join(","));
     Assert.areEqual("20260908130000_Notes", (await facade.getAppliedMigrationsAsync()).join(","));
     Assert.areEqual(0, (await facade.getPendingMigrationsAsync()).length);
+  }
+
+  @TestMethod
+  public opensNoConnectionForMigrationsOutOfOrder(): void {
+    const provider = new MemoryProvider();
+    const options = new DbContextOptions(provider, new DataSource("notes", ":memory:"));
+
+    Assert.throws(() => new DatabaseFacade(options, [new NotesMigration("20260908140000_Later"), new NotesMigration()]), DataException);
+    Assert.throws(() => new DatabaseFacade(options, [new NotesMigration(), new NotesMigration()]), DataException);
+    Assert.areEqual(0, provider.connections.length);
   }
 }

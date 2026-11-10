@@ -142,7 +142,19 @@ export class AuthenticatorTests {
     const nonce = AuthenticatorTests.saslInitial(AuthenticatorTests.respond(noSalt, 10, "SCRAM-SHA-256\0\0")).slice("n,,n=*,r=".length);
 
     Assert.throws(() => noNonce.respond(11, Buffer.from(`s=${AuthenticatorTests.salt},i=1`)), DataException);
-    Assert.throws(() => noSalt.respond(11, Buffer.from(`r=${nonce}server`)), RangeError);
+    Assert.throws(() => noSalt.respond(11, Buffer.from(`r=${nonce}server`)), DataException);
+  }
+
+  @TestMethod
+  public refusesAServerFirstMessageWithoutAPositiveIterationCount(): void {
+    for (const fields of ["", ",i=", ",i=0", ",i=-1", ",i=1.5", ",i=x", ",i=99999999999999999999"]) {
+      const authenticator = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend());
+      const nonce = AuthenticatorTests.saslInitial(AuthenticatorTests.respond(authenticator, 10, "SCRAM-SHA-256  ")).slice("n,,n=*,r=".length);
+
+      const failure = Assert.throws(() => authenticator.respond(11, Buffer.from(`r=${nonce}server,s=${AuthenticatorTests.salt}${fields}`)), DataException);
+
+      Assert.areEqual("The server's SCRAM message has no salt or no positive iteration count.", failure.message);
+    }
   }
 
   @TestMethod

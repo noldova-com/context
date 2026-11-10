@@ -114,7 +114,7 @@ export class PostgreSQLSocketTests {
     const error = await closed;
 
     Assert.isInstanceOf(error, Error);
-    Assert.areEqual("ERR_STREAM_WRITE_AFTER_END", Reflect.get(error, "code"));
+    Assert.areEqual("ERR_STREAM_WRITE_AFTER_END", "code" in error ? error.code : undefined);
     Assert.isTrue(socket.isClosed);
     Assert.isTrue(await Released.socketsAsync());
   }
@@ -156,7 +156,7 @@ export class PostgreSQLSocketTests {
 
     const error = await Assert.throwsAsync(() => PostgreSQLSocket.connectAsync("127.0.0.1", port, new AbortController().signal), Error);
 
-    Assert.areEqual("ECONNREFUSED", Reflect.get(error, "code"));
+    Assert.areEqual("ECONNREFUSED", "code" in error ? error.code : undefined);
     Assert.isTrue(await Released.socketsAsync());
   }
 

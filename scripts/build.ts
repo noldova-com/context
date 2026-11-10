@@ -79,7 +79,7 @@ export class Build extends Script {
       return Config.PACKAGES_INFO.map(t => t.packageName);
 
     const manifest: unknown = JSON.parse(await this.readFileAsync(`${Build.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Build.PACKAGE_MANIFEST_FILE_NAME}`));
-    const dependencies: unknown = typeof manifest === "object" && manifest !== null ? Reflect.get(manifest, Build.BUILD_DEPENDENCIES_FIELD) : undefined;
+    const dependencies: unknown = typeof manifest === "object" && manifest !== null ? new Map(Object.entries(manifest)).get(Build.BUILD_DEPENDENCIES_FIELD) : undefined;
     return typeof dependencies === "object" && dependencies !== null ? Object.keys(dependencies) : [];
   }
 

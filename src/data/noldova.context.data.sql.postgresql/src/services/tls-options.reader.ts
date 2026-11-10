@@ -11,7 +11,7 @@
 import type { Buffer } from "node:buffer";
 import { createPrivateKey } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { createSecureContext, type ConnectionOptions as TlsOptions, type SecureContext, type SecureContextOptions } from "node:tls";
+import { createSecureContext, getCACertificates, type ConnectionOptions as TlsOptions, type SecureContext, type SecureContextOptions } from "node:tls";
 
 import "@noldova/context.core";
 import { DataException } from "@noldova/context.data";
@@ -29,10 +29,14 @@ export class TlsOptionsReader {
       TlsOptionsReader.readKeyAsync(options.sslKey, options.sslPassword)
     ]);
     return {
-      secureContext: TlsOptionsReader.createContext({ ca, cert, key }),
+      secureContext: TlsOptionsReader.createContext({ ca: TlsOptionsReader.readRoots(ca), cert, key }),
       rejectUnauthorized: options.sslMode === SslMode.VerifyCa || options.sslMode === SslMode.VerifyFull,
       ...options.sslMode === SslMode.VerifyCa ? { checkServerIdentity: () => undefined } : {}
     };
+  }
+
+  public static readRoots(file: Buffer | undefined): Buffer | string[] {
+    return file ?? getCACertificates(Resources.systemCertificates);
   }
 
   private static readOptionalFileAsync(option: string, path: string | null): Promise<Buffer | undefined> {

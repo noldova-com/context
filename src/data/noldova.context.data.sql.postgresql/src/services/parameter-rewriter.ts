@@ -13,6 +13,8 @@ import { TokenKind } from "../enums/token-kind.js";
 import { Resources } from "../resources.js";
 
 export class ParameterRewriter {
+  private static readonly digit: RegExp = /^[0-9]$/u;
+
   private readonly text: string;
   private readonly output: string[] = [];
   private position: number = 0;
@@ -46,6 +48,8 @@ export class ParameterRewriter {
         this.skipQuoted(Resources.identifierQuote);
       else if (character === Resources.dollarQuote && this.skipDollarString())
         this.previous = TokenKind.Operand;
+      else if (character === Resources.dollarQuote && ParameterRewriter.digit.test(this.text.charAt(start + 1)))
+        throw new DataException(Resources.formatPositionalParameter(start));
       else if (character === Resources.parameterMarker)
         this.rewriteMarker();
       else if (ParameterRewriter.isWordCharacter(character))

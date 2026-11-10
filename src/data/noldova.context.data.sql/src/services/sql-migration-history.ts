@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "@noldova/context.core";
 import { MigrationHistory } from "@noldova/context.data";
 
 import { SqlQuery } from "../models/sql-query.js";
@@ -23,9 +24,15 @@ export class SqlMigrationHistory extends MigrationHistory {
   }
 
   public override async getAppliedAsync(transaction?: SqlTransaction): Promise<readonly string[]> {
-    const target = transaction ?? this.connection;
-    await target.executeAsync(new SqlQuery(Resources.createMigrationsTable));
-    return (await target.queryAsync(new SqlQuery(Resources.selectAppliedMigrations))).map(t => t.readString(Resources.idColumn));
+    if (Object.isUndefined(transaction))
+      return this.connection.runInTransactionAsync(async t => {
+        for (const statement of this.connection.dialect.formatLock(Resources.migrationsTable))
+          await t.executeAsync(new SqlQuery(statement));
+        return this.getAppliedAsync(t);
+      });
+
+    await transaction.executeAsync(new SqlQuery(Resources.createMigrationsTable));
+    return (await transaction.queryAsync(new SqlQuery(Resources.selectAppliedMigrations))).map(t => t.readString(Resources.idColumn));
   }
 
   public override async recordAsync(id: string, transaction?: SqlTransaction): Promise<void> {

@@ -452,12 +452,14 @@ export declare class SqlChangeFeed extends ChangeFeed<SqlTransaction> {
   public constructor(connection: SqlConnection);
 
   /**
-   * Inserts the change and returns it with the assigned sequence.
+   * Inserts the change under the feed's lock and returns it with the
+   * assigned sequence.
    */
   protected override appendCoreAsync(entity: string, entityId: string, operation: ChangeOperation, payload: string, transaction: SqlTransaction | undefined): Promise<Change>;
 
   /**
-   * Selects the changes after the sequence in order, up to the limit.
+   * Selects the changes after the sequence in order, up to the limit, under
+   * the feed's lock, in a transaction of its own when none is given.
    */
   protected override readAfterCoreAsync(sequence: number, limit: number, transaction: SqlTransaction | undefined): Promise<readonly Change[]>;
 }
@@ -613,7 +615,8 @@ export declare class SqlMigrationHistory extends MigrationHistory {
 
   /**
    * Creates the table when absent and returns the recorded ids in ascending
-   * order.
+   * order; without a transaction, it does so in one of its own under the
+   * migration lock, and a given transaction's owner holds that lock.
    */
   public override getAppliedAsync(transaction?: SqlTransaction): Promise<readonly string[]>;
 

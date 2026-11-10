@@ -155,7 +155,7 @@ export class SessionStarterTests {
 
     const error = await Assert.throwsAsync(() => new SessionStarter(options).cancelAsync(new BackendKey(1, 2), new AbortController().signal), Error);
 
-    Assert.areEqual("ECONNREFUSED", Reflect.get(error, "code"));
+    Assert.areEqual("ECONNREFUSED", "code" in error ? error.code : undefined);
     Assert.isTrue(await Released.socketsAsync());
   }
 
@@ -273,7 +273,7 @@ export class SessionStarterTests {
 
     Assert.isNull(closed.cause ?? null);
     Assert.isTrue(broken.message.length > 0);
-    Assert.areEqual("ECONNRESET", Reflect.get(failure, "code"));
+    Assert.areEqual("ECONNRESET", "code" in failure ? failure.code : undefined);
     await SessionStarterTests.closeAsync(server);
   }
 
@@ -300,7 +300,7 @@ export class SessionStarterTests {
     const error = await Assert.throwsAsync(
       () => new SessionStarter(SessionStarterTests.fake(server, SslMode.VerifyFull, ChannelBinding.Prefer, "", 0)).startAsync(), Error);
 
-    Assert.areEqual("DEPTH_ZERO_SELF_SIGNED_CERT", Reflect.get(error, "code"));
+    Assert.areEqual("DEPTH_ZERO_SELF_SIGNED_CERT", "code" in error ? error.code : undefined);
     await SessionStarterTests.closeAsync(server);
   }
 

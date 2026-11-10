@@ -337,11 +337,12 @@ export class PostgreSQLPoolServerTests {
   @TestMethod
   public async closesACancelTheServerNeverAnswersWhenTheEndTimesOutAsync(): Promise<void> {
     const server = await FakeServer.startAsync();
-    server.onCancel = () => undefined;
-    const received: string[] = [];
-    server.onMessage = (_peer, type) => {
-      received.push(type);
-    };
+    const cancelReceived = new Promise<void>(resolve => {
+      server.onCancel = () => resolve();
+    });
+    const messageReceived = new Promise<void>(resolve => {
+      server.onMessage = () => resolve();
+    });
     const options = new ClientOptions({ max: 1, cancelTimeout: 0, fetchTypes: false, maxLifetime: null });
     const connection = new ConnectionOptions("127.0.0.1", server.port, "app", "app", "", SslMode.Disable, ChannelBinding.Prefer, 0, new Map());
     const pool = new PostgreSQLPool(options, connection, new TypeRegistry(options), values => new SessionStarter(values, options.cancelTimeout));
@@ -350,10 +351,10 @@ export class PostgreSQLPoolServerTests {
       const failed = Assert.throwsAsync(async () => {
         await query;
       }, ConnectionClosedException);
-      await PostgreSQLPoolServerTests.untilAsync(() => received.length > 0);
+      await messageReceived;
 
       const cancelled = Assert.throwsAsync(() => query.cancelAsync(), ConnectionClosedException);
-      await PostgreSQLPoolServerTests.untilAsync(() => server.cancels.length === 1);
+      await cancelReceived;
       await pool.endAsync(0.01);
       const cancelError = await cancelled;
       const queryError = await failed;
@@ -670,13 +671,6 @@ export class PostgreSQLPoolServerTests {
 
   private static describe(error: Error): string {
     return `${error.constructor.name}:${error instanceof PostgreSQLException ? error.sqlState : ""}:${error.message}`;
-  }
-
-  private static async untilAsync(condition: () => boolean): Promise<void> {
-    for (let turn = 0; turn < 1000 && !condition(); turn += 1)
-      await new Promise<void>(resolve => {
-        setImmediate(resolve);
-      });
   }
 
   private static async untilRunningAsync(watcher: RealPool, tag: string): Promise<void> {

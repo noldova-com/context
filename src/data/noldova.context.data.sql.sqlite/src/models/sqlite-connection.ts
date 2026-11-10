@@ -29,8 +29,15 @@ export class SQLiteConnection extends SqlConnection {
   public static open(dataSource: DataSource): SQLiteConnection {
     mkdirSync(dirname(dataSource.location), { recursive: true });
     const handle = new DatabaseSync(dataSource.location, { timeout: Resources.busyTimeout });
-    handle.exec(Resources.journalModePragma);
-    handle.exec(Resources.foreignKeysPragma);
+    try {
+      handle.exec(Resources.journalModePragma);
+      handle.exec(Resources.foreignKeysPragma);
+    }
+    catch (error) {
+      handle.close();
+      throw error;
+    }
+
     return new SQLiteConnection(dataSource, new SQLiteSession(handle));
   }
 

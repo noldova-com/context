@@ -101,8 +101,11 @@ export class Authenticator {
     const iterations = fields.get("i") ?? "";
     if (!serverNonce.startsWith(this.nonce))
       throw new DataException(Resources.saslNonceMismatch);
+    const count = Number(iterations);
+    if (salt.length === 0 || !/^[0-9]+$/u.test(iterations) || !Number.isSafeInteger(count) || count < 1)
+      throw new DataException(Resources.saslFirstMessageInvalid);
 
-    const saltedPassword = Authenticator.saltPassword(this.password, salt, Number(iterations));
+    const saltedPassword = Authenticator.saltPassword(this.password, salt, count);
     const clientKey = Authenticator.computeHmac(saltedPassword, Resources.clientKey);
     const channel = (Object.isNull(this.bound) ? Buffer.from(this.header) : Buffer.concat([Buffer.from(this.header), this.bound])).toString("base64");
     const message = `n=*,r=${this.nonce},r=${serverNonce},s=${salt},i=${iterations},c=${channel},r=${serverNonce}`;

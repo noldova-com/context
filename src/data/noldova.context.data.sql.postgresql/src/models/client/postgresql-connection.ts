@@ -978,8 +978,19 @@ export class PostgreSQLConnection implements CopyHost {
   }
 
   private expect(exchange: Exchange): void {
-    if (this.options.cancelTimeout && Object.isNull(exchange.unanswered))
-      exchange.unanswered = this.timers.setTimeout(() => this.handleUnanswered(exchange), this.options.cancelTimeout * 1000);
+    if (!this.options.cancelTimeout || !Object.isNull(exchange.unanswered))
+      return;
+
+    exchange.unanswered = this.timers.setTimeout(() => this.handleUnanswered(exchange), this.options.cancelTimeout * 1000);
+    exchange.batch?.query.promise.then(() => this.clearUnanswered(exchange), () => this.clearUnanswered(exchange));
+  }
+
+  private clearUnanswered(exchange: Exchange): void {
+    if (Object.isNull(exchange.unanswered))
+      return;
+
+    this.timers.clearTimeout(exchange.unanswered);
+    exchange.unanswered = null;
   }
 
   private handleUnanswered(exchange: Exchange): void {
@@ -996,10 +1007,8 @@ export class PostgreSQLConnection implements CopyHost {
       this.timers.clearTimeout(exchange.silence);
       exchange.silence = null;
     }
-    if (!Object.isNull(exchange.unanswered) && (Object.isNull(exchange.batch) || exchange.batch.query.settled)) {
-      this.timers.clearTimeout(exchange.unanswered);
-      exchange.unanswered = null;
-    }
+    if (Object.isNull(exchange.batch) || exchange.batch.query.settled)
+      this.clearUnanswered(exchange);
   }
 
   private cancelBatchAsync(query: Query): Promise<void> {

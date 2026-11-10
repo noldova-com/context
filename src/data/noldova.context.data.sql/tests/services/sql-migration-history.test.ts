@@ -25,9 +25,12 @@ export class SqlMigrationHistoryTests {
     await history.recordAsync("20260908130000_A");
 
     Assert.areEqual("20260908130000_A,20260908130001_B", (await history.getAppliedAsync()).join(","));
-    Assert.areEqual("CREATE TABLE IF NOT EXISTS \"__migrations\" (\"id\" TEXT PRIMARY KEY, \"appliedAt\" TEXT NOT NULL)", connection.statements[0]);
-    Assert.areEqual("SELECT \"id\" FROM \"__migrations\" ORDER BY \"id\"", connection.statements[1]);
-    Assert.areEqual("INSERT INTO \"__migrations\" (\"id\", \"appliedAt\") VALUES (?, ?)", connection.statements[2]);
+    Assert.areEqual("BEGIN", connection.statements[0]);
+    Assert.areEqual("LOCK __migrations", connection.statements[1]);
+    Assert.areEqual("CREATE TABLE IF NOT EXISTS \"__migrations\" (\"id\" TEXT PRIMARY KEY, \"appliedAt\" TEXT NOT NULL)", connection.statements[2]);
+    Assert.areEqual("SELECT \"id\" FROM \"__migrations\" ORDER BY \"id\"", connection.statements[3]);
+    Assert.areEqual("COMMIT", connection.statements[4]);
+    Assert.areEqual("INSERT INTO \"__migrations\" (\"id\", \"appliedAt\") VALUES (?, ?)", connection.statements[5]);
   }
 
   @TestMethod

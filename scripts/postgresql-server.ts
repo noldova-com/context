@@ -71,24 +71,28 @@ export default class PostgreSQLServer implements AsyncDisposable {
   private static readonly PARENT_SEGMENT: string = "..";
   private static readonly SETTINGS: readonly string[] = ["listen_addresses = '127.0.0.1'", "unix_socket_directories = ''", "fsync = off"];
   private static readonly PORT_SETTING: string = "port = ";
+  private static readonly START_ATTEMPTS: number = 5;
+  private static readonly BIND_FAILURE: string = "could not bind";
   private static readonly NEW_LINE: string = "\n";
 
   private readonly binFolder: string;
   private readonly temporaryFolder: string;
   private started: boolean = false;
+  private port: number = 0;
 
-  public readonly url: string;
-
-  private constructor(binFolder: string, temporaryFolder: string, port: number) {
+  private constructor(binFolder: string, temporaryFolder: string) {
     this.binFolder = binFolder;
     this.temporaryFolder = temporaryFolder;
-    this.url = `postgres://${PostgreSQLServer.USER}@${PostgreSQLServer.HOST}:${port}/${PostgreSQLServer.USER}`;
+  }
+
+  public get url(): string {
+    return `postgres://${PostgreSQLServer.USER}@${PostgreSQLServer.HOST}:${this.port}/${PostgreSQLServer.USER}`;
   }
 
   public static async startAsync(): Promise<PostgreSQLServer> {
     const binFolder = await PostgreSQLServer.installAsync();
     const temporaryFolder = await fs.mkdtemp(path.join(process.env[PostgreSQLServer.RUNNER_TEMPORARY_VARIABLE] ?? os.tmpdir(), PostgreSQLServer.TEMPORARY_PREFIX));
-    const server = new PostgreSQLServer(binFolder, temporaryFolder, await PostgreSQLServer.findFreePortAsync());
+    const server = new PostgreSQLServer(binFolder, temporaryFolder);
     try {
       await server.initializeAsync();
       return server;
@@ -116,11 +120,26 @@ export default class PostgreSQLServer implements AsyncDisposable {
 
   private async initializeAsync(): Promise<void> {
     await this.runAsync("initdb", ["-D", this.dataFolder, "-U", PostgreSQLServer.USER, "-A", "trust", "-E", "UTF8", "--no-locale"]);
-    const port = new URL(this.url).port;
-    const settings = [...PostgreSQLServer.SETTINGS, PostgreSQLServer.PORT_SETTING + port].join(PostgreSQLServer.NEW_LINE);
+    const settings = PostgreSQLServer.SETTINGS.join(PostgreSQLServer.NEW_LINE);
     await fs.appendFile(path.join(this.dataFolder, PostgreSQLServer.CONFIGURATION_FILE), PostgreSQLServer.NEW_LINE + settings + PostgreSQLServer.NEW_LINE);
-    this.started = true;
-    await this.runAsync("pg_ctl", ["-D", this.dataFolder, "-l", this.logFile, "-w", "-t", "120", "start"]);
+    for (let attempt = 1; ; attempt += 1) {
+      // The port is picked right before the start, and another one is tried when a process took it in between.
+      this.port = await PostgreSQLServer.findFreePortAsync();
+      await fs.writeFile(this.logFile, "");
+      await fs.appendFile(path.join(this.dataFolder, PostgreSQLServer.CONFIGURATION_FILE), PostgreSQLServer.PORT_SETTING + this.port + PostgreSQLServer.NEW_LINE);
+      this.started = true;
+      try {
+        await this.runAsync("pg_ctl", ["-D", this.dataFolder, "-l", this.logFile, "-w", "-t", "120", "start"]);
+        return;
+      }
+      catch (error) {
+        const log = await fs.readFile(this.logFile, PostgreSQLServer.TEXT_ENCODING);
+        if (attempt === PostgreSQLServer.START_ATTEMPTS || !log.includes(PostgreSQLServer.BIND_FAILURE))
+          throw error;
+
+        this.started = false;
+      }
+    }
   }
 
   private get logFile(): string {

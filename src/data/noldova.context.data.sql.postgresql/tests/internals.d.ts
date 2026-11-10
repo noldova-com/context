@@ -527,12 +527,14 @@ declare module "@noldova/context.data.sql.postgresql/models/started-session.js" 
 }
 
 declare module "@noldova/context.data.sql.postgresql/services/tls-options.reader.js" {
+  import type { Buffer } from "node:buffer";
   import type { ConnectionOptions as TlsOptions } from "node:tls";
 
   import type { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
 
   export class TlsOptionsReader {
     public static readAsync(options: ConnectionOptions): Promise<TlsOptions>;
+    public static readRoots(file: Buffer | undefined): Buffer | string[];
   }
 }
 
@@ -716,6 +718,7 @@ declare module "@noldova/context.data.sql.postgresql/models/client/query.js" {
     public reject(error: Error): void;
     public complete(value: QueryOutcome): void;
     public fail(error: Error): void;
+    public finish(): void;
     public cancelAsync(): Promise<void>;
     public useSignal(signal: AbortSignal | null): this;
     public useSimpleProtocol(): this;

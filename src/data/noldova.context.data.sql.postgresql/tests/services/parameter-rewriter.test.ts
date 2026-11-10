@@ -38,7 +38,7 @@ export class ParameterRewriterTests {
   @TestData("SELECT a$b$c FROM t WHERE x = ?", "SELECT a$b$c FROM t WHERE x = $1")
   @TestData("SELECT ? -- why?", "SELECT $1 -- why?")
   @TestData("SELECT ?, $$a?", "SELECT $1, $$a?")
-  @TestData("SELECT $1 + $2, ?", "SELECT $1 + $2, $1")
+  @TestData("SELECT ?, $ + $", "SELECT $1, $ + $")
   @TestData("SELECT x$, ?", "SELECT x$, $1")
   @TestData("SELECT $a, ?", "SELECT $a, $1")
   @TestData("? IS NULL", "$1 IS NULL")
@@ -58,6 +58,16 @@ export class ParameterRewriterTests {
   @TestData("SELECT 1 FROM t WHERE ? ? 'key'")
   public refusesQuestionMarkOperators(text: string): void {
     Assert.throws(() => ParameterRewriter.rewrite(text, 1), DataException);
+  }
+
+  @TestMethod
+  @TestData("SELECT $1, ?", 7)
+  @TestData("SELECT ? + $2", 11)
+  public refusesAPositionalParameterOutsideQuotedText(text: string, offset: number): void {
+    const failure = Assert.throws(() => ParameterRewriter.rewrite(text, 1), DataException);
+
+    Assert.areEqual(`The text at offset ${offset} is a positional parameter; mark every parameter with ? instead.`, failure.message);
+    Assert.areEqual("SELECT '$1', $1", ParameterRewriter.rewrite("SELECT '$1', ?", 1));
   }
 
   @TestMethod
