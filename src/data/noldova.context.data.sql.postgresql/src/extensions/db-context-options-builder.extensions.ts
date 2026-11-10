@@ -10,7 +10,7 @@ import type { SqlConnection, SqlMigration } from "@noldova/context.data.sql";
 import { ArgumentException } from "@noldova/context.exceptions";
 
 import { Resources } from "../resources.js";
-import { ConnectionStringParser } from "../services/connection-string.parser.js";
+import { LocationParser } from "../services/location.parser.js";
 import { PostgreSQLProvider } from "../services/postgresql-provider.js";
 
 declare module "@noldova/context.data" {
@@ -22,5 +22,5 @@ declare module "@noldova/context.data" {
 DbContextOptionsBuilder.prototype.usePostgreSQL = function (this: DbContextOptionsBuilder, location: string): DbContextOptions<SqlConnection, SqlMigration> {
   ArgumentException.throwIfNullOrWhitespace(location, Resources.locationParameterName);
 
-  return this.use(new PostgreSQLProvider(), new DataSource(ConnectionStringParser.parse(location).database, location));
+  return this.use(new PostgreSQLProvider(), new DataSource(LocationParser.parse(location).connection.database, location));
 };

@@ -22,8 +22,6 @@ import { TemporarySchema } from "../fixtures/temporary-schema.fixture.js";
 
 @TestClass
 export class DbContextOptionsBuilderExtensionsTests {
-  private static readonly countLockWaits: string = "SELECT count(*)::int AS waiting FROM pg_locks WHERE locktype = 'advisory' AND NOT granted";
-
   @TestMethod
   public buildsOptionsForAPostgreSQLDatabase(): void {
     const location = "postgres://user@db.example:5432/notes";
@@ -54,6 +52,15 @@ export class DbContextOptionsBuilderExtensionsTests {
   }
 
   @TestMethod
+  public rejectsAnOptionTheClientRefusesWithoutNamingTheLocation(): void {
+    const failure = Assert.throws(
+      () => new DbContextOptionsBuilder().usePostgreSQL("postgres://app@db.example/notes?target_session_attrs=read-write"), DataException);
+
+    Assert.isFalse(failure.message.includes("read-write"));
+    Assert.isFalse(failure.message.includes("db.example"));
+  }
+
+  @TestMethod
   public async opensAContextThatMigratesTheDatabase(): Promise<void> {
     await using schema = await TemporarySchema.createAsync();
     await using context = new NotesContext(new DbContextOptionsBuilder().usePostgreSQL(schema.location));
@@ -66,8 +73,11 @@ export class DbContextOptionsBuilderExtensionsTests {
   @TestMethod
   public async appliesEachMigrationOnceWhenTwoContextsWaitOnTheMigrationLock(): Promise<void> {
     await using schema = await TemporarySchema.createAsync();
-    await using first = new NotesContext(new DbContextOptionsBuilder().usePostgreSQL(schema.location));
-    await using second = new NotesContext(new DbContextOptionsBuilder().usePostgreSQL(schema.location));
+    const location = `${schema.location}&application_name=${schema.name}`;
+    await using first = new NotesContext(new DbContextOptionsBuilder().usePostgreSQL(location));
+    await using second = new NotesContext(new DbContextOptionsBuilder().usePostgreSQL(location));
+    const waits = "SELECT count(*)::int AS waiting FROM pg_locks l JOIN pg_stat_activity a ON a.pid = l.pid"
+      + ` WHERE l.locktype = 'advisory' AND NOT l.granted AND a.application_name = '${schema.name}'`;
     const holder = RealClient.create({ onnotice: false });
 
     try {
@@ -78,7 +88,7 @@ export class DbContextOptionsBuilderExtensionsTests {
           settled = true;
         });
         both.catch(() => undefined);
-        while (!settled && Number(RealClient.field(await scope.runUnsafe(DbContextOptionsBuilderExtensionsTests.countLockWaits), "waiting")) < 2)
+        while (!settled && Number(RealClient.field(await holder.runUnsafe(waits), "waiting")) < 2)
           await new Promise<void>(resolve => setImmediate(resolve));
         return { migrating: both };
       });

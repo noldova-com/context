@@ -32,26 +32,6 @@ declare module "@noldova/context.data.sql.postgresql/services/value-converter.js
   }
 }
 
-declare module "@noldova/context.data.sql.postgresql/services/connection-string.parser.js" {
-  export class ConnectionStringParser {
-    public static parse(location: string): {
-      readonly host: string;
-      readonly port: number;
-      readonly database: string;
-      readonly user: string;
-      readonly password: string;
-      readonly sslMode: string;
-      readonly channelBinding: string;
-      readonly connectTimeout: number;
-      readonly parameters: ReadonlyMap<string, string>;
-      readonly rootCertificate: string | null;
-      readonly sslCertificate: string | null;
-      readonly sslKey: string | null;
-      readonly sslPassword: string | null;
-    };
-  }
-}
-
 declare module "@noldova/context.data.sql.postgresql/enums/channel-binding.js" {
   export enum ChannelBinding {
     Disable = "disable",

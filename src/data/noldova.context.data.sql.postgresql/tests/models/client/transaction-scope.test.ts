@@ -17,12 +17,14 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { RealClient } from "../../fixtures/real-client.fixture.js";
 import { Released } from "../../fixtures/released.fixture.js";
+import { TemporarySchema } from "../../fixtures/temporary-schema.fixture.js";
 
 @TestClass
 export class TransactionScopeTests {
   @TestMethod
   public async commitsWhatTheCallbackReturnsAsync(): Promise<void> {
-    const client = RealClient.create();
+    await using schema = await TemporarySchema.createAsync();
+    const client = schema.createClient();
     try {
       await client.runUnsafe("create table scope_commits (n int4)");
       const value = await client.beginAsync(async scope => {
@@ -38,7 +40,6 @@ export class TransactionScopeTests {
       Assert.areEqual(1, await TransactionScopeTests.countAsync(client, "scope_commits"));
     }
     finally {
-      await client.runUnsafe("drop table if exists scope_commits");
       await client.endAsync();
     }
 
@@ -47,7 +48,8 @@ export class TransactionScopeTests {
 
   @TestMethod
   public async rollsBackWhenTheCallbackThrowsAsync(): Promise<void> {
-    const client = RealClient.create();
+    await using schema = await TemporarySchema.createAsync();
+    const client = schema.createClient();
     try {
       await client.runUnsafe("create table scope_throws (n int4)");
       const failure = await Assert.throwsAsync(() => client.beginAsync(async scope => {
@@ -60,7 +62,6 @@ export class TransactionScopeTests {
       Assert.areEqual(0, await TransactionScopeTests.countAsync(client, "scope_throws"));
     }
     finally {
-      await client.runUnsafe("drop table if exists scope_throws");
       await client.endAsync();
     }
 
@@ -98,7 +99,8 @@ export class TransactionScopeTests {
 
   @TestMethod
   public async runsSavepointsAndNestedTransactionsAsync(): Promise<void> {
-    const client = RealClient.create();
+    await using schema = await TemporarySchema.createAsync();
+    const client = schema.createClient();
     try {
       await client.runUnsafe("create table scope_savepoints (n int4)");
       await client.beginAsync("read write", async scope => {
@@ -119,7 +121,6 @@ export class TransactionScopeTests {
       Assert.areEqual(JSON.stringify([{ n: 1 }, { n: 3 }, { n: 4 }]), JSON.stringify(await client.runUnsafe("select n from scope_savepoints order by n")));
     }
     finally {
-      await client.runUnsafe("drop table if exists scope_savepoints");
       await client.endAsync();
     }
 
@@ -128,7 +129,8 @@ export class TransactionScopeTests {
 
   @TestMethod
   public async rollsBackOnRequestAndRefusesLaterQueriesAsync(): Promise<void> {
-    const client = RealClient.create();
+    await using schema = await TemporarySchema.createAsync();
+    const client = schema.createClient();
     try {
       await client.runUnsafe("create table scope_rollbacks (n int4)");
       const kept = await client.beginAsync(async scope => {
@@ -166,7 +168,6 @@ export class TransactionScopeTests {
       Assert.areEqual(0, await TransactionScopeTests.countAsync(client, "scope_rollbacks"));
     }
     finally {
-      await client.runUnsafe("drop table if exists scope_rollbacks");
       await client.endAsync();
     }
 

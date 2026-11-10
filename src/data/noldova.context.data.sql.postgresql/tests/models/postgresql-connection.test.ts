@@ -41,6 +41,14 @@ export class PostgreSQLConnectionTests {
   }
 
   @TestMethod
+  public rejectsAnOptionTheClientRefusesWithoutNamingTheLocation(): void {
+    const failure = Assert.throws(
+      () => PostgreSQLConnection.open(new DataSource("app", "postgresql://app@db.example/notes?sslnegotiation=direct")), DataException);
+
+    Assert.isFalse(failure.message.includes("db.example"));
+  }
+
+  @TestMethod
   public async rejectsAnUnreachableServerAndTriesAgainOnTheNextOperation(): Promise<void> {
     const connection = PostgreSQLConnection.open(new DataSource("app", PostgreSQLConnectionTests.unreachable));
 

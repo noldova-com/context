@@ -81,8 +81,9 @@ from it:
   files, as above, in place of a Node `tls` options object.
 - `build.js`, `subscribe.js`, `large.js`, `cf.js` and `diagnostics.js` are
   left out, and so are the environment variables and the password file.
-- The provider's own parts are new: the connection-string parser, the `?`
-  rewriter and the value converter.
+- The provider's own parts are new: the location parser, which checks a
+  location with the client's own parser, the `?` rewriter and the value
+  converter.
 
 ## License
 

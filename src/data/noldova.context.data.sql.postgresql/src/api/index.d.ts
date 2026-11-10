@@ -16,8 +16,8 @@ declare module "@noldova/context.data" {
      * connection string of the form `postgres://user:password@host:port/database`,
      * through `PostgreSQLProvider`; the data source is named after the
      * database. A blank location throws `ArgumentException`, and one that is
-     * not such a connection string throws `DataException`, whose message never
-     * holds the location.
+     * not such a connection string, or that sets an option the client does not
+     * support, throws `DataException`, whose message never holds the location.
      */
     usePostgreSQL(location: string): DbContextOptions<SqlConnection, SqlMigration>;
   }
@@ -66,8 +66,9 @@ export declare class PostgreSQLDialect extends SqlDialect {
 export declare class PostgreSQLConnection extends SqlConnection {
   /**
    * Opens a connection on the data source without reaching the server, which
-   * the first operation does. A location that is not a connection string
-   * throws `DataException`, whose message never holds the location.
+   * the first operation does. A location that is not a connection string, or
+   * that sets an option the client does not support, throws `DataException`,
+   * whose message never holds the location.
    */
   public static open(dataSource: DataSource): PostgreSQLConnection;
 

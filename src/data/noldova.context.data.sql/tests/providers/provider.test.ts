@@ -66,4 +66,32 @@ export class ProviderTests {
     Assert.areEqual("{\"text\":\"again\"}", after.map(t => t.payload).join(","));
     Assert.areEqual(1, (await feed.readAfterAsync(0, 1)).length);
   }
+
+  @TestMethod
+  @TestData("sqlite", false)
+  @TestData("sqlite", true)
+  @TestData("postgresql", false)
+  @TestData("postgresql", true)
+  public async recoversChangeFeedPreparationAfterRollback(provider: string, readFirst: boolean): Promise<void> {
+    await using database = await ProviderDatabase.createAsync(provider);
+    const options = database.options();
+    await using connection = options.provider.openConnection(options.dataSource);
+    const feed = options.provider.createChangeFeed(connection);
+
+    const rollback = new Error("Rollback fixture");
+    Assert.areEqual(rollback, await Assert.throwsAsync(async () => connection.runInTransactionAsync(async t => {
+      await feed.appendAsync("note", "discarded", ChangeOperation.Insert, "{}", t);
+      throw rollback;
+    }), Error));
+
+    if (readFirst)
+      Assert.areEqual(0, (await feed.readAfterAsync(0)).length);
+    const change = await feed.appendAsync("note", "kept", ChangeOperation.Insert, "{}");
+    const changes = await feed.readAfterAsync(0);
+
+    Assert.areEqual(1, change.sequence);
+    Assert.areEqual(1, changes.length);
+    Assert.areEqual("kept", changes[0]?.entityId);
+    Assert.areEqual(1, (await connection.queryAsync(database.findIndex("IX___changes_entity_entityId"))).length);
+  }
 }

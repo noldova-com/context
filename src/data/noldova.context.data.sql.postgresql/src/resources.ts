@@ -40,9 +40,6 @@ export class Resources {
   public static readonly commitStatement: string = "commit";
   public static readonly connectTimeout: string = "The connection to the PostgreSQL server timed out.";
   public static readonly connectTimeoutOption: string = "connect_timeout";
-  public static readonly connectionStringOptions: ReadonlySet<string> = new Set([
-    "channel_binding", "connect_timeout", "sslcert", "sslkey", "sslmode", "sslpassword", "sslrootcert"
-  ]);
   public static readonly constraintNameField: string = "constraint_name";
   public static readonly copyInProgress: string = "Queries cannot run while a COPY is in progress on the connection.";
   public static readonly copyStreamDestroyed: string = "The COPY stream was destroyed.";
@@ -72,7 +69,7 @@ export class Resources {
   public static readonly inferOption: string = "infer";
   public static readonly infinity: string = "infinity";
   public static readonly integerType: string = "BIGINT";
-  public static readonly invalidConnectionString: string = "The data source's location is not a PostgreSQL connection string of the form postgres://user:password@host:port/database.";
+  public static readonly invalidConnectionString: string = "The data source's location is not a PostgreSQL connection string of the form postgres://user:password@host:port/database, or it sets an option the client doesn't support.";
   public static readonly invalidStatementNameState: string = "26000";
   public static readonly kindColumn: string = "kind";
   public static readonly lastValueColumn: string = "lastval";

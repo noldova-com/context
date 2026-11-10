@@ -11,6 +11,7 @@
 import { randomUUID } from "node:crypto";
 
 import { DataSource } from "@noldova/context.data";
+import { PostgreSQLClient } from "@noldova/context.data.sql.postgresql/models/client/postgresql-client.js";
 
 import { RealClient } from "./real-client.fixture.js";
 import { Released } from "./released.fixture.js";
@@ -28,6 +29,10 @@ export class TemporarySchema implements AsyncDisposable {
     const schema = new TemporarySchema(`context_${randomUUID().replaceAll("-", "")}`);
     await TemporarySchema.runAsync(`CREATE SCHEMA "${schema.name}"`);
     return schema;
+  }
+
+  public createClient(): PostgreSQLClient {
+    return PostgreSQLClient.create(this.location, { maxLifetime: null });
   }
 
   public dataSource(name: string = "app"): DataSource {

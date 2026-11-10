@@ -7,9 +7,9 @@
  */
 
 import { ChangeOperation } from "@noldova/context.data";
-import { SqlMigrator, SqlProvider, SqlQuery } from "@noldova/context.data.sql";
+import { SqlMigrator, SqlProvider } from "@noldova/context.data.sql";
 import { PostgreSQLConnection, PostgreSQLProvider } from "@noldova/context.data.sql.postgresql";
-import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
+import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { TemporarySchema } from "../fixtures/temporary-schema.fixture.js";
 
@@ -28,33 +28,6 @@ export class PostgreSQLProviderTests {
     Assert.areEqual(dataSource, connection.dataSource);
     Assert.isTrue(connection.isOpen);
     Assert.isInstanceOf(provider.createMigrator(connection, []), SqlMigrator);
-  }
-
-  @TestMethod
-  @TestData(false)
-  @TestData(true)
-  public async recoversChangeFeedPreparationAfterRollback(readFirst: boolean): Promise<void> {
-    await using schema = await TemporarySchema.createAsync();
-    const provider = new PostgreSQLProvider();
-    await using connection = provider.openConnection(schema.dataSource());
-    const feed = provider.createChangeFeed(connection);
-
-    const rollback = new Error("Rollback fixture");
-    Assert.areEqual(rollback, await Assert.throwsAsync(async () => connection.runInTransactionAsync(async t => {
-      await feed.appendAsync("note", "discarded", ChangeOperation.Insert, "{}", t);
-      throw rollback;
-    }), Error));
-
-    if (readFirst)
-      Assert.areEqual(0, (await feed.readAfterAsync(0)).length);
-    const change = await feed.appendAsync("note", "kept", ChangeOperation.Insert, "{}");
-    const changes = await feed.readAfterAsync(0);
-
-    Assert.areEqual(1, changes.length);
-    Assert.areEqual(change.sequence, changes[0]?.sequence);
-    Assert.areEqual("kept", changes[0]?.entityId);
-    const query = new SqlQuery("SELECT indexname FROM pg_indexes WHERE schemaname = ? AND indexname = 'IX___changes_entity_entityId'", [schema.name]);
-    Assert.areEqual(1, (await connection.queryAsync(query)).length);
   }
 
   @TestMethod

@@ -31,11 +31,13 @@ export class ProviderDatabase implements AsyncDisposable {
   private readonly provider: string;
   private readonly location: string;
   private readonly drop: () => Promise<void>;
+  private readonly indexes: (name: string) => SqlQuery;
 
-  private constructor(provider: string, location: string, drop: () => Promise<void>) {
+  private constructor(provider: string, location: string, drop: () => Promise<void>, indexes: (name: string) => SqlQuery) {
     this.provider = provider;
     this.location = location;
     this.drop = drop;
+    this.indexes = indexes;
   }
 
   public static async createAsync(provider: string): Promise<ProviderDatabase> {
@@ -44,7 +46,7 @@ export class ProviderDatabase implements AsyncDisposable {
       return new ProviderDatabase(provider, join(folder, "notes.db"), () => {
         rmSync(folder, { recursive: true, force: true });
         return Promise.resolve();
-      });
+      }, name => new SqlQuery("SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?", [name]));
     }
     if (provider !== ProviderDatabase.postgresql)
       throw new Error(`No database for the provider ${provider}.`);
@@ -57,13 +59,17 @@ export class ProviderDatabase implements AsyncDisposable {
       await ProviderDatabase.runAsync(`DROP SCHEMA "${schema}" CASCADE`);
       if (!await Released.socketsAsync())
         throw new Error("The test's connections left their sockets open.");
-    });
+    }, name => new SqlQuery("SELECT indexname FROM pg_indexes WHERE schemaname = ? AND indexname = ?", [schema, name]));
   }
 
   public options(): DbContextOptions<SqlConnection, SqlMigration> {
     return this.provider === ProviderDatabase.sqlite
       ? new DbContextOptionsBuilder().useSQLite(this.location)
       : new DbContextOptionsBuilder().usePostgreSQL(this.location);
+  }
+
+  public findIndex(name: string): SqlQuery {
+    return this.indexes(name);
   }
 
   public [Symbol.asyncDispose](): Promise<void> {
