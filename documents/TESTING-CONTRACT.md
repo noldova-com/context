@@ -79,7 +79,7 @@ Each provider's own test project tests only what is its own, such as opening its
 The PostgreSQL tests reach a server through the connection string in the `NOLDOVA_CONTEXT_POSTGRESQL_URL` environment variable, which their projects' fixtures read; without the variable those tests fail, never skip, so the complete gate needs a server on every target.
 A run starts one PostgreSQL server, and every PostgreSQL test of the run uses it.
 Each test that writes tables or rows there, each method and each data row alike, creates its own schema and drops it at its end, so it starts on an empty schema and no test sees another's tables or rows.
-A test that writes only temporary tables keeps them in its own sessions, which it ends.
+A test that writes only temporary tables keeps them in its own sessions, which it ends at its end, even when it fails.
 `ProviderTests` shows it: the rows of `seesNoNoteAnotherTestWrote` and the method after it each write the same note, and each finds only its own.
 
 ## 4. Assertions
