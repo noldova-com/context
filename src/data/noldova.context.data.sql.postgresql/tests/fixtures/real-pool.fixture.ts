@@ -26,7 +26,7 @@ import type { QueryOutcome } from "@noldova/context.data.sql.postgresql/types/qu
 import { PostgreSQLServerFixture } from "./postgresql-server.fixture.js";
 import { Released } from "./released.fixture.js";
 
-export class RealPool {
+export class RealPool implements AsyncDisposable {
   public readonly options: ClientOptions;
   public readonly connection: ConnectionOptions;
   public readonly registry: TypeRegistry;
@@ -75,6 +75,10 @@ export class RealPool {
   public async endAsync(): Promise<boolean> {
     await this.pool.endAsync();
     return Released.socketsAsync();
+  }
+
+  public async [Symbol.asyncDispose](): Promise<void> {
+    await this.pool.endAsync(0);
   }
 
   private static isList(outcome: QueryOutcome): outcome is readonly QueryOutcome[] {

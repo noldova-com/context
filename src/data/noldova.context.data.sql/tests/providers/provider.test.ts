@@ -68,6 +68,22 @@ export class ProviderTests {
   }
 
   @TestMethod
+  @TestData("sqlite", "first row")
+  @TestData("sqlite", "second row")
+  @TestData("postgresql", "first row")
+  @TestData("postgresql", "second row")
+  public async seesNoNoteAnotherTestWrote(provider: string, text: string): Promise<void> {
+    await ProviderTests.writesTheOnlyNoteAsync(provider, text);
+  }
+
+  @TestMethod
+  @TestData("sqlite")
+  @TestData("postgresql")
+  public async seesNoNoteAnotherTestWroteInTheNextMethod(provider: string): Promise<void> {
+    await ProviderTests.writesTheOnlyNoteAsync(provider, "next method");
+  }
+
+  @TestMethod
   @TestData("sqlite", false)
   @TestData("sqlite", true)
   @TestData("postgresql", false)
@@ -93,5 +109,17 @@ export class ProviderTests {
     Assert.areEqual(1, changes.length);
     Assert.areEqual("kept", changes[0]?.entityId);
     Assert.areEqual(1, (await connection.queryAsync(database.findIndex("IX___changes_entity_entityId"))).length);
+  }
+
+  private static async writesTheOnlyNoteAsync(provider: string, text: string): Promise<void> {
+    await using database = await ProviderDatabase.createAsync(provider);
+    await using context = new NotesContext(database.options());
+    const connection = context.database.connection;
+
+    Assert.areEqual("20260908130000_Notes", (await context.database.migrateAsync()).join(","));
+    Assert.areEqual(1, await connection.executeAsync(new SqlQuery("INSERT INTO notes (id, text) VALUES (?, ?)", ["shared", text])));
+    const records = await connection.queryAsync(new SqlQuery("SELECT id, text FROM notes WHERE text <> ?", ["none"]));
+
+    Assert.areEqual(`shared:${text}`, records.map(t => `${String(t.readValue("id"))}:${String(t.readValue("text"))}`).join(","));
   }
 }

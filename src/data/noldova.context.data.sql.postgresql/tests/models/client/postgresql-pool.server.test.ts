@@ -45,7 +45,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async runsQueriesWithParametersAndParsesTheirTypesAsync(): Promise<void> {
-    const real = new RealPool();
+    await using real = new RealPool();
 
     const rows = await real.rowsAsync(
       "select $1::int4 as i, $2::text as t, $3::bool as b, $4::int8 as big, $5::float8 as f, $6::bytea as bytes, $7::int4[] as ints, "
@@ -69,7 +69,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async pipelinesQueriesOnOneConnectionAsync(): Promise<void> {
-    const real = new RealPool({ max: 1 });
+    await using real = new RealPool({ max: 1 });
 
     const outcomes = await Promise.all(Array.from({ length: 20 }, (_, index) => real.rowsAsync("select $1::int4 as n", [index])));
     const pids = await Promise.all([real.rowsAsync("select pg_backend_pid() as pid"), real.rowsAsync("select pg_backend_pid() as pid")]);
@@ -82,7 +82,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async reprepresAStatementTheServerForgotAsync(): Promise<void> {
-    const real = new RealPool({ max: 1 });
+    await using real = new RealPool({ max: 1 });
 
     const first = await real.rowsAsync("select $1::int4 * 2 as n", [2]);
     await real.query("deallocate all").useSimpleProtocol();
@@ -96,7 +96,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async retriesAStatementWhoseResultChangedShapeAsync(): Promise<void> {
-    const real = new RealPool({ max: 1 });
+    await using real = new RealPool({ max: 1 });
     const lease = await real.pool.acquireLeaseAsync(LeaseKind.Reserve);
 
     await real.leased(lease, "create temporary table shapes (a int4)").useSimpleProtocol();
@@ -114,7 +114,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async describesAStatementWithoutRunningItAsync(): Promise<void> {
-    const real = new RealPool();
+    await using real = new RealPool();
 
     const described = await real.query("select $1::int4 as n, $2::text as t", [1, "a"]).describe();
     const failed = await Assert.throwsAsync(async () => {
@@ -129,7 +129,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async rejectsAnErrorAndStaysUsableAsync(): Promise<void> {
-    const real = new RealPool({ max: 1 });
+    await using real = new RealPool({ max: 1 });
 
     const failed = await Assert.throwsAsync(async () => {
       await real.query("select 1 / $1::int4", [0]);
@@ -150,7 +150,7 @@ export class PostgreSQLPoolServerTests {
   @TestMethod
   public async closesOnAFatalErrorAndOpensAgainAsync(): Promise<void> {
     const closed: number[] = [];
-    const real = new RealPool({ max: 1, onclose: connection => closed.push(connection) });
+    await using real = new RealPool({ max: 1, onclose: connection => closed.push(connection) });
 
     const fatal = await Assert.throwsAsync(async () => {
       await real.query("select pg_terminate_backend(pg_backend_pid())").useSimpleProtocol();
@@ -166,7 +166,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async runsSimpleQueriesWithSeveralResultsAsync(): Promise<void> {
-    const real = new RealPool();
+    await using real = new RealPool();
 
     const several = RealPool.results(await real.query("select 1 as a; select 2 as b").useSimpleProtocol());
     const empty = await real.query("").useSimpleProtocol();
@@ -179,7 +179,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async copiesRowsOutAndInAsync(): Promise<void> {
-    const real = new RealPool({ max: 1 });
+    await using real = new RealPool({ max: 1 });
     const lease = await real.pool.acquireLeaseAsync(LeaseKind.Reserve);
 
     await real.leased(lease, "create temporary table copied (n int4, t text)").useSimpleProtocol();
@@ -210,7 +210,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async failsACopyInTheClientAbortsAsync(): Promise<void> {
-    const real = new RealPool({ max: 1 });
+    await using real = new RealPool({ max: 1 });
     const lease = await real.pool.acquireLeaseAsync(LeaseKind.Reserve);
 
     await real.leased(lease, "create temporary table aborted (n int4)").useSimpleProtocol();
@@ -234,7 +234,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async readsACursorInBatchesAsync(): Promise<void> {
-    const real = new RealPool();
+    await using real = new RealPool();
     const sizes: number[] = [];
     const closedAt: number[] = [];
 
@@ -258,7 +258,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async stepsACursorInsideATransactionAsync(): Promise<void> {
-    const real = new RealPool();
+    await using real = new RealPool();
     const lease = await real.pool.acquireLeaseAsync(LeaseKind.Transaction);
     const sizes: number[] = [];
 
@@ -284,7 +284,7 @@ export class PostgreSQLPoolServerTests {
   @TestMethod
   public async hearsNotificationsNoticesAndParametersAsync(): Promise<void> {
     const heard: string[] = [];
-    const real = new RealPool({
+    await using real = new RealPool({
       max: 1,
       onnotify: (channel, payload) => heard.push(`notify:${channel}:${payload}`),
       onnotice: notice => heard.push(`notice:${notice.get("message") ?? ""}`),
@@ -306,8 +306,8 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async cancelsARunningQueryAndOneQueuedBehindItAsync(): Promise<void> {
-    const real = new RealPool({ max: 1 });
-    const watcher = new RealPool({ max: 1 });
+    await using real = new RealPool({ max: 1 });
+    await using watcher = new RealPool({ max: 1 });
 
     const sleeping = real.query("select pg_sleep(30), 'noldova-sleeping' as tag");
     const queued = real.query("select pg_sleep(30), 'noldova-queued' as tag");
@@ -372,7 +372,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async timesOutASlowQueryAsync(): Promise<void> {
-    const real = new RealPool({ max: 1, queryTimeout: PostgreSQLPoolServerTests.QUERY_TIMEOUT_SECONDS });
+    await using real = new RealPool({ max: 1, queryTimeout: PostgreSQLPoolServerTests.QUERY_TIMEOUT_SECONDS });
     let error: QueryTimeoutException;
     let after: Result;
     let ended = false;
@@ -394,7 +394,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async commitsAndRollsBackInATransactionLeaseAsync(): Promise<void> {
-    const real = new RealPool();
+    await using real = new RealPool();
     const setup = await real.pool.acquireLeaseAsync(LeaseKind.Reserve);
     await real.leased(setup, "create temporary table ledger (n int4)").useSimpleProtocol();
 
@@ -418,7 +418,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async rollsBackATransactionLeftOpenOutsideALeaseAsync(): Promise<void> {
-    const real = new RealPool({ max: 2 });
+    await using real = new RealPool({ max: 2 });
 
     const error = await Assert.throwsAsync(async () => {
       await real.query("begin").useSimpleProtocol();
@@ -433,7 +433,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async runsABatchAndReportsItsFailingPartAsync(): Promise<void> {
-    const real = new RealPool();
+    await using real = new RealPool();
 
     const results = RealPool.results(await real.batch(real.query("select $1::int4 as n", [1]), real.query("select $1::text as t", ["b"])));
     const failed = await Assert.throwsAsync(async () => {
@@ -449,7 +449,7 @@ export class PostgreSQLPoolServerTests {
   @TestMethod
   public async appliesTransformsRowModesAndDebugAsync(): Promise<void> {
     const debugged: string[] = [];
-    const real = new RealPool({
+    await using real = new RealPool({
       transform: new TransformOptions({ columnFrom: name => name.toUpperCase(), rowFrom: row => ({ wrapped: row }) }),
       debug: (_connection, text) => debugged.push(text)
     });
@@ -471,7 +471,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async closesIdleConnectionsAndEndsWithATimeoutAsync(): Promise<void> {
-    const real = new RealPool({ max: 3 });
+    await using real = new RealPool({ max: 3 });
 
     await Promise.all([real.rowsAsync("select pg_sleep(0.01)"), real.rowsAsync("select pg_sleep(0.01)"), real.rowsAsync("select pg_sleep(0.01)")]);
     await real.pool.closeAsync();
@@ -493,7 +493,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async readsAReusedStatementInBinaryAsync(): Promise<void> {
-    const real = new RealPool({ max: 1 });
+    await using real = new RealPool({ max: 1 });
     const text = "select $1::int4[] as ints, $2::bytea as bytes, $3::text as t";
     const values = [[1, 2], Buffer.from([9]), "x"];
 
@@ -513,7 +513,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async sendsLooseParametersOfMixedTypesAsync(): Promise<void> {
-    const real = new RealPool({ max: 1 });
+    await using real = new RealPool({ max: 1 });
 
     const rows = await real.query("select $1::int4 as a, $2::int4 as b, $3::int4 as c", [null, 5, 7], [0, 23, 0]);
     const again = await real.query("select $1::int4 as a, $2::int4 as b, $3::int4 as c", [1, null, 3], [0, 23, 0]);
@@ -526,7 +526,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async refusesMoreValuesThanTheStatementTakesAsync(): Promise<void> {
-    const real = new RealPool({ max: 2 });
+    await using real = new RealPool({ max: 2 });
     const lease = await real.pool.acquireLeaseAsync(LeaseKind.Reserve);
 
     const described = await Assert.throwsAsync(async () => {
@@ -551,7 +551,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async skipsTheRestOfABatchWhosePartCannotBeSentAsync(): Promise<void> {
-    const real = new RealPool({ max: 1 });
+    await using real = new RealPool({ max: 1 });
 
     const typed = await Assert.throwsAsync(async () => {
       await real.batch(real.query("select 1 as n"), real.query("select $1::int4 as n", [1, 2], [23]), real.query("select 3 as n"));
@@ -572,7 +572,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async readsACursorWithParametersAsync(): Promise<void> {
-    const real = new RealPool({ max: 1 });
+    await using real = new RealPool({ max: 1 });
     const sizes: number[] = [];
 
     await real.query("select generate_series(1, $1) as n", [5]).useCursor(2, rows => {
@@ -586,7 +586,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async timesOutAQueryQueuedBehindASlowOneAsync(): Promise<void> {
-    const real = new RealPool({ max: 1, queryTimeout: PostgreSQLPoolServerTests.QUERY_TIMEOUT_SECONDS });
+    await using real = new RealPool({ max: 1, queryTimeout: PostgreSQLPoolServerTests.QUERY_TIMEOUT_SECONDS });
     let errors: QueryTimeoutException[];
     let after: Result;
     let ended = false;
@@ -613,7 +613,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async refusesAValueItCannotSerializeOnceTheServerDescribedItAsync(): Promise<void> {
-    const real = new RealPool({ max: 2 });
+    await using real = new RealPool({ max: 2 });
     const circular = { self: {} };
     circular.self = circular;
     const lease = await real.pool.acquireLeaseAsync(LeaseKind.Reserve);
@@ -640,7 +640,7 @@ export class PostgreSQLPoolServerTests {
 
   @TestMethod
   public async describesTheStatementAQueryRanAsync(): Promise<void> {
-    const real = new RealPool();
+    await using real = new RealPool();
     const query = real.query("select $1::int4 as n", [1]);
 
     await query;
