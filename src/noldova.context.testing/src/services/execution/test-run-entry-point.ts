@@ -43,7 +43,8 @@ export class TestRunEntryPoint {
         testProjects.push(new TestProject(packageName, rootDirectory));
       }
 
-      const supervisor = new TestRunSupervisor(Resources.defaultTimeoutMilliseconds, testProjects, filters, reporter);
+      const supervisor = new TestRunSupervisor(
+        Resources.defaultTimeoutMilliseconds, testProjects, filters, reporter, TestRunSupervisor.readCoverageDirectory());
       reporter.start();
       const result = await supervisor.runAsync();
       const totals = new TestRunTotals(result.passed, result.failed, result.skipped, supervisor.elapsedMilliseconds);

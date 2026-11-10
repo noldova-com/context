@@ -22,6 +22,7 @@ import { join } from "node:path";
 
 import CommandFailedException from "./command-failed.exception.ts";
 import Config from "./config.ts";
+import PostgreSQLServer from "./postgresql-server.ts";
 import Script from "./script.ts";
 
 export class Test extends Script {
@@ -33,6 +34,7 @@ export class Test extends Script {
   private static readonly FILTERED_COVERAGE_SKIPPED: string = "Coverage gate skipped for a filtered run.";
   private static readonly NODE_MODULES_DIRECTORY_NAME: string = "node_modules";
   private static readonly NO_TEST_PROJECTS: string = "No test projects were found.";
+  private static readonly POSTGRESQL_STARTED: string = "Started a PostgreSQL server for the data tests.";
   private static readonly OPTION_PREFIX: string = "--";
   private static readonly SKIP_COVERAGE_DETAILS_OPTION: string = "--skip-coverage-details";
   private static readonly SKIP_TEST_DETAILS_OPTION: string = "--skip-test-details";
@@ -100,7 +102,13 @@ export class Test extends Script {
       environment[Test.COVERAGE_VARIABLE] = Config.COVERAGE_FOLDER;
     }
 
+    const server = process.env[PostgreSQLServer.URL_VARIABLE] === undefined ? await PostgreSQLServer.startAsync() : null;
     try {
+      if (server !== null) {
+        environment[PostgreSQLServer.URL_VARIABLE] = server.url;
+        await this.writeLogAsync(Test.POSTGRESQL_STARTED);
+      }
+
       await this.executeProcessAsync(
         process.execPath,
         [Test.SOURCE_MAPS_OPTION, Test.TEST_ENTRY_PATH, ...testProjectArguments],
@@ -115,6 +123,9 @@ export class Test extends Script {
 
       process.exitCode = 1;
     }
+    finally {
+      await server?.[Symbol.asyncDispose]();
+    }
 
     if (filters.length > 0) {
       await this.writeLogAsync(Test.FILTERED_COVERAGE_SKIPPED);
@@ -126,7 +137,18 @@ export class Test extends Script {
       t.name,
       join(Test.NODE_MODULES_DIRECTORY_NAME, t.packageName),
       join(Test.SOURCE_DIRECTORY_NAME, t.path, Test.SOURCE_DIRECTORY_NAME)));
-    const coverage = await new testing.CoverageAnalyzer().analyzeAsync(Config.COVERAGE_FOLDER, coverageProjects);
+    let coverage: InstanceType<typeof testing.CoverageResult>;
+    try {
+      coverage = await new testing.CoverageAnalyzer().analyzeAsync(Config.COVERAGE_FOLDER, coverageProjects);
+    }
+    catch (error) {
+      if (!(error instanceof testing.TestingException))
+        throw error;
+
+      await this.writeLogAsync(error.message);
+      process.exitCode = 1;
+      return;
+    }
 
     await this.writeLogAsync(Test.BLANK_LINE);
     for (const line of new testing.CoverageReportWriter().formatLines(coverage, flags.has(Test.SKIP_COVERAGE_DETAILS_OPTION)))

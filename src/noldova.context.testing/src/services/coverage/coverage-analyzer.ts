@@ -8,7 +8,7 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 
 import { ArgumentException } from "@noldova/context.exceptions";
@@ -38,6 +38,7 @@ export class CoverageAnalyzer {
     if ([...expectedFilePathsByProject.values()].every(t => t.length === 0))
       throw new TestingException(Resources.coverageUniverseEmpty);
 
+    await this.throwIfProfilesMissingAsync(coverageDirectory);
     const scriptEntriesByFile = await new CoverageReportReader(normalizedProjects.map(t => t.productionDirectory)).readAsync(coverageDirectory);
     const fileCoverages: FileCoverage[] = [];
     for (const [project, expectedFilePaths] of expectedFilePathsByProject) {
@@ -49,6 +50,32 @@ export class CoverageAnalyzer {
     }
 
     return new CoverageResult(fileCoverages);
+  }
+
+  private async throwIfProfilesMissingAsync(coverageDirectory: string): Promise<void> {
+    const fileNames = (await readdir(coverageDirectory)).sort();
+    const written = new Set<string>();
+    for (const fileName of fileNames) {
+      const match = Resources.coverageProfilePattern.exec(fileName);
+      if (match !== null)
+        written.add(Resources.formatProfileThread(String(match[1]), String(match[2])));
+    }
+
+    const missing: string[] = [];
+    for (const fileName of fileNames) {
+      const processId = Resources.threadListPattern.exec(fileName)?.[1];
+      if (Object.isUndefined(processId))
+        continue;
+
+      for (const threadId of (await readFile(join(coverageDirectory, fileName), Resources.textEncoding)).split(Resources.lineSeparator)) {
+        const thread = Resources.formatProfileThread(processId, threadId);
+        if (threadId !== String.empty && !written.has(thread))
+          missing.push(thread);
+      }
+    }
+
+    if (missing.length > 0)
+      throw new TestingException(Resources.coverageProfilesMissing(missing));
   }
 
   private async collectExpectedFilePathsAsync(productionDirectory: string): Promise<string[]> {

@@ -36,7 +36,7 @@ noldova.context.collections/
 
 The command host follows the same rule (`noldova.context/src/noldova.context.ctxp`).
 Matching makes placement predictable; it never lets a consumer infer identity without reading and validating the manifest, and a name, directory, basename, or import with different casing is not an alias.
-Repository category directories such as `src/parsers/` group package roots by responsibility and carry no semantic identity.
+Repository category directories such as `src/data/` and `src/parsers/` group package roots by responsibility and carry no semantic identity.
 
 Every project declares its development version and consumers validate exact artifact and compatibility identities under `VERSIONING-AND-COMPATIBILITY.md`.
 

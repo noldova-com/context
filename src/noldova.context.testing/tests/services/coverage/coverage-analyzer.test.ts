@@ -12,7 +12,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { ArgumentException } from "@noldova/context.exceptions";
-import { Assert, CoverageAnalyzer, CoverageProject, TestClass, TestData, TestingException, TestMethod } from "@noldova/context.testing";
+import { Assert, CoverageAnalyzer, CoverageProject, type CoverageResult, TestClass, TestData, TestingException, TestMethod } from "@noldova/context.testing";
 
 @TestClass
 export class CoverageAnalyzerTests {
@@ -657,6 +657,39 @@ export class CoverageAnalyzerTests {
       const result = await new CoverageAnalyzer().analyzeAsync(coverageDirectory, [this.createProject(productionDirectory, productionDirectory)]);
       Assert.areEqual(2, result.uncoveredLength);
       Assert.areEqual(0, result.takenBlockCount);
+    }
+    finally {
+      await rm(coverageDirectory, { recursive: true, force: true });
+    }
+  }
+
+  @TestMethod
+  public async failsWhenAListedThreadWroteNoProfileAsync(): Promise<void> {
+    const error = await Assert.throwsAsync(() => this.analyzeListedThreadsAsync("0\n7\n"), TestingException);
+
+    Assert.areEqual("No coverage profile was written for thread 7 of process 12, so the coverage would be incomplete.", error.message);
+  }
+
+  @TestMethod
+  public async acceptsAListWhoseThreadsAllWroteProfilesAsync(): Promise<void> {
+    const result = await this.analyzeListedThreadsAsync("0\n");
+
+    Assert.isTrue(result.isComplete);
+  }
+
+  private async analyzeListedThreadsAsync(threadList: string): Promise<CoverageResult> {
+    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
+    try {
+      const includedDirectory = join(coverageDirectory, "included");
+      await mkdir(includedDirectory);
+      const samplePath = join(includedDirectory, "sample.js");
+      await writeFile(samplePath, "x;");
+      await writeFile(join(coverageDirectory, "coverage-12-345-0.json"), JSON.stringify({
+        result: [{ url: pathToFileURL(samplePath).href, functions: [{ ranges: [{ startOffset: 0, endOffset: 2, count: 1 }] }] }],
+      }));
+      await writeFile(join(coverageDirectory, "threads-12-0f3a.txt"), threadList);
+
+      return await new CoverageAnalyzer().analyzeAsync(coverageDirectory, [this.createProject(includedDirectory, coverageDirectory)]);
     }
     finally {
       await rm(coverageDirectory, { recursive: true, force: true });

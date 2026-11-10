@@ -69,6 +69,10 @@ Guards reject prohibited script languages, inline shell workflows, and shell-ena
 
 `npm run test` runs the complete suite through `noldova.context.testing` against freshly installed packages in root `node_modules`; package-name resolution must reach installed packed artifacts, never source files or stale output.
 The canonical run requires a successful build and installation for the same source state, follows the strict and coverage rules, and leaves tracked files unchanged.
+It also requires a PostgreSQL server for the PostgreSQL provider's tests, named by `NOLDOVA_CONTEXT_POSTGRESQL_URL` as `TESTING-CONTRACT.md` section 3 says; when the variable is unset, `npm test` starts one itself.
+`scripts/postgresql-server.ts` downloads PostgreSQL 18.6.1 from the theseus-rs/postgresql-binaries release for the machine's platform, refuses an archive whose SHA-256 differs from the pinned one, and caches it in `_build/postgresql`.
+It creates a cluster in a new folder under the job's temp folder, starts it as the current user on a free local port with trust authentication, runs the tests against it, then stops it and removes the folder.
+Nothing is installed on the machine and no container is used, so it works the same on Linux, macOS and Windows.
 `TESTING-CONTRACT.md` owns execution, result accounting, skips, and filter semantics.
 `npm run test -- <filter>...` forwards filters to the runner; a targeted run skips the coverage gate.
 

@@ -19,6 +19,7 @@ import {
 import { FakeClock } from "../../fixtures/execution/fake-clock.fixture.js";
 import { FixtureTestProject } from "../../fixtures/execution/fixture-test-project.fixture.js";
 import { RecordingMethodProgress } from "../../fixtures/execution/recording-method-progress.fixture.js";
+import { WithoutCoverage } from "../../fixtures/execution/without-coverage.fixture.js";
 
 @TestClass
 export class ParallelTestRunnerTests {
@@ -72,7 +73,8 @@ export class ParallelTestRunnerTests {
     clock.fireOnceArmed(ParallelTestRunnerTests.HANGING_TEST_WATCHDOG, ParallelTestRunnerTests.LOOPING_TEST_WATCHDOG);
     const project = await FixtureTestProject.createAsync(["hanging-fixture", "looping-fixture", "passing-fixture"]);
     try {
-      const result = await new ParallelTestRunner(ParallelTestRunnerTests.TIMEOUT_MILLISECONDS, 1, clock).runAsync([project.testProject]);
+      const result = await WithoutCoverage.runAsync(() => new ParallelTestRunner(ParallelTestRunnerTests.TIMEOUT_MILLISECONDS, 1, clock)
+        .runAsync([project.testProject]));
 
       Assert.areEqual("HangingFixtureTests.hangsAsync Failed,HangingFixtureTests.passes Passed,LoopingFixtureTests.finishesFirst Passed,"
         + "LoopingFixtureTests.loopsForever Failed,LoopingFixtureTests.passesAfterTheLoop Passed,PassingFixtureTests.passes Passed",
@@ -149,10 +151,11 @@ export class ParallelTestRunnerTests {
     let error: Error;
     try {
       await prepareAsync(project.testProject.rootDirectory);
-      const running = new ParallelTestRunner(ParallelTestRunnerTests.TIMEOUT_MILLISECONDS, workerCount, clock).runAsync([project.testProject]);
-      act(clock);
-
-      error = await Assert.throwsAsync(() => running, Error);
+      error = await WithoutCoverage.runAsync(() => {
+        const running = new ParallelTestRunner(ParallelTestRunnerTests.TIMEOUT_MILLISECONDS, workerCount, clock).runAsync([project.testProject]);
+        act(clock);
+        return Assert.throwsAsync(() => running, Error);
+      });
     }
     finally {
       await project.removeAsync();

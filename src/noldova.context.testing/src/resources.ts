@@ -69,6 +69,10 @@ export class Resources {
   public static readonly defaultTimeoutMilliseconds: number = 30_000;
   public static readonly filtersVariable: string = "CONTEXT_TEST_FILTERS";
   public static readonly skipTestDetailsVariable: string = "CONTEXT_SKIP_TEST_DETAILS";
+  public static readonly coverageVariable: string = "NODE_V8_COVERAGE";
+  public static readonly coverageProfilePattern: RegExp = /^coverage-(\d+)-\d+-(\d+)\.json$/u;
+  public static readonly threadListPattern: RegExp = /^threads-(\d+)-[0-9a-f-]+\.txt$/u;
+  public static readonly lineSeparator: string = "\n";
   public static readonly greenThreshold: number = 90;
   public static readonly yellowThreshold: number = 60;
   public static readonly terminalRed: string = "\u001b[31m";
@@ -183,6 +187,18 @@ export class Resources {
 
   public static testWorkerEnded(exitCode: number): string {
     return `The test worker ended with exit code ${exitCode} before the run finished.`;
+  }
+
+  public static threadListFileName(processId: number, listId: string): string {
+    return `threads-${processId}-${listId}.txt`;
+  }
+
+  public static coverageProfilesMissing(threads: readonly string[]): string {
+    return `No coverage profile was written for ${threads.join(", ")}, so the coverage would be incomplete.`;
+  }
+
+  public static formatProfileThread(processId: string, threadId: string): string {
+    return `thread ${threadId} of process ${processId}`;
   }
 
   public static testWorkerEndedAfterItsLastClass(exitCode: number): string {

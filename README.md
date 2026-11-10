@@ -48,6 +48,10 @@ Each name opens the package's folder and its own README; each badge opens it on 
 | Package | npm | What it is |
 |---|---|---|
 | [`context.json`](src/noldova.context.json) | [![npm](https://badgen.net/npm/v/@noldova/context.json)](https://www.npmjs.com/package/@noldova/context.json) | Reads untrusted JSON into typed values, and says by path which field is wrong |
+| [`context.data`](src/data/noldova.context.data) | [![npm](https://badgen.net/npm/v/@noldova/context.data)](https://www.npmjs.com/package/@noldova/context.data) | A database-independent data model: connections, transactions, migrations and a change feed, which a provider implements |
+| [`context.data.sql`](src/data/noldova.context.data.sql) | [![npm](https://badgen.net/npm/v/@noldova/context.data.sql)](https://www.npmjs.com/package/@noldova/context.data.sql) | The data model over SQL: a schema and migration builder, SQL dialects, and SQL connections, migrations and change feed |
+| [`context.data.sql.sqlite`](src/data/noldova.context.data.sql.sqlite) | [![npm](https://badgen.net/npm/v/@noldova/context.data.sql.sqlite)](https://www.npmjs.com/package/@noldova/context.data.sql.sqlite) | The SQLite provider of the SQL data model, on the host's `node:sqlite` |
+| [`context.data.sql.postgresql`](src/data/noldova.context.data.sql.postgresql) | [![npm](https://badgen.net/npm/v/@noldova/context.data.sql.postgresql)](https://www.npmjs.com/package/@noldova/context.data.sql.postgresql) | The PostgreSQL provider of the SQL data model, ported from postgres.js |
 
 ### Testing
 
