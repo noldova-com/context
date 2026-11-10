@@ -141,6 +141,7 @@ No test code pauses for a fixed time.
 
 The packages are published to npm under `@noldova` from `main` by the release workflow, `.github/workflows/release-npm.yml`, with provenance and without a stored token.
 Their versions follow [VERSIONING-AND-COMPATIBILITY.md](documents/VERSIONING-AND-COMPATIBILITY.md).
+Each version changes `version.json` in a pull request that writes the version's section of [CHANGELOG.md](CHANGELOG.md), from the pull requests merged since the previous version.
 The release tags the commit `v<version>` first, before it builds or publishes; a version whose build or publish then fails keeps its tag, so releasing other changes needs a new version.
 After a release, the workflow proposes the version to each public repository that pins these packages, in one pull request each, through a GitHub App whose key the `version-updates` environment holds.
 
