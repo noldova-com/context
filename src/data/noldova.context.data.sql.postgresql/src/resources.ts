@@ -181,7 +181,7 @@ export class Resources {
   public static readonly unlistenPrefix: string = "unlisten ";
   public static readonly unsafeInteger: string = "The row holds a BIGINT outside the range of safe integers.";
   public static readonly unsafeTransaction: string = "Run transaction statements only in a transaction or on a reserved connection, or set max to 1.";
-  public static readonly unsupportedOutcome: string = "The statement gave no single result; run one statement at a time.";
+  public static readonly unsupportedOutcome: string = "The statement gave no single result, as a COPY does; the connection runs only statements that give one.";
   public static readonly unsupportedValue: string = "The row holds a value that is neither text nor null.";
   public static readonly unterminatedErrorField: string = "The server sent an error whose field has no terminator.";
   public static readonly userInfoSeparator: string = "@";

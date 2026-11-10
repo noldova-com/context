@@ -10,7 +10,7 @@
 
 import { setImmediate } from "node:timers";
 
-import { ChangeOperation, DataException, DbContextOptions, DbContextOptionsBuilder } from "@noldova/context.data";
+import { DataException, DbContextOptions, DbContextOptionsBuilder } from "@noldova/context.data";
 import { SqlQuery } from "@noldova/context.data.sql";
 import { PostgreSQLProvider } from "@noldova/context.data.sql.postgresql";
 import { ArgumentException } from "@noldova/context.exceptions";
@@ -61,9 +61,6 @@ export class DbContextOptionsBuilderExtensionsTests {
     Assert.areEqual("20260908130000_Notes", (await context.database.migrateAsync()).join(","));
     const query = new SqlQuery("SELECT indexname FROM pg_indexes WHERE schemaname = ? AND indexname = 'IX_notes_text'", [schema.name]);
     Assert.areEqual(1, (await context.database.connection.queryAsync(query)).length);
-    Assert.areEqual(0, (await context.database.getPendingMigrationsAsync()).length);
-    Assert.areEqual(1, (await context.database.changeFeed.appendAsync("note", "a", ChangeOperation.Insert, "{}")).sequence);
-    Assert.areEqual(1, (await context.database.changeFeed.readAfterAsync(0)).length);
   }
 
   @TestMethod

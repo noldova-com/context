@@ -83,6 +83,28 @@ export class PostgreSQLConnectionTests {
   }
 
   @TestMethod
+  public async readsNoRecordsFromAStatementWithoutRows(): Promise<void> {
+    await using schema = await TemporarySchema.createAsync();
+    await using connection = PostgreSQLConnection.open(schema.dataSource());
+    await connection.executeAsync(PostgreSQLConnectionTests.createNotes);
+
+    const records = await connection.queryAsync(new SqlQuery("INSERT INTO notes (id, text) VALUES (?, ?)", ["a", "first"]));
+
+    Assert.areEqual(0, records.length);
+    Assert.areEqual(1, (await connection.queryAsync(PostgreSQLConnectionTests.selectNotes)).length);
+  }
+
+  @TestMethod
+  public async refusesAStatementThatGivesNoSingleResult(): Promise<void> {
+    await using schema = await TemporarySchema.createAsync();
+    await using connection = PostgreSQLConnection.open(schema.dataSource());
+
+    const error = await Assert.throwsAsync(async () => connection.queryAsync(new SqlQuery("COPY (SELECT 1) TO STDOUT")), DataException);
+
+    Assert.areEqual("The statement gave no single result, as a COPY does; the connection runs only statements that give one.", error.message);
+  }
+
+  @TestMethod
   public async readsNumbersAsNumbersAndOtherTypesAsText(): Promise<void> {
     await using schema = await TemporarySchema.createAsync();
     await using connection = PostgreSQLConnection.open(schema.dataSource());

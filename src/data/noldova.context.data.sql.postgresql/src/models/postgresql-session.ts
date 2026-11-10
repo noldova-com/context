@@ -11,6 +11,7 @@ import { type SqlQuery, SqlSession } from "@noldova/context.data.sql";
 
 import type { PostgreSQLClient } from "./client/postgresql-client.js";
 import type { ReservedClient } from "./client/reserved-client.js";
+import type { Column } from "./column.js";
 import { Result } from "./result.js";
 import { Resources } from "../resources.js";
 import { ParameterRewriter } from "../services/parameter-rewriter.js";
@@ -32,7 +33,8 @@ export class PostgreSQLSession extends SqlSession {
   }
 
   public override async executeAsync(query: SqlQuery): Promise<number> {
-    return (await this.runAsync(query.text, query.parameters)).count ?? 0;
+    const [result] = await this.runAsync(query.text, query.parameters);
+    return result.count ?? 0;
   }
 
   public override async insertAsync(query: SqlQuery): Promise<number> {
@@ -55,19 +57,18 @@ export class PostgreSQLSession extends SqlSession {
     await this.client.endAsync();
   }
 
-  private async runAsync(text: string, parameters: readonly DataValue[]): Promise<Result> {
+  private async runAsync(text: string, parameters: readonly DataValue[]): Promise<readonly [Result, readonly Column[]]> {
     this.reserved ??= await this.client.reserveAsync();
     const outcome = await this.reserved.query(ParameterRewriter.rewrite(text, parameters.length), parameters.map(t => ValueConverter.write(t)))
       .useParsers(() => null)
       .useValueRows();
-    if (!(outcome instanceof Result))
+    if (!(outcome instanceof Result) || Object.isNull(outcome.columns))
       throw new DataException(Resources.unsupportedOutcome);
 
-    return outcome;
+    return [outcome, outcome.columns];
   }
 
-  private static toRecords(result: Result): readonly DataRecord[] {
-    const columns = result.columns ?? [];
+  private static toRecords([result, columns]: readonly [Result, readonly Column[]]): readonly DataRecord[] {
     return result.map(row => ValueConverter.readRecord(columns, row));
   }
 }
