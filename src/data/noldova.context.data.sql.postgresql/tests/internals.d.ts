@@ -22,31 +22,13 @@ declare module "@noldova/context.data.sql.postgresql/services/parameter-rewriter
 }
 
 declare module "@noldova/context.data.sql.postgresql/services/value-converter.js" {
-  import type { DataValue } from "@noldova/context.data";
+  import type { DataRecord, DataValue } from "@noldova/context.data";
+  import type { Column } from "@noldova/context.data.sql.postgresql/models/column.js";
 
   export class ValueConverter {
-    public static read(type: number, text: string | null): DataValue;
+    public static readRecord(columns: readonly Column[], row: unknown): DataRecord;
+    public static read(type: number, text: unknown): DataValue;
     public static write(value: DataValue): string | null;
-  }
-}
-
-declare module "@noldova/context.data.sql.postgresql/services/connection-string.parser.js" {
-  export class ConnectionStringParser {
-    public static parse(location: string): {
-      readonly host: string;
-      readonly port: number;
-      readonly database: string;
-      readonly user: string;
-      readonly password: string;
-      readonly sslMode: string;
-      readonly channelBinding: string;
-      readonly connectTimeout: number;
-      readonly parameters: ReadonlyMap<string, string>;
-      readonly rootCertificate: string | null;
-      readonly sslCertificate: string | null;
-      readonly sslKey: string | null;
-      readonly sslPassword: string | null;
-    };
   }
 }
 

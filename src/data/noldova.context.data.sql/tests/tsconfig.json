@@ -2,6 +2,12 @@
   "extends": "../../../../tsconfig-base.json",
   "compilerOptions": {
     "rootDir": ".",
-    "outDir": "../../../../_build/node/noldova.context.data.sql.tests"
+    "outDir": "../../../../_build/node/noldova.context.data.sql.tests",
+    "typeRoots": [
+      "../../../../node_modules/@types"
+    ],
+    "types": [
+      "node"
+    ]
   }
 }

@@ -325,8 +325,7 @@ export class SessionStarterTests {
 
     session.socket.resume();
     peer?.send(M.notice("late"));
-    await SessionStarterTests.untilAsync(() => false);
-    peer?.destroy();
+    peer?.socket.end();
     await SessionStarterTests.untilAsync(() => session.socket.isClosed);
 
     Assert.isTrue(session.socket.isClosed);
@@ -389,7 +388,7 @@ export class SessionStarterTests {
   }
 
   private static async untilAsync(condition: () => boolean): Promise<void> {
-    for (let turn = 0; turn < 1000 && !condition(); turn += 1)
+    while (!condition())
       await new Promise<void>(resolve => {
         setImmediate(resolve);
       });
