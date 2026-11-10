@@ -1,0 +1,17 @@
+{
+  "name": "noldova.context.data.sql.tests",
+  "version": "0.0.1",
+  "kind": "library",
+  "frameworks": [],
+  "dependencies": {
+    "projects": [
+      "../src/noldova.context.data.sql.ctxp"
+    ],
+    "packages": [
+      "noldova.context.core",
+      "noldova.context.data",
+      "noldova.context.exceptions",
+      "noldova.context.testing"
+    ]
+  }
+}

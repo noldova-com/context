@@ -8,8 +8,11 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
+import { randomUUID } from "node:crypto";
+import { writeFile } from "node:fs/promises";
 import { availableParallelism } from "node:os";
-import { Worker, type WorkerOptions } from "node:worker_threads";
+import { join } from "node:path";
+import { threadId, Worker, type WorkerOptions } from "node:worker_threads";
 
 import "@noldova/context.core";
 import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
@@ -40,6 +43,8 @@ export class TestRunSupervisor {
   private readonly startLimitMilliseconds: number;
   private readonly createWorker: (url: URL, options: WorkerOptions) => Worker;
   private readonly clock: IClock;
+  private readonly coverageDirectory: string | null;
+  private readonly endedThreadIds: number[];
   private readonly runs: TestWorkerRun[];
   private readonly workers: Map<Worker, () => Promise<void>>;
   private readonly methodResults: Map<number, TestMethodResult[]>;
@@ -53,7 +58,7 @@ export class TestRunSupervisor {
   private elapsedMillisecondsValue: number;
 
   public constructor(timeoutMilliseconds: number, testProjects: readonly TestProject[], filters: readonly string[],
-    progressListener: ITestProgressListener | undefined, workerUrl: URL = new URL(Resources.testRunWorkerFileName, import.meta.url),
+    progressListener: ITestProgressListener | undefined, coverageDirectory: string | null, workerUrl: URL = new URL(Resources.testRunWorkerFileName, import.meta.url),
     workerCount: number = TestRunSupervisor.defaultWorkerCount(),
     startLimitMilliseconds: number = Resources.testWorkerStartMilliseconds,
     createWorker: (url: URL, options: WorkerOptions) => Worker = (url, options) => new Worker(url, options),
@@ -72,6 +77,8 @@ export class TestRunSupervisor {
     this.startLimitMilliseconds = startLimitMilliseconds;
     this.createWorker = createWorker;
     this.clock = clock;
+    this.coverageDirectory = coverageDirectory;
+    this.endedThreadIds = [];
     this.runs = [];
     this.workers = new Map();
     this.methodResults = new Map();
@@ -93,6 +100,10 @@ export class TestRunSupervisor {
     return this.elapsedMillisecondsValue;
   }
 
+  public static readCoverageDirectory(): string | null {
+    return process.env[Resources.coverageVariable] ?? null;
+  }
+
   public static defaultWorkerCount(): number {
     return Math.max(availableParallelism(), Resources.minimumWorkerCount);
   }
@@ -104,10 +115,15 @@ export class TestRunSupervisor {
 
   public async runAsync(): Promise<TestRunResult> {
     const start = this.clock.now();
-    await new Promise<void>((resolve, reject) => {
-      for (let index = 0; index < this.workerCount; index++)
-        this.startWorker(resolve, reject);
-    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        for (let index = 0; index < this.workerCount; index++)
+          this.startWorker(resolve, reject);
+      });
+    }
+    finally {
+      await this.writeThreadListAsync();
+    }
 
     const result = new TestRunResult(this.classResults, this.selection);
     if (result.total !== this.methodCount)
@@ -120,6 +136,7 @@ export class TestRunSupervisor {
   private startWorker(resolve: () => void, reject: (error: unknown) => void): void {
     const start = new TestWorkerStart(this.testProjects, this.filters, this.timeoutMilliseconds);
     const worker = this.createWorker(this.workerUrl, { workerData: start.toData() });
+    const workerThreadId = worker.threadId;
     const startLimitMilliseconds = Math.max(this.timeoutMilliseconds + Resources.testWorkerGraceMilliseconds, this.startLimitMilliseconds);
     let started: TestWorkerMessage | undefined;
     let imported: string | undefined;
@@ -142,15 +159,16 @@ export class TestRunSupervisor {
       this.runs.length = 0;
       void Promise.all([...this.workers.values()].map(stopWorkerAsync => stopWorkerAsync())).then(() => reject(error));
     };
-    // A worker with no run left ends by itself, so its thread writes its coverage. It fails the run when it ends with an error or an exit code
-    // other than 0, or does not end within the limit, since its coverage would then be incomplete.
+
     const end = (): void => {
       worker.removeAllListeners(Resources.messageEvent);
       worker.removeAllListeners(Resources.exitEvent);
       worker.once(Resources.exitEvent, (code: number) => {
         this.clock.clearTimeout(watchdog);
-        if (code === 0)
+        if (code === 0) {
+          this.endedThreadIds.push(workerThreadId);
           finish();
+        }
         else
           fail(new TestingException(Resources.testWorkerEndedAfterItsLastClass(code)));
       });
@@ -230,6 +248,15 @@ export class TestRunSupervisor {
     });
     worker.on(Resources.exitEvent, (code: number) => fail(new TestingException(Resources.testWorkerEnded(code))));
     arm(startLimitMilliseconds);
+  }
+
+  private async writeThreadListAsync(): Promise<void> {
+    if (Object.isNull(this.coverageDirectory))
+      return;
+
+    const threadIds = [threadId, ...this.endedThreadIds];
+    await writeFile(join(this.coverageDirectory, Resources.threadListFileName(process.pid, randomUUID())),
+      threadIds.map(t => `${t}${Resources.lineSeparator}`).join(String.empty));
   }
 
   private queue(ready: TestWorkerMessage): void {

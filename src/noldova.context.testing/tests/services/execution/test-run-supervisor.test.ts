@@ -9,6 +9,10 @@
 // This file uses Node APIs and will change when we replace Node.
 
 import { once } from "node:events";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { threadId } from "node:worker_threads";
 
 import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
 import {
@@ -31,14 +35,14 @@ export class TestRunSupervisorTests {
   @TestData(2_147_483_647)
   @TestMethod
   public rejectsATimeoutOutOfRange(timeoutMilliseconds: number): void {
-    Assert.throws(() => new TestRunSupervisor(timeoutMilliseconds, [], [], TestRunSupervisorTests.reporter([])), ArgumentOutOfRangeException);
+    Assert.throws(() => new TestRunSupervisor(timeoutMilliseconds, [], [], TestRunSupervisorTests.reporter([]), null), ArgumentOutOfRangeException);
   }
 
   @TestData(0)
   @TestData(1.5)
   @TestMethod
   public rejectsAWorkerCountThatIsNotAPositiveInteger(workerCount: number): void {
-    Assert.throws(() => new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined,
+    Assert.throws(() => new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined,
       workerCount), ArgumentOutOfRangeException);
   }
 
@@ -46,7 +50,7 @@ export class TestRunSupervisorTests {
   @TestData(2_147_483_648)
   @TestMethod
   public rejectsAStartLimitOutOfRange(startLimitMilliseconds: number): void {
-    Assert.throws(() => new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined,
+    Assert.throws(() => new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined,
       2, startLimitMilliseconds), ArgumentOutOfRangeException);
   }
 
@@ -54,7 +58,7 @@ export class TestRunSupervisorTests {
   public async reportsTheRunsElapsedTimeRatherThanTheSumOfItsTestsAsync(): Promise<void> {
     const clock = new FakeClock();
     const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"));
-    const supervisor = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+    const supervisor = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       undefined, () => worker, clock);
     const running = supervisor.runAsync();
     clock.advance(42);
@@ -64,6 +68,56 @@ export class TestRunSupervisorTests {
 
     Assert.areEqual(1, result.passed);
     Assert.areEqual(42, supervisor.elapsedMilliseconds);
+  }
+
+  @TestMethod
+  public async listsItsThreadAndEachWorkerThatEndedByItselfForTheCoverageAsync(): Promise<void> {
+    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-threads-"));
+    try {
+      const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"));
+      const workerThreadId = worker.threadId;
+      const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), coverageDirectory,
+        undefined, 1, undefined, () => worker, new FakeClock()).runAsync();
+      worker.send(TestWorkerMessage.ready(1, 1, 1));
+      await running;
+
+      Assert.areEqual(`${threadId}\n${workerThreadId}\n`, await TestRunSupervisorTests.readThreadListAsync(coverageDirectory));
+    }
+    finally {
+      await rm(coverageDirectory, { recursive: true, force: true });
+    }
+  }
+
+  @TestMethod
+  public async leavesAWorkerItStoppedOutOfTheCoverageThreadListAsync(): Promise<void> {
+    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-threads-"));
+    try {
+      const worker = new ScriptedWorker(timingOut => {
+        TestRunSupervisorTests.completeMethod(timingOut, 0, TestOutcome.Failed);
+        timingOut.send(TestWorkerMessage.timedOut(0, 0, "StoppedFixtureTests.test.js"));
+      });
+      const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), coverageDirectory,
+        undefined, 1, undefined, () => worker, new FakeClock()).runAsync();
+      worker.send(TestWorkerMessage.ready(1, 1, 1));
+      await running;
+
+      Assert.areEqual(1, worker.terminateCount);
+      Assert.areEqual(`${threadId}\n`, await TestRunSupervisorTests.readThreadListAsync(coverageDirectory));
+    }
+    finally {
+      await rm(coverageDirectory, { recursive: true, force: true });
+    }
+  }
+
+  @TestMethod
+  public async listsNoThreadWhenTheRunTakesNoCoverageAsync(): Promise<void> {
+    const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"));
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
+      undefined, () => worker, new FakeClock()).runAsync();
+    worker.send(TestWorkerMessage.ready(1, 1, 1));
+    const result = await running;
+
+    Assert.areEqual(1, result.passed);
   }
 
   @TestMethod
@@ -78,7 +132,7 @@ export class TestRunSupervisorTests {
       firstFinishing.resolve();
     });
     const scripted = [first, second];
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter(output),
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter(output), null,
       undefined, 2, undefined, () => scripted.shift() ?? new ScriptedWorker(() => undefined), new FakeClock()).runAsync();
     first.send(TestWorkerMessage.ready(2, 2, 2));
     second.send(TestWorkerMessage.ready(2, 2, 2));
@@ -95,7 +149,7 @@ export class TestRunSupervisorTests {
   public async countsWhatItsFiltersSelectedOutOfWhatItDiscoveredAsync(): Promise<void> {
     const starts: TestWorkerStart[] = [];
     const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"));
-    const supervisor = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], ["Passing"], TestRunSupervisorTests.reporter([]),
+    const supervisor = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], ["Passing"], TestRunSupervisorTests.reporter([]), null,
       undefined, 1, undefined, (_url, options) => {
         starts.push(TestWorkerStart.from(options.workerData));
         return worker;
@@ -129,7 +183,7 @@ export class TestRunSupervisorTests {
       worker.send(TestWorkerMessage.classCompleted(0, "StoppedFixtureTests.test.js"));
     });
     const scripted = [blocking, resuming];
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       undefined, () => {
         const worker = scripted.shift() ?? new ScriptedWorker(() => undefined);
         queueMicrotask(() => worker.send(TestWorkerMessage.ready(1, 3, 3)));
@@ -160,7 +214,7 @@ export class TestRunSupervisorTests {
         slow.send(TestWorkerMessage.classCompleted(0, "SlowFixtureTests.test.js"));
       });
     });
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       undefined, () => {
         created++;
         return worker;
@@ -190,7 +244,7 @@ export class TestRunSupervisorTests {
       worker.send(TestWorkerMessage.classCompleted(0, "StoppedFixtureTests.test.js"));
     });
     const scripted = [blocking, resuming];
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       undefined, () => {
         const worker = scripted.shift() ?? new ScriptedWorker(() => undefined);
         queueMicrotask(() => worker.send(TestWorkerMessage.ready(1, 1, 1)));
@@ -217,7 +271,7 @@ export class TestRunSupervisorTests {
       TestRunSupervisorTests.completeMethod(timingOut, 1, TestOutcome.Failed);
       timingOut.send(TestWorkerMessage.timedOut(0, 1, "StoppedFixtureTests.test.js"));
     });
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       undefined, () => {
         created++;
         return worker;
@@ -244,7 +298,7 @@ export class TestRunSupervisorTests {
       });
     });
     const scripted = [first, second];
-    const running = new TestRunSupervisor(10_000, [], [], TestRunSupervisorTests.reporter([]), undefined, 2, undefined,
+    const running = new TestRunSupervisor(10_000, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 2, undefined,
       () => scripted.shift() ?? new ScriptedWorker(() => undefined), clock).runAsync();
     first.send(TestWorkerMessage.ready(2, 2, 2));
     second.send(TestWorkerMessage.ready(2, 2, 2));
@@ -265,7 +319,7 @@ export class TestRunSupervisorTests {
     const clock = new FakeClock();
     const release = Promise.withResolvers<void>();
     const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), release.promise);
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       undefined, () => worker, clock).runAsync();
     worker.send(TestWorkerMessage.ready(1, 1, 1));
     await worker.ending;
@@ -285,7 +339,7 @@ export class TestRunSupervisorTests {
   public async failsTheRunWhenAWorkerEndsWithAnExitCodeAfterItsLastClassAsync(): Promise<void> {
     const release = Promise.withResolvers<void>();
     const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), release.promise);
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       undefined, () => worker, new FakeClock()).runAsync();
     worker.send(TestWorkerMessage.ready(1, 1, 1));
     await worker.ending;
@@ -301,7 +355,7 @@ export class TestRunSupervisorTests {
   public async failsTheRunWhenAWorkerFailsAfterItsLastClassAsync(): Promise<void> {
     const release = Promise.withResolvers<void>();
     const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), release.promise);
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       undefined, () => worker, new FakeClock()).runAsync();
     worker.send(TestWorkerMessage.ready(1, 1, 1));
     await worker.ending;
@@ -316,7 +370,7 @@ export class TestRunSupervisorTests {
   @TestMethod
   public async failsTheRunWhenItsWorkerReturnsFewerResultsThanItSelectedAsync(): Promise<void> {
     const worker = new ScriptedWorker(() => undefined);
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       undefined, () => worker, new FakeClock()).runAsync();
     worker.send(TestWorkerMessage.ready(0, 1, 1));
 
@@ -335,7 +389,7 @@ export class TestRunSupervisorTests {
       listening.send(isTimedOut ? TestWorkerMessage.timedOut(0, 0, "listening-fixture.test.js")
         : TestWorkerMessage.classCompleted(0, "listening-fixture.test.js"));
     });
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], new RecordingTestProgress(new Error("The listener failed.")),
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], new RecordingTestProgress(new Error("The listener failed.")), null,
       undefined, 1, undefined, () => worker, new FakeClock()).runAsync();
     worker.send(TestWorkerMessage.ready(1, 1, 1));
 
@@ -350,7 +404,7 @@ export class TestRunSupervisorTests {
   public async failsTheRunWhenItsWorkerCompletesWhatItDidNotReportAsync(kind: string): Promise<void> {
     const worker = new ScriptedWorker(misbehaving => misbehaving.emit("message",
       { ...TestWorkerMessage.started(0, 0, TestRunSupervisorTests.TIMEOUT_MILLISECONDS).toData(), kind, timeoutMilliseconds: 0 }));
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       undefined, () => worker, new FakeClock()).runAsync();
     worker.send(TestWorkerMessage.ready(1, 1, 1));
 
@@ -367,7 +421,7 @@ export class TestRunSupervisorTests {
       importing.send(TestWorkerMessage.methodCompleted(0, 0, TestRunSupervisorTests.result("ImportingFixtureTests")));
       importing.send(TestWorkerMessage.classCompleted(0, "importing-fixture.test.js"));
     });
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       60_000, () => worker, clock).runAsync();
     for (let file = 0; file < 3; file++) {
       clock.advance(59_999);
@@ -384,7 +438,7 @@ export class TestRunSupervisorTests {
   public async failsTheRunWhenItsWorkerImportsNoFurtherFileWithinTheLimitAsync(): Promise<void> {
     const clock = new FakeClock();
     const worker = new ScriptedWorker(() => undefined);
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       60_000, () => worker, clock).runAsync();
     clock.advance(59_999);
     worker.send(TestWorkerMessage.imported("nested/first.test.js"));
@@ -404,7 +458,7 @@ export class TestRunSupervisorTests {
       stopping.send(TestWorkerMessage.timedOut(0, 0, "stopping-fixture.test.js"));
       stopping.emit("error", new Error("The worker failed after it timed out."));
     });
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 1,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       undefined, () => worker, new FakeClock()).runAsync();
     worker.send(TestWorkerMessage.ready(1, 1, 1));
 
@@ -420,7 +474,7 @@ export class TestRunSupervisorTests {
     const misbehaving = new ScriptedWorker(() => undefined);
     const scripted = [timingOut, misbehaving];
     let created = 0;
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 2,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 2,
       undefined, () => {
         created++;
         return scripted.shift() ?? new ScriptedWorker(() => undefined);
@@ -445,7 +499,7 @@ export class TestRunSupervisorTests {
     const stopping = new ScriptedWorker(() => undefined, release.promise);
     const misbehaving = new ScriptedWorker(() => undefined);
     const scripted = [stopping, misbehaving];
-    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), undefined, 2,
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 2,
       undefined, () => scripted.shift() ?? new ScriptedWorker(() => undefined), new FakeClock()).runAsync();
     let isFailed = false;
     const failed = running.catch(() => {
@@ -461,6 +515,13 @@ export class TestRunSupervisorTests {
 
     Assert.isFalse(isFailedWhileStopping);
     Assert.isTrue(isFailed);
+  }
+
+  private static async readThreadListAsync(coverageDirectory: string): Promise<string> {
+    const fileNames = await readdir(coverageDirectory);
+    Assert.areEqual(1, fileNames.length);
+    Assert.isTrue(fileNames.every(t => t.startsWith(`threads-${process.pid}-`) && t.endsWith(".txt")), fileNames.join());
+    return readFile(join(coverageDirectory, fileNames.join()), "utf8");
   }
 
   private static completeClass(worker: ScriptedWorker, classIndex: number, className: string): void {

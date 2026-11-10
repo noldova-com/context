@@ -22,6 +22,7 @@ import Script from "./script.ts";
 
 export class Build extends Script {
   private static readonly BUILD_SCRIPT_PATH: string = "scripts/build.ts";
+  private static readonly BUILD_DEPENDENCIES_FIELD: "dependencies" = "dependencies";
   private static readonly CLEAN_INSTALL_ARGUMENTS: readonly string[] = ["ci", "--ignore-scripts"];
   private static readonly GIT_HEAD_ARGUMENTS: readonly string[] = ["rev-parse", "--verify", "HEAD^{commit}"];
   private static readonly GIT_HEAD_FIELD: string = "gitHead";
@@ -56,7 +57,30 @@ export class Build extends Script {
       return;
     }
 
-    await this.executeActionAsync(packagesInfo, t => this.buildPackageAsync(t, commit));
+    const built: PackageInfo[] = [];
+    let uninstalled = new Set<string>();
+    await this.executeActionAsync(packagesInfo, async packageInfo => {
+      const needed = await this.readNeededPackagesAsync(packageInfo);
+      if (needed.some(t => uninstalled.has(t))) {
+        await this.installPackagesAsync(packagesInfo, built);
+        uninstalled = new Set();
+      }
+
+      await this.buildPackageAsync(packageInfo, commit);
+      built.push(packageInfo);
+      uninstalled.add(packageInfo.packageName);
+    });
+    if (uninstalled.size > 0)
+      await this.installPackagesAsync(packagesInfo, built);
+  }
+
+  private async readNeededPackagesAsync(packageInfo: PackageInfo): Promise<readonly string[]> {
+    if (await this.pathExistsAsync(`${Build.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Build.BUILD_SCRIPT_PATH}`))
+      return Config.PACKAGES_INFO.map(t => t.packageName);
+
+    const manifest: unknown = JSON.parse(await this.readFileAsync(`${Build.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Build.PACKAGE_MANIFEST_FILE_NAME}`));
+    const dependencies: unknown = typeof manifest === "object" && manifest !== null && Build.BUILD_DEPENDENCIES_FIELD in manifest ? manifest[Build.BUILD_DEPENDENCIES_FIELD] : undefined;
+    return typeof dependencies === "object" && dependencies !== null ? Object.keys(dependencies) : [];
   }
 
   private async listCopiesAsync(arguments_: readonly string[]): Promise<void> {
@@ -104,7 +128,6 @@ export class Build extends Script {
       await this.copyNoticesFileAsync(packageInfo);
       await this.buildAsync(packageInfo);
       await this.createPackageAsync(packageInfo);
-      await this.installPackagesAsync();
     });
   }
 
@@ -157,11 +180,11 @@ export class Build extends Script {
       true);
   }
 
-  private async installPackagesAsync(): Promise<void> {
+  private async installPackagesAsync(planned: readonly PackageInfo[], built: readonly PackageInfo[]): Promise<void> {
     const archives: string[] = [];
     for (const packageInfo of Config.PACKAGES_INFO) {
       const archive = `./${Config.PACKAGES_FOLDER}/${packageInfo.archiveName(Config.VERSION)}`;
-      if (await this.pathExistsAsync(archive))
+      if (built.includes(packageInfo) || (!planned.includes(packageInfo) && await this.pathExistsAsync(archive)))
         archives.push(archive);
     }
 
