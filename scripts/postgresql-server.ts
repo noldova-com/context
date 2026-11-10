@@ -98,7 +98,12 @@ export default class PostgreSQLServer implements AsyncDisposable {
       return server;
     }
     catch (error) {
-      await server[Symbol.asyncDispose]();
+      try {
+        await server[Symbol.asyncDispose]();
+      }
+      catch (stopError) {
+        throw new AggregateError([error, stopError], PostgreSQLServer.startAndStopFailed(error, stopError));
+      }
       throw error;
     }
   }
@@ -342,6 +347,14 @@ export default class PostgreSQLServer implements AsyncDisposable {
 
   private static binFolderMissing(folder: string): string {
     return `The PostgreSQL archive extracted to ${folder} has no bin folder.`;
+  }
+
+  private static startAndStopFailed(start: unknown, stop: unknown): string {
+    return `The PostgreSQL server did not start: ${PostgreSQLServer.describe(start)}${PostgreSQLServer.NEW_LINE}Stopping it failed too: ${PostgreSQLServer.describe(stop)}`;
+  }
+
+  private static describe(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
   }
 
   private static commandFailed(command: string, code: number | null, log: string): string {

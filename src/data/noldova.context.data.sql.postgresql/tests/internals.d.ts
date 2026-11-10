@@ -482,6 +482,7 @@ declare module "@noldova/context.data.sql.postgresql/models/client-options.js" {
 declare module "@noldova/context.data.sql.postgresql/models/connection-options.js" {
   import type { ChannelBinding } from "@noldova/context.data.sql.postgresql/enums/channel-binding.js";
   import type { SslMode } from "@noldova/context.data.sql.postgresql/enums/ssl-mode.js";
+  import type { SystemCertificates } from "@noldova/context.data.sql.postgresql/models/system-certificates.js";
 
   export class ConnectionOptions {
     public readonly host: string;
@@ -493,14 +494,21 @@ declare module "@noldova/context.data.sql.postgresql/models/connection-options.j
     public readonly channelBinding: ChannelBinding;
     public readonly connectTimeout: number;
     public readonly parameters: ReadonlyMap<string, string>;
+    public readonly systemCertificates: SystemCertificates;
     public readonly rootCertificate: string | null;
     public readonly sslCertificate: string | null;
     public readonly sslKey: string | null;
     public readonly sslPassword: string | null;
     public constructor(
       host: string, port: number, database: string, user: string, password: string, sslMode: SslMode, channelBinding: ChannelBinding,
-      connectTimeout: number, parameters: ReadonlyMap<string, string>, rootCertificate?: string | null, sslCertificate?: string | null, sslKey?: string | null,
+      connectTimeout: number, parameters: ReadonlyMap<string, string>, systemCertificates: SystemCertificates, rootCertificate?: string | null, sslCertificate?: string | null, sslKey?: string | null,
       sslPassword?: string | null);
+  }
+}
+
+declare module "@noldova/context.data.sql.postgresql/models/system-certificates.js" {
+  export class SystemCertificates {
+    public read(): string[];
   }
 }
 
@@ -527,14 +535,12 @@ declare module "@noldova/context.data.sql.postgresql/models/started-session.js" 
 }
 
 declare module "@noldova/context.data.sql.postgresql/services/tls-options.reader.js" {
-  import type { Buffer } from "node:buffer";
   import type { ConnectionOptions as TlsOptions } from "node:tls";
 
   import type { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
 
   export class TlsOptionsReader {
     public static readAsync(options: ConnectionOptions): Promise<TlsOptions>;
-    public static readRoots(file: Buffer | undefined): Buffer | string[];
   }
 }
 

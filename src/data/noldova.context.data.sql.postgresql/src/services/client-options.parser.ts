@@ -15,6 +15,7 @@ import { ClientConfiguration } from "../models/client-configuration.js";
 import { ClientOptions } from "../models/client-options.js";
 import { ConnectionOptions } from "../models/connection-options.js";
 import { ParsedUrl } from "../models/parsed-url.js";
+import { SystemCertificates } from "../models/system-certificates.js";
 import { TransformOptions } from "../models/transform-options.js";
 import { Resources } from "../resources.js";
 import type { ClientSettings } from "../types/client-settings.js";
@@ -77,6 +78,7 @@ export class ClientOptionsParser {
       ClientOptionsParser.parseBinding(channelBinding ?? query.get(Resources.channelBindingOption) ?? null),
       connectTimeout ?? ClientOptionsParser.parseInteger(query.get(Resources.connectTimeoutOption), Resources.connectTimeoutOption) ?? ClientOptionsParser.defaultConnectTimeout,
       ClientOptionsParser.mergeParameters(connection, query),
+      new SystemCertificates(),
       ClientOptionsParser.readRootCertificate(query),
       query.get(Resources.sslCertOption) ?? null,
       query.get(Resources.sslKeyOption) ?? null,

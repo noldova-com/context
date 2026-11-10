@@ -25,6 +25,7 @@ import { UnsafeTransactionException } from "@noldova/context.data.sql.postgresql
 import { BuiltQuery } from "@noldova/context.data.sql.postgresql/models/built-query.js";
 import { ClientOptions } from "@noldova/context.data.sql.postgresql/models/client-options.js";
 import { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
+import { SystemCertificates } from "@noldova/context.data.sql.postgresql/models/system-certificates.js";
 import { Result } from "@noldova/context.data.sql.postgresql/models/result.js";
 import { StatementDescription } from "@noldova/context.data.sql.postgresql/models/statement-description.js";
 import { TransformOptions } from "@noldova/context.data.sql.postgresql/models/transform-options.js";
@@ -344,7 +345,7 @@ export class PostgreSQLPoolServerTests {
       server.onMessage = () => resolve();
     });
     const options = new ClientOptions({ max: 1, cancelTimeout: 0, fetchTypes: false, maxLifetime: null });
-    const connection = new ConnectionOptions("127.0.0.1", server.port, "app", "app", "", SslMode.Disable, ChannelBinding.Prefer, 0, new Map());
+    const connection = new ConnectionOptions("127.0.0.1", server.port, "app", "app", "", SslMode.Disable, ChannelBinding.Prefer, 0, new Map(), new SystemCertificates());
     const pool = new PostgreSQLPool(options, connection, new TypeRegistry(options), values => new SessionStarter(values, options.cancelTimeout));
     try {
       const query = new Query(new BuiltQuery("select pg_sleep(30)", [], []), pool);

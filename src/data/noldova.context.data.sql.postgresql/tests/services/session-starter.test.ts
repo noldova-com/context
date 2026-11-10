@@ -19,6 +19,7 @@ import { ConnectionClosedException } from "@noldova/context.data.sql.postgresql/
 import { PostgreSQLException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql.exception.js";
 import { BackendKey } from "@noldova/context.data.sql.postgresql/models/backend-key.js";
 import { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
+import { SystemCertificates } from "@noldova/context.data.sql.postgresql/models/system-certificates.js";
 import type { StartedSession } from "@noldova/context.data.sql.postgresql/models/started-session.js";
 import { PostgreSQLSocket } from "@noldova/context.data.sql.postgresql/models/postgresql-socket.js";
 import { SessionStarter } from "@noldova/context.data.sql.postgresql/services/session-starter.js";
@@ -81,7 +82,7 @@ export class SessionStarterTests {
   public async passesOnTheFatalErrorOfAnUnknownDatabaseAsync(): Promise<void> {
     const server = PostgreSQLServerFixture.current();
     const options = new ConnectionOptions(
-      server.host, server.port, "noldova_missing_database", server.user, "", SslMode.Disable, ChannelBinding.Prefer, 0, new Map());
+      server.host, server.port, "noldova_missing_database", server.user, "", SslMode.Disable, ChannelBinding.Prefer, 0, new Map(), new SystemCertificates());
 
     const error = await Assert.throwsAsync(() => new SessionStarter(options).startAsync(), PostgreSQLException);
 
@@ -370,11 +371,11 @@ export class SessionStarterTests {
 
   private static real(sslMode: SslMode, connectTimeout: number, parameters: ReadonlyMap<string, string> = new Map()): ConnectionOptions {
     const server = PostgreSQLServerFixture.current();
-    return new ConnectionOptions(server.host, server.port, server.database, server.user, "", sslMode, ChannelBinding.Prefer, connectTimeout, parameters);
+    return new ConnectionOptions(server.host, server.port, server.database, server.user, "", sslMode, ChannelBinding.Prefer, connectTimeout, parameters, new SystemCertificates());
   }
 
   private static fake(server: FakeServer, sslMode: SslMode, binding: ChannelBinding, password: string, connectTimeout: number): ConnectionOptions {
-    return new ConnectionOptions("127.0.0.1", server.port, "app", "app", password, sslMode, binding, connectTimeout, new Map());
+    return new ConnectionOptions("127.0.0.1", server.port, "app", "app", password, sslMode, binding, connectTimeout, new Map(), new SystemCertificates());
   }
 
   private static async endAsync(session: StartedSession): Promise<void> {

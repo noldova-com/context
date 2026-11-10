@@ -18,6 +18,7 @@ import { SslMode } from "@noldova/context.data.sql.postgresql/enums/ssl-mode.js"
 import { BuiltQuery } from "@noldova/context.data.sql.postgresql/models/built-query.js";
 import { ClientOptions } from "@noldova/context.data.sql.postgresql/models/client-options.js";
 import { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
+import { SystemCertificates } from "@noldova/context.data.sql.postgresql/models/system-certificates.js";
 import type { PoolLease } from "@noldova/context.data.sql.postgresql/models/client/pool-lease.js";
 import { PostgreSQLPool } from "@noldova/context.data.sql.postgresql/models/client/postgresql-pool.js";
 import { Query } from "@noldova/context.data.sql.postgresql/models/client/query.js";
@@ -39,7 +40,7 @@ export class PoolHarness {
 
   public constructor(values: Partial<ClientOptions> = {}, connectTimeout: number = 0) {
     this.options = new ClientOptions({ fetchTypes: false, maxLifetime: null, backoff: 1, ...values, timers: this.timers });
-    this.connection = new ConnectionOptions("localhost", 5432, "app", "app", "", SslMode.Disable, ChannelBinding.Disable, connectTimeout, new Map());
+    this.connection = new ConnectionOptions("localhost", 5432, "app", "app", "", SslMode.Disable, ChannelBinding.Disable, connectTimeout, new Map(), new SystemCertificates());
     this.registry = new TypeRegistry(this.options);
     this.pool = new PostgreSQLPool(this.options, this.connection, this.registry, options => this.start(options));
   }
