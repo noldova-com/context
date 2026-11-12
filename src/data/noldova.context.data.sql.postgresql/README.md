@@ -59,6 +59,19 @@ Not supported yet: the `PG*` environment variables, the password file, the
 operating system's user name as the default user, several hosts and
 `target_session_attrs`, Unix-domain sockets, and direct SSL negotiation.
 
+## Cancel
+
+A query the client has not sent yet fails at once with
+`QueryCanceledException`, and no cancel goes to the server. For a query
+already sent, a cancel opens its own connection and sends PostgreSQL's
+cancel request once; a query sent behind another on the same connection
+gets it when the query ahead ends. The server ignores a cancel that arrives
+while its session is between statements, so a cancel sent as a queued query
+starts can miss it and the query runs on. When the query neither ends nor fails within the
+connection string's `cancel_timeout` seconds, 5 by default, the client
+closes the connection and its queries fail with `ConnectionClosedException`;
+`cancel_timeout=0` waits without a limit.
+
 ## Source
 
 The client is a port of postgres.js (https://github.com/porsager/postgres)
