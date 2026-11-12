@@ -8,8 +8,7 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
+import { spawnSync } from "node:child_process";
 
 import * as api from "@noldova/context.data.sql.postgresql";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
@@ -22,15 +21,17 @@ export class DataSqlPostgreSQLApiTests {
   }
 
   @TestMethod
-  public async loadsWithoutOpeningAnyResourceAsync(): Promise<void> {
+  public loadsWithoutOpeningAnyResource(): void {
     const entryPoint = JSON.stringify(import.meta.resolve("@noldova/context.data.sql.postgresql"));
     const script = `const before = process.getActiveResourcesInfo();
       await import(${entryPoint});
-      process.stdout.write(before.join(",") + "|" + process.getActiveResourcesInfo().join(","));`;
+      const after = process.getActiveResourcesInfo();
+      process.stdout.write(before.join(",") + "|" + after.join(","));`;
 
-    const { stdout } = await promisify(execFile)(process.execPath, ["--input-type=module", "--eval", script], { windowsHide: true });
-    const [before, after] = stdout.split("|");
+    const loaded = spawnSync(process.execPath, ["--input-type=module", "--eval", script], { encoding: "utf8", windowsHide: true });
+    const [before, after] = loaded.stdout.split("|");
 
+    Assert.areEqual(0, loaded.status, loaded.stderr);
     Assert.areEqual(before, after);
   }
 }
