@@ -18,6 +18,7 @@ declare global {
     isNullOrUndefined(value: unknown): value is null | undefined;
     isNumber(value: unknown): value is number;
     isObject(value: unknown): value is object;
+    isPlainObject(value: unknown): value is object;
     isString(value: unknown): value is string;
     isSymbol(value: unknown): value is symbol;
     isUndefined(value: unknown): value is undefined;
@@ -52,6 +53,21 @@ function isObject(value: unknown): value is object {
   return !Object.isNull(value) && (typeof value === Resources.typeofObject || typeof value === Resources.typeofFunction);
 }
 
+function isPlainObject(value: unknown): value is object {
+  if (!Object.isObject(value) || Object.isFunction(value))
+    return false;
+
+  let prototype: unknown;
+  try {
+    prototype = Object.getPrototypeOf(value);
+  }
+  catch {
+    return false;
+  }
+
+  return prototype === Object.prototype || Object.isNull(prototype);
+}
+
 function isString(value: unknown): value is string {
   return typeof value === Resources.typeofString;
 }
@@ -75,6 +91,7 @@ Object.defineProperty(Object, nameof<ObjectConstructor>(t => t.isNull), { value:
 Object.defineProperty(Object, nameof<ObjectConstructor>(t => t.isNullOrUndefined), { value: isNullOrUndefined, writable: false, enumerable: false, configurable: false });
 Object.defineProperty(Object, nameof<ObjectConstructor>(t => t.isNumber), { value: isNumber, writable: false, enumerable: false, configurable: false });
 Object.defineProperty(Object, nameof<ObjectConstructor>(t => t.isObject), { value: isObject, writable: false, enumerable: false, configurable: false });
+Object.defineProperty(Object, nameof<ObjectConstructor>(t => t.isPlainObject), { value: isPlainObject, writable: false, enumerable: false, configurable: false });
 Object.defineProperty(Object, nameof<ObjectConstructor>(t => t.isSymbol), { value: isSymbol, writable: false, enumerable: false, configurable: false });
 
 export { };

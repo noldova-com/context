@@ -31,6 +31,32 @@ export class JsonReaderTests {
   }
 
   @TestMethod
+  public parsesTextWhoseRootIsAnyJsonValue(): void {
+    Assert.areEqual("[1,\"two\",{\"three\":3}]", JSON.stringify(JsonReader.parseValue("[1, \"two\", {\"three\": 3}]")));
+    Assert.areEqual("\"text\"", JSON.stringify(JsonReader.parseValue("\"text\"")));
+    Assert.areEqual("42", JSON.stringify(JsonReader.parseValue("42")));
+    Assert.areEqual("false", JSON.stringify(JsonReader.parseValue("false")));
+    Assert.areEqual("null", JSON.stringify(JsonReader.parseValue("null")));
+    Assert.areEqual("{\"name\":\"fixture name\"}", JSON.stringify(JsonReader.parseValue("{\"name\":\"fixture name\"}")));
+  }
+
+  @TestMethod
+  public rejectsInvalidTextForAnyRootAtItsPath(): void {
+    const exception = Assert.throws(() => JsonReader.parseValue("[1,", "$.output"), JsonException);
+
+    Assert.areEqual("$.output", exception.path);
+    Assert.isTrue(exception.message.includes("not valid JSON"));
+    Assert.isInstanceOf(exception.cause, SyntaxError);
+  }
+
+  @TestMethod
+  public rejectsAnyRootNestedBeyondTheMaximumDepth(): void {
+    const text = `${"[".repeat(JsonReader.maximumDepth + 1)}${"]".repeat(JsonReader.maximumDepth + 1)}`;
+
+    Assert.isTrue(Assert.throws(() => JsonReader.parseValue(text), JsonException).message.includes(String(JsonReader.maximumDepth)));
+  }
+
+  @TestMethod
   public rejectsValuesThatAreNotObjects(): void {
     Assert.areEqual("$", Assert.throws(() => JsonReader.fromValue([1, 2]), JsonException).path);
     Assert.areEqual("$", Assert.throws(() => JsonReader.fromValue("text"), JsonException).path);
@@ -246,6 +272,18 @@ export class JsonReaderTests {
     Assert.areEqual(0, reader.readStringArray("empty").length);
     Assert.isTrue(Assert.throws(() => reader.readStringArray("text"), JsonException).message.includes("array"));
     Assert.areEqual("$.mixed.1", Assert.throws(() => reader.readStringArray("mixed"), JsonException).path);
+  }
+
+  @TestMethod
+  public readsNumberArraysWithItemPaths(): void {
+    const reader = JsonReader.fromValue({ items: [1, 2.5, -3], empty: [], text: "a", mixed: [1, "2"], absent: null });
+
+    Assert.areEqual("1,2.5,-3", reader.readNumberArray("items").join(","));
+    Assert.areEqual(0, reader.readNumberArray("empty").length);
+    Assert.isTrue(Assert.throws(() => reader.readNumberArray("text"), JsonException).message.includes("array"));
+    Assert.areEqual("$.mixed.1", Assert.throws(() => reader.readNumberArray("mixed"), JsonException).path);
+    Assert.areEqual("$.absent", Assert.throws(() => reader.readNumberArray("absent"), JsonException).path);
+    Assert.areEqual("$.missing", Assert.throws(() => reader.readNumberArray("missing"), JsonException).path);
   }
 
   @TestMethod
