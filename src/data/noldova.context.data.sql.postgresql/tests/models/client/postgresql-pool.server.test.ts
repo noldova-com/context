@@ -681,5 +681,7 @@ export class PostgreSQLPoolServerTests {
       if (JSON.stringify(rows) === JSON.stringify([{ n: 1 }]))
         return;
     }
+
+    Assert.fail(`The query tagged ${tag} never showed as running.`);
   }
 }
