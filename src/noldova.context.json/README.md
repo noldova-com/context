@@ -30,13 +30,13 @@ catch (error) {
 }
 ```
 
-A required field must be present and not `null`; an `optional` accessor
-accepts an absent field, and a `nullable` one accepts `null`. Unknown fields
-are ignored. Arrays of strings, numbers and objects have their own readers, such
-as `readNumberArray`, whose failures name the item, as `$.sizes.1`. Text whose
-root isn't an object, such as an array, is read with `JsonReader.parseValue`,
-which fails with the same `JsonException`. The declaration file `api/index.d.ts` documents every member with
-its contract and examples.
+A required field must be present and not `null`; an `optional` accessor accepts
+an absent field, and a `nullable` one accepts `null`. Unknown fields are
+ignored. Arrays of strings, numbers and objects have their own readers, such as
+`readNumberArray`, whose failures name the item, as `$.sizes.1`. Text whose root
+isn't an object, such as an array, is read with `JsonReader.parseValue`, which
+fails with the same `JsonException`. The declaration file `api/index.d.ts`
+documents every member with its contract and examples.
 
 ## License
 
