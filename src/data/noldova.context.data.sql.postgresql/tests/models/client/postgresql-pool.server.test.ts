@@ -320,10 +320,10 @@ export class PostgreSQLPoolServerTests {
     }, Error);
     const after = running.then(rows => rows);
     await PostgreSQLPoolServerTests.untilRunningAsync(watcher, "noldova-sleeping");
-    const queuedCancel = queued.cancelAsync();
     await sleeping.cancelAsync();
     const error = await failed;
-    await queuedCancel;
+    await PostgreSQLPoolServerTests.untilRunningAsync(watcher, "noldova-queued");
+    await queued.cancelAsync();
     const lateError = await late;
     const rows = await after;
     await watcher.pool.endAsync();
