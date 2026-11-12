@@ -24,7 +24,7 @@ Behavior that belongs to or needs an identity a higher package owns is added by 
 Separately accepted CONTEXT additions use the extension-method contract in `ARCHITECTURE.md`.
 
 During the stage-zero bootstrap, Core augments host global identities with accepted CONTEXT additions, declares no class sharing a built-in global's name, and may add foundational value types of its own.
-The accepted Core additions are the `Object` value checks `isBigInt`, `isBoolean`, `isFunction`, `isNull`, `isNullOrUndefined`, `isNumber`, `isObject`, `isString`, `isSymbol`, and `isUndefined`; `String.empty`, `String.format`, `String.isNullOrEmpty`, and `String.isNullOrWhitespace`; and the ASCII decimal-digit, hexadecimal-digit, and letter classifications.
+The accepted Core additions are the `Object` value checks `isBigInt`, `isBoolean`, `isFunction`, `isNull`, `isNullOrUndefined`, `isNumber`, `isObject`, `isPlainObject`, `isString`, `isSymbol`, and `isUndefined`; `String.empty`, `String.format`, `String.isNullOrEmpty`, and `String.isNullOrWhitespace`; and the ASCII decimal-digit, hexadecimal-digit, and letter classifications.
 Every bootstrap augmentation is recorded for re-analysis by its owning standard-library campaign.
 A Core type that needs a host primitive declares the host contract as a typed ambient declaration rather than importing a host module.
 Core temporarily hosts the `nameof` shim under `LANGUAGE-SURFACE.md`; that shim creates no dependency on a reflection package.

@@ -190,6 +190,28 @@ declare global {
     isObject(value: unknown): value is object;
 
     /**
+     * Identifies a plain object: one whose prototype is `Object.prototype` or `null`, such as an
+     * object literal or a value `JSON.parse` returns for an object.
+     *
+     * @param value Any value to classify; its members are not inspected.
+     * @returns `true` for object literals and objects made with `Object.create(null)`, narrowing to
+     * `object`. Returns `false` for null, undefined, primitive values, functions, arrays, boxed
+     * primitives, class instances such as `Map` and `Error`, and objects with any other prototype.
+     * Use it where `typeof value === "object"` checks for a record of fields; see
+     * {@link ObjectConstructor.isObject} for every non-null object, functions included.
+     * @example
+     * ```ts
+     * import "@noldova/context.core";
+     *
+     * Object.isPlainObject({ name: "value" }); // true
+     * Object.isPlainObject(Object.create(null)); // true
+     * Object.isPlainObject([]); // false
+     * Object.isPlainObject(new Map()); // false
+     * ```
+     */
+    isPlainObject(value: unknown): value is object;
+
+    /**
      * Identifies primitive strings, including the empty string.
      *
      * @param value Any value to classify without string conversion.

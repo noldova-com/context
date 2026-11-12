@@ -30,7 +30,9 @@ String.isNullOrWhitespace(" \t\r\n "); // true
 ```
 
 The predicates classify primitives only: `Object.isString(new String(""))` is
-`false`. The declaration file `api/index.d.ts` documents every member with its
+`false`. `Object.isObject` accepts every non-null object, functions included,
+while `Object.isPlainObject` accepts only object literals and objects without a
+prototype, the records `JSON.parse` returns. The declaration file `api/index.d.ts` documents every member with its
 contract and examples.
 
 ## License
