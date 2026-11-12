@@ -57,7 +57,14 @@ function isPlainObject(value: unknown): value is object {
   if (!Object.isObject(value) || Object.isFunction(value))
     return false;
 
-  const prototype: unknown = Object.getPrototypeOf(value);
+  let prototype: unknown;
+  try {
+    prototype = Object.getPrototypeOf(value);
+  }
+  catch {
+    return false;
+  }
+
   return prototype === Object.prototype || Object.isNull(prototype);
 }
 
