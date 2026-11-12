@@ -28,10 +28,12 @@ export class DataSqlPostgreSQLApiTests {
       const after = process.getActiveResourcesInfo();
       process.stdout.write(before.join(",") + "|" + after.join(","));`;
 
-    const loaded = spawnSync(process.execPath, ["--input-type=module", "--eval", script], { encoding: "utf8", windowsHide: true });
-    const [before, after] = loaded.stdout.split("|");
+    const loaded = spawnSync(process.execPath, ["--input-type=module", "--eval", script],
+      { encoding: "utf8", windowsHide: true, timeout: 20_000, killSignal: "SIGKILL" });
 
+    Assert.isUndefined(loaded.error, loaded.stdout);
     Assert.areEqual(0, loaded.status, loaded.stderr);
+    const [before, after] = loaded.stdout.split("|");
     Assert.areEqual(before, after);
   }
 }
