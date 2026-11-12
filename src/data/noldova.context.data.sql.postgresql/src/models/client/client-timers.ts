@@ -9,7 +9,6 @@
 // This file uses Node APIs and will change when we replace Node.
 
 import { performance } from "node:perf_hooks";
-import { nextTick } from "node:process";
 import { clearTimeout, setTimeout } from "node:timers";
 
 import "@noldova/context.core";
@@ -49,6 +48,6 @@ export class ClientTimers {
   }
 
   public nextTick(callback: () => void): void {
-    nextTick(callback);
+    process.nextTick(callback);
   }
 }
