@@ -30,6 +30,7 @@ export class CoreApiTests {
       api.nameof<ObjectConstructor>(t => t.isNullOrUndefined),
       api.nameof<ObjectConstructor>(t => t.isNumber),
       api.nameof<ObjectConstructor>(t => t.isObject),
+      api.nameof<ObjectConstructor>(t => t.isPlainObject),
       api.nameof<ObjectConstructor>(t => t.isString),
       api.nameof<ObjectConstructor>(t => t.isSymbol),
       api.nameof<ObjectConstructor>(t => t.isUndefined)

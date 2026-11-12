@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { runInNewContext } from "node:vm";
+
 import { nameof } from "@noldova/context.core";
 import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
@@ -51,6 +53,55 @@ export class ObjectExtensionsTests {
   }
 
   @TestMethod
+  public isPlainObjectAcceptsOnlyObjectLiteralsAndNullPrototypeObjects(): void {
+    Assert.isTrue(Object.isPlainObject({}));
+    Assert.isTrue(Object.isPlainObject({ name: "value" }));
+    Assert.isTrue(Object.isPlainObject(Object.create(null)));
+    Assert.isFalse(Object.isPlainObject([]));
+    Assert.isFalse(Object.isPlainObject(new Map<string, string>()));
+    Assert.isFalse(Object.isPlainObject(new Error("value")));
+    Assert.isFalse(Object.isPlainObject(Object.create({})));
+    Assert.isFalse(Object.isPlainObject(new String(String.empty)));
+    Assert.isFalse(Object.isPlainObject(() => undefined));
+    Assert.isFalse(Object.isPlainObject(Object));
+    Assert.isFalse(Object.isPlainObject(null));
+    Assert.isFalse(Object.isPlainObject(undefined));
+    Assert.isFalse(Object.isPlainObject("value"));
+    Assert.isFalse(Object.isPlainObject(0));
+  }
+
+  @TestMethod
+  public isPlainObjectRefusesAnObjectLiteralFromAnotherRealm(): void {
+    Assert.isFalse(Object.isPlainObject(runInNewContext("({})")));
+    Assert.isTrue(Object.isPlainObject(runInNewContext("Object.create(null)")));
+  }
+
+  @TestMethod
+  public isPlainObjectAnswersForAProxyThroughItsPrototypeTrap(): void {
+    Assert.isTrue(Object.isPlainObject(new Proxy({}, {})));
+    Assert.isFalse(Object.isPlainObject(new Proxy({}, { getPrototypeOf: () => Map.prototype })));
+  }
+
+  @TestMethod
+  public isPlainObjectRefusesAProxyWhosePrototypeCannotBeRead(): void {
+    const revocable = Proxy.revocable({}, {});
+    revocable.revoke();
+
+    Assert.isFalse(Object.isPlainObject(revocable.proxy));
+    Assert.isFalse(Object.isPlainObject(new Proxy({}, { getPrototypeOf: () => { throw new RangeError("value"); } })));
+  }
+
+  @TestMethod
+  public isPlainObjectNarrowsToObject(): void {
+    const value: unknown = { name: "value" };
+
+    if (!Object.isPlainObject(value))
+      Assert.fail();
+
+    Assert.isTrue(Object.hasOwn(value, "name"));
+  }
+
+  @TestMethod
   public classificationGuardsNarrowValues(): void {
     const bigintValue: unknown = 1n;
     const booleanValue: unknown = true;
@@ -86,6 +137,7 @@ export class ObjectExtensionsTests {
       nameof<ObjectConstructor>(t => t.isFunction),
       nameof<ObjectConstructor>(t => t.isNumber),
       nameof<ObjectConstructor>(t => t.isObject),
+      nameof<ObjectConstructor>(t => t.isPlainObject),
       nameof<ObjectConstructor>(t => t.isString),
       nameof<ObjectConstructor>(t => t.isSymbol)
     ];

@@ -125,6 +125,26 @@ export declare class JsonReader {
   public static parse(text: string, path?: string): JsonReader;
 
   /**
+   * Parses JSON text whose root may be any JSON value, such as an array, a string or a number.
+   *
+   * @param text The JSON text.
+   * @param path Path to report for the root; the root path `$` by default.
+   * @returns The parsed value. Use {@link JsonReader.parse} instead when the root must be an object,
+   * to read its fields.
+   * @throws JsonException synchronously when the text is not valid JSON (the `SyntaxError` is the cause),
+   * or it nests deeper than `maximumDepth`.
+   * @example
+   * ```ts
+   * import "@noldova/context.core";
+   * import { JsonReader, type JsonValue } from "@noldova/context.json";
+   *
+   * const value: JsonValue = JsonReader.parseValue("[\"1.0.0\", \"1.1.0\"]");
+   * export const versions: readonly string[] = Array.isArray(value) ? value.filter((t): t is string => Object.isString(t)) : [];
+   * ```
+   */
+  public static parseValue(text: string, path?: string): JsonValue;
+
+  /**
    * Returns a reader over an untrusted value that must be a JSON object.
    *
    * @param value The untrusted value, such as a structured-clone payload.
@@ -319,6 +339,23 @@ export declare class JsonReader {
    * ```
    */
   public readStringArray(name: string): readonly string[];
+
+  /**
+   * Reads a required array of numbers.
+   *
+   * @param name The field's name.
+   * @returns The numbers, in order; empty for an empty array.
+   * @throws JsonException synchronously when the field is absent, `null`, or not an array, or when an item is
+   * not a number; the path names the item.
+   * @example
+   * ```ts
+   * import { JsonReader } from "@noldova/context.json";
+   *
+   * const reader: JsonReader = JsonReader.parse("{\"sizes\":[16,32,48]}");
+   * export const sizes: readonly number[] = reader.readNumberArray("sizes");
+   * ```
+   */
+  public readNumberArray(name: string): readonly number[];
 
   /**
    * Reads a required array of objects as nested readers.

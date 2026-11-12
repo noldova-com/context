@@ -27,16 +27,11 @@ export class JsonReader {
   }
 
   public static parse(text: string, path: string = Resources.rootPath): JsonReader {
-    let parsed: unknown;
+    return JsonReader.fromValue(JsonReader.parseText(text, path), path);
+  }
 
-    try {
-      parsed = JSON.parse(text);
-    }
-    catch (error) {
-      throw new JsonException(Resources.invalidJsonText, path, new ExceptionOptions(error));
-    }
-
-    return JsonReader.fromValue(parsed, path);
+  public static parseValue(text: string, path: string = Resources.rootPath): JsonValue {
+    return JsonReader.toJsonValue(JsonReader.parseText(text, path), path);
   }
 
   public static fromValue(value: unknown, path: string = Resources.rootPath): JsonReader {
@@ -142,6 +137,18 @@ export class JsonReader {
     });
   }
 
+  public readNumberArray(name: string): readonly number[] {
+    const field = this.readRequired(name);
+    if (!Array.isArray(field))
+      this.throwWrongTypeException(name, Resources.arrayTypeName);
+
+    return field.map((t, index) => {
+      if (!Object.isNumber(t))
+        throw new JsonException(Resources.formatWrongType(Resources.numberTypeName), this.formatItemPath(name, index));
+      return t;
+    });
+  }
+
   public readObjectArray(name: string): readonly JsonReader[] {
     const field = this.readRequired(name);
     if (!Array.isArray(field))
@@ -197,6 +204,15 @@ export class JsonReader {
     return JsonReader.formatChildPath(this.formatFieldPath(name), String(index));
   }
 
+  private static parseText(text: string, path: string): unknown {
+    try {
+      return JSON.parse(text);
+    }
+    catch (error) {
+      throw new JsonException(Resources.invalidJsonText, path, new ExceptionOptions(error));
+    }
+  }
+
   private static convertToJsonValue(value: unknown, path: string, ancestors: Set<object>): JsonValue {
     if (Object.isNull(value) || Object.isString(value) || Object.isBoolean(value))
       return value;
@@ -207,7 +223,7 @@ export class JsonReader {
       return value;
     }
 
-    if (Array.isArray(value) || JsonReader.isPlainObject(value)) {
+    if (Array.isArray(value) || Object.isPlainObject(value)) {
       if (ancestors.has(value))
         throw new JsonException(Resources.circularReference, path);
       if (ancestors.size === JsonReader.maximumDepth)
@@ -242,14 +258,6 @@ export class JsonReader {
 
   private static formatChildPath(parent: string, child: string): string {
     return `${parent}${Resources.pathSeparator}${child}`;
-  }
-
-  private static isPlainObject(value: unknown): value is object {
-    if (!Object.isObject(value) || Object.isFunction(value))
-      return false;
-
-    const prototype: unknown = Object.getPrototypeOf(value);
-    return prototype === Object.prototype || Object.isNull(prototype);
   }
 
   private static isObject(value: JsonValue): value is JsonObject {
