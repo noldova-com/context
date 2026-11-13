@@ -11,7 +11,6 @@ import { DataException } from "@noldova/context.data";
 import { Resources } from "../resources.js";
 
 export class CancelUnansweredException extends DataException {
-  public override readonly name: string = "CancelUnansweredException";
   public readonly seconds: number;
   public readonly silent: boolean;
 

@@ -12,7 +12,6 @@ import { ExceptionOptions } from "@noldova/context.exceptions";
 import { Resources } from "../resources.js";
 
 export class QueryTimeoutException extends DataException {
-  public override readonly name: string = "QueryTimeoutException";
   public readonly seconds: number;
 
   public constructor(seconds: number, cause: unknown) {

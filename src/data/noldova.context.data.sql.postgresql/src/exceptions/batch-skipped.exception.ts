@@ -12,7 +12,6 @@ import { ExceptionOptions } from "@noldova/context.exceptions";
 import { Resources } from "../resources.js";
 
 export class BatchSkippedException extends DataException {
-  public override readonly name: string = "BatchSkippedException";
   public readonly index: number;
 
   public constructor(index: number, cause: Error | null) {

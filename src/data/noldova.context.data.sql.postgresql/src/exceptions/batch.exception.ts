@@ -12,7 +12,6 @@ import { ExceptionOptions } from "@noldova/context.exceptions";
 import { Resources } from "../resources.js";
 
 export class BatchException extends DataException {
-  public override readonly name: string = "BatchException";
   public readonly index: number;
 
   public constructor(index: number, cause: Error) {
