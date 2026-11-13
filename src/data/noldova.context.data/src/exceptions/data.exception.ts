@@ -9,8 +9,6 @@
 import { Exception, type ExceptionOptions } from "@noldova/context.exceptions";
 
 export class DataException extends Exception {
-  public override readonly name: string = "DataException";
-
   public constructor(message: string, options?: ExceptionOptions) {
     super(message, options);
   }

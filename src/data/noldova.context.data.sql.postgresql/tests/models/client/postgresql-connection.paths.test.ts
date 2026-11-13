@@ -171,6 +171,7 @@ export class PostgreSQLConnectionPathTests {
     const waiting = harness.timers.scheduled;
     harness.timers.advance(5000);
     Assert.areEqual(0, error.index);
+    Assert.areEqual("BatchException", error.name);
     Assert.areEqual(0, waiting);
     Assert.isFalse(harness.socket.destroyed);
   }
@@ -301,7 +302,7 @@ export class PostgreSQLConnectionPathTests {
     harness.events.unknownTypes = false;
     await harness.connection.cancelAsync(query);
 
-    await rejected;
+    Assert.areEqual("QueryCanceledException", (await rejected).name);
     harness.connection.go();
     Assert.areEqual(0, harness.connection.inflight);
   }

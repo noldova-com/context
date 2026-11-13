@@ -203,7 +203,9 @@ export class PostgreSQLConnectionTests {
     const error = await rejected;
     Assert.areEqual(1, error.index);
     Assert.isInstanceOf(error.cause, PostgreSQLException);
-    Assert.areEqual(1, (await Assert.throwsAsync(() => parts[0]?.promise ?? Promise.resolve(), BatchSkippedException)).index);
+    const skipped = await Assert.throwsAsync(() => parts[0]?.promise ?? Promise.resolve(), BatchSkippedException);
+    Assert.areEqual(1, skipped.index);
+    Assert.areEqual("BatchSkippedException", skipped.name);
     await Assert.throwsAsync(() => parts[1]?.promise ?? Promise.resolve(), PostgreSQLException);
   }
 

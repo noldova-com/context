@@ -9,8 +9,6 @@
 import { DataException } from "@noldova/context.data";
 
 export class TransactionRolledBackException extends DataException {
-  public override readonly name: string = "TransactionRolledBackException";
-
   public constructor(message: string) {
     super(message);
   }

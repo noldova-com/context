@@ -11,7 +11,6 @@ import { DataException } from "@noldova/context.data";
 import { Resources } from "../resources.js";
 
 export class TypeNotFoundException extends DataException {
-  public override readonly name: string = "TypeNotFoundException";
   public readonly names: readonly string[];
 
   public constructor(names: readonly string[]) {

@@ -11,7 +11,6 @@ import { DataException } from "@noldova/context.data";
 import { Resources } from "../resources.js";
 
 export class ConnectionEndedException extends DataException {
-  public override readonly name: string = "ConnectionEndedException";
   public readonly host: string;
   public readonly port: number;
 

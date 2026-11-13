@@ -9,8 +9,6 @@
 import { DataException } from "@noldova/context.data";
 
 export class UnsafeTransactionException extends DataException {
-  public override readonly name: string = "UnsafeTransactionException";
-
   public constructor(message: string) {
     super(message);
   }

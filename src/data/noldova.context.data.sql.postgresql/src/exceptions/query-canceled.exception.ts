@@ -11,8 +11,6 @@ import { DataException } from "@noldova/context.data";
 import { Resources } from "../resources.js";
 
 export class QueryCanceledException extends DataException {
-  public override readonly name: string = "QueryCanceledException";
-
   public constructor() {
     super(Resources.queryCanceled);
   }

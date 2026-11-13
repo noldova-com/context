@@ -163,6 +163,7 @@ export class TransactionScopeTests {
       Assert.areEqual("kept", kept);
       Assert.areEqual("late", late.message);
       Assert.areEqual("The query was not sent, because the transaction was rolled back with rollbackAsync.", refused.message);
+      Assert.areEqual("TransactionRolledBackException", refused.name);
       Assert.areEqual("after", thrown.message);
       Assert.areEqual("inner", inner);
       Assert.areEqual(0, await TransactionScopeTests.countAsync(client, "scope_rollbacks"));

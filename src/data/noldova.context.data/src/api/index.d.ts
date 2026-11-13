@@ -41,12 +41,6 @@ export declare enum ChangeOperation {
  */
 export declare class DataException extends Exception {
   /**
-   * The exception's name, `"DataException"`, which the class sets itself so
-   * that it stays the same in a minified build.
-   */
-  public override readonly name: string;
-
-  /**
    * Initializes the exception with a message and optional options carrying
    * the cause.
    */

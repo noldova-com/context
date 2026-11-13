@@ -11,7 +11,6 @@ import { DataException } from "@noldova/context.data";
 import { Resources } from "../resources.js";
 
 export class PostgreSQLException extends DataException {
-  public override readonly name: string = "PostgreSQLException";
   public readonly sqlState: string;
   public readonly severity: string;
   public readonly detail: string | null;

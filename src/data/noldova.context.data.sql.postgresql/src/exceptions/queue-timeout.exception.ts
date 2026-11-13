@@ -11,7 +11,6 @@ import { DataException } from "@noldova/context.data";
 import { Resources } from "../resources.js";
 
 export class QueueTimeoutException extends DataException {
-  public override readonly name: string = "QueueTimeoutException";
   public readonly seconds: number;
 
   public constructor(seconds: number) {
