@@ -143,7 +143,9 @@ export class PostgreSQLPoolTests {
 
     harness.timers.advance(1000);
 
-    Assert.areEqual(1, (await rejected).seconds);
+    const timedOut = await rejected;
+    Assert.areEqual(1, timedOut.seconds);
+    Assert.areEqual("QueueTimeoutException", timedOut.name);
     Assert.areEqual(1, harness.timers.unreferenced.length);
     Assert.areEqual(0, harness.pool.stats.waiting);
   }
@@ -355,9 +357,10 @@ export class PostgreSQLPoolTests {
 
     const ending = harness.pool.endAsync();
     Assert.isTrue(harness.pool.endAsync() === ending);
-    await Assert.throwsAsync(async () => {
+    const ended = await Assert.throwsAsync(async () => {
       await harness.query("select 2");
     }, ConnectionEndedException);
+    Assert.areEqual("ConnectionEndedException", ended.name);
     await Assert.throwsAsync(() => harness.pool.acquireLeaseAsync(LeaseKind.Reserve), ConnectionEndedException);
     Assert.isNull(harness.socket(0).ended);
 
@@ -648,7 +651,9 @@ export class PostgreSQLPoolTests {
 
     Assert.areEqual("Q,Q", await harness.writtenAsync(0));
     harness.answer(0, ...PoolHarness.done(), ...PoolHarness.done());
-    Assert.areEqual("nope", (await firstRejected).names.join());
+    const notFound = await firstRejected;
+    Assert.areEqual("nope", notFound.names.join());
+    Assert.areEqual("TypeNotFoundException", notFound.name);
 
     await Assert.throwsAsync(() => harness.pool.acquireLeaseAsync(LeaseKind.Reserve), TypeNotFoundException);
     await Assert.throwsAsync(async () => {

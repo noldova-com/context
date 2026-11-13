@@ -153,7 +153,9 @@ export class PoolLeaseTests {
     harness.pool.query(query, lease);
 
     Assert.areEqual("The query cannot be built.", (await Assert.throwsAsync(() => failing.promise, DataException)).message);
-    Assert.areEqual("The reserve has ended.", (await Assert.throwsAsync(() => query.promise, UnsafeTransactionException)).message);
+    const unsafe = await Assert.throwsAsync(() => query.promise, UnsafeTransactionException);
+    Assert.areEqual("The reserve has ended.", unsafe.message);
+    Assert.areEqual("UnsafeTransactionException", unsafe.name);
   }
 
   @TestMethod
@@ -170,6 +172,7 @@ export class PoolLeaseTests {
     await Assert.throwsAsync(() => failing.promise, DataException);
     const closed = await Assert.throwsAsync(() => query.promise, ConnectionClosedException);
     Assert.isFalse(closed.destroyed);
+    Assert.areEqual("ConnectionClosedException", closed.name);
     Assert.isTrue(lease.error === closed);
     await Assert.throwsAsync(async () => {
       await harness.leased(lease, "select 3");

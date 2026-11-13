@@ -388,6 +388,7 @@ export class PostgreSQLPoolServerTests {
     }
 
     Assert.isTrue(error.message.length > 0);
+    Assert.areEqual("QueryTimeoutException", error.name);
     Assert.areEqual(JSON.stringify([{ n: 1 }]), JSON.stringify(after));
     Assert.isTrue(ended);
   }

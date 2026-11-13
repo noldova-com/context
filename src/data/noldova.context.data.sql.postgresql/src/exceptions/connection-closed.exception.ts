@@ -12,7 +12,6 @@ import { ExceptionOptions } from "@noldova/context.exceptions";
 import { Resources } from "../resources.js";
 
 export class ConnectionClosedException extends DataException {
-  public override readonly name: string = "ConnectionClosedException";
   public readonly destroyed: boolean;
   public readonly host: string;
   public readonly port: number;
