@@ -27,6 +27,7 @@ export class PostgreSQLExceptionTests {
     ]));
 
     Assert.areEqual("duplicate key", exception.message);
+    Assert.areEqual("PostgreSQLException", exception.name);
     Assert.areEqual("23505", exception.sqlState);
     Assert.areEqual("ERROR", exception.severity);
     Assert.areEqual("Key (id)=(1) already exists.", exception.detail);
