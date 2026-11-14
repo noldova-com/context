@@ -86,14 +86,14 @@ export class TestDiscovery {
     const classCategories = this.getCategories(testClassConstructor);
 
     for (const memberName of [...Object.getOwnPropertyNames(testClassConstructor).sort(), ...Object.getOwnPropertySymbols(testClassConstructor)]) {
-      const descriptor = Object.getOwnPropertyDescriptor(testClassConstructor, memberName)!;
+      const descriptor = this.getOwnDescriptor(testClassConstructor, memberName, className, filePath);
       if (this.descriptorHasTestMetadata(descriptor))
         throw new TestingException(Resources.staticTestMetadataInvalid(String(memberName), className, filePath));
     }
 
     const methods: DiscoveredTestMethod[] = [];
     for (const memberName of [...Object.getOwnPropertyNames(prototype).sort(), ...Object.getOwnPropertySymbols(prototype)]) {
-      const descriptor = Object.getOwnPropertyDescriptor(prototype, memberName)!;
+      const descriptor = this.getOwnDescriptor(prototype, memberName, className, filePath);
       if (Object.isSymbol(memberName)) {
         if (this.descriptorHasTestMetadata(descriptor))
           throw new TestingException(Resources.symbolTestMetadataInvalid(className, filePath));
@@ -256,6 +256,14 @@ export class TestDiscovery {
       throw new TestingException(Resources.timeoutMarkInvalid);
 
     return timeoutMilliseconds;
+  }
+
+  private getOwnDescriptor(owner: object, memberName: string | symbol, className: string, filePath: string): PropertyDescriptor {
+    const descriptor = Object.getOwnPropertyDescriptor(owner, memberName);
+    if (Object.isUndefined(descriptor))
+      throw new TestingException(Resources.memberDescriptorMissing(String(memberName), className, filePath));
+
+    return descriptor;
   }
 
   private descriptorHasTestMetadata(descriptor: PropertyDescriptor): boolean {

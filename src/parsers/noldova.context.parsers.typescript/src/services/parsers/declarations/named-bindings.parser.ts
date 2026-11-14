@@ -49,7 +49,7 @@ export class NamedBindingsParser {
     if (Object.isUndefined(openBraceNode))
       parser.reportExpected(Resources.openBrace);
     else {
-      parser.context.enterList(TypeScriptListKind.ImportOrExportSpecifiers);
+      const outerListScope = parser.context.enterList(TypeScriptListKind.ImportOrExportSpecifiers);
       try {
         while (!parser.isEndOfFile && !(parser.currentNode instanceof TypeScriptCloseBraceNode) && !parser.currentNode.startsTypeScriptFromClause(parser)) {
           if (!parser.currentNode.isTypeScriptListElement(TypeScriptListKind.ImportOrExportSpecifiers, parser)) {
@@ -73,7 +73,7 @@ export class NamedBindingsParser {
         }
       }
       finally {
-        parser.context.leaveList();
+        parser.context.leaveList(outerListScope);
       }
     }
     const closeBraceNode = Object.isUndefined(openBraceNode) ? undefined : parser.tryConsume(TypeScriptCloseBraceNode);

@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { Diagnostic, DiagnosticLocation, type DiagnosticTemplate } from "@noldova/context.diagnostics";
+import { type Diagnostic, DiagnosticLocation, type DiagnosticTemplate } from "@noldova/context.diagnostics";
 
 import type { SourceSpan } from "./sources/source-span.js";
 import type { Source } from "./sources/source.js";
@@ -25,15 +25,15 @@ export class DiagnosticCollector {
 
   public add(diagnostic: Diagnostic): void;
   public add(template: DiagnosticTemplate, span: SourceSpan, messageArguments?: readonly (string | number)[]): void;
-  public add(diagnosticOrTemplate: Diagnostic | DiagnosticTemplate, span?: SourceSpan, messageArguments: readonly (string | number)[] = []): void {
-    if (diagnosticOrTemplate instanceof Diagnostic) {
-      this.collectedDiagnostics.push(diagnosticOrTemplate);
+  public add(...parameters: [Diagnostic] | [DiagnosticTemplate, SourceSpan, (readonly (string | number)[] | undefined)?]): void {
+    if (parameters.length === 1) {
+      this.collectedDiagnostics.push(parameters[0]);
       return;
     }
 
-    const diagnosticSourceSpan = span!;
-    const location = new DiagnosticLocation(this.source.identity, diagnosticSourceSpan.startOffset, diagnosticSourceSpan.length, this.source.length);
-    this.collectedDiagnostics.push(diagnosticOrTemplate.create(location, messageArguments));
+    const [template, span, messageArguments = []] = parameters;
+    const location = new DiagnosticLocation(this.source.identity, span.startOffset, span.length, this.source.length);
+    this.collectedDiagnostics.push(template.create(location, messageArguments));
   }
 
   public truncate(count: number): void {
