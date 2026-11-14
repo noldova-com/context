@@ -18,7 +18,7 @@ A path locates that authority; it does not replace it.
 
 ## 2. Canonical identity
 
-Every project has one fully qualified declared name of the form `noldova.context.<name>`, except the `ctx` command-host package whose reserved identity is exactly `noldova.context`.
+Every project has one fully qualified declared name of the form `noldova.context.<name>`, except the planned `ctx` command-host package, whose identity is reserved as exactly `noldova.context`.
 A name is lowercase ASCII letters and digits in dot-separated segments; a name with an uppercase letter is invalid, so no two identities differ only in case on any file system.
 `<name>` may contain further segments, such as `noldova.context.parsers.typescript`, when the responsibility is genuinely nested within a broader domain; nesting expresses ownership, not directory convenience.
 The npm package of `noldova.context.<name>` is `@noldova/context.<name>`.
@@ -34,7 +34,7 @@ noldova.context.collections/
     noldova.context.collections.tests.ctxp
 ```
 
-The command host follows the same rule (`noldova.context/src/noldova.context.ctxp`).
+The command host, once it exists, will follow the same rule (`noldova.context/src/noldova.context.ctxp`).
 Matching makes placement predictable; it never lets a consumer infer identity without reading and validating the manifest, and a name, directory, basename, or import with different casing is not an alias.
 Repository category directories such as `src/data/` and `src/parsers/` group package roots by responsibility and carry no semantic identity.
 
@@ -63,7 +63,7 @@ A package project's manifest and sources live in the package root's `src/`; its 
 
 The dependency graph is derived from project manifests and their effective framework compositions, never duplicated in a root script, configuration array, or hand-maintained order list.
 The temporary Node bootstrap is the sole exception: its explicit ordered configuration builds npm forms before the SDK build provider exists and is not a semantic graph, resolver, or certification input.
-Package-local `package.json` files are temporary bootstrap manifests containing only `name`, `version`, `type`, `main`, `types`, and `license`, plus `dependencies` for packages actually imported during the bootstrap.
+Package-local `package.json` files are temporary bootstrap manifests containing only `name`, `version`, `type`, `main`, `types`, and `license`, plus `dependencies` for packages actually imported during the bootstrap, and `repository`, `bugs`, `homepage` and `publishConfig`, which npm's provenance and the registry need.
 Other npm metadata requires a demonstrated bootstrap requirement.
 These manifests are removed with the bootstrap.
 

@@ -103,7 +103,6 @@ export class TestRunWorkerEntryPointTests {
     }
   }
 
-  // Tells the worker no run is left and waits until its thread ends by itself, so the thread writes its coverage.
   private static async endAsync(worker: Worker): Promise<number> {
     if (worker.threadId === -1)
       return worker.terminate();

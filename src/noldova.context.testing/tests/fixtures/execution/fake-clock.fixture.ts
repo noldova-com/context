@@ -10,8 +10,6 @@
 
 import type { IClock } from "@noldova/context.testing";
 
-// A clock whose time moves only when a test advances it or fires a timer. When it fires on the next turn, each timer also fires one loop turn
-// after it is armed, unless it is cleared first: a test that settles at once clears its timeout in time, and one that never settles times out.
 export class FakeClock implements IClock {
   private readonly dueTimes: Map<number, number>;
   private readonly callbacks: Map<number, () => void>;

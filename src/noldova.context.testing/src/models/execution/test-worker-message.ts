@@ -26,7 +26,6 @@ export class TestWorkerMessage {
   public readonly classCount: number;
   public readonly methodCount: number;
   public readonly discoveredCount: number;
-  // The started test's time limit, by which the main thread times it; 0 in every other message.
   public readonly timeoutMilliseconds: number;
 
   private constructor(kind: TestWorkerMessageKind, classIndex: number, methodIndex: number, filePath: string, result: TestWorkerResult | undefined,

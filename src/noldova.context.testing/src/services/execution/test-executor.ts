@@ -47,7 +47,6 @@ export class TestExecutor {
     this.clock = clock;
   }
 
-  // The time limit a method runs under: its own, when it declares one, or the run's.
   public getTimeoutMilliseconds(method: DiscoveredTestMethod): number {
     return method.timeoutMilliseconds ?? this.timeoutMilliseconds;
   }

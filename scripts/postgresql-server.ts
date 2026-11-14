@@ -128,7 +128,6 @@ export default class PostgreSQLServer implements AsyncDisposable {
     const settings = PostgreSQLServer.SETTINGS.join(PostgreSQLServer.NEW_LINE);
     await fs.appendFile(path.join(this.dataFolder, PostgreSQLServer.CONFIGURATION_FILE), PostgreSQLServer.NEW_LINE + settings + PostgreSQLServer.NEW_LINE);
     for (let attempt = 1; ; attempt += 1) {
-      // The port is picked right before the start, and another one is tried when a process took it in between.
       this.port = await PostgreSQLServer.findFreePortAsync();
       await fs.writeFile(this.logFile, "");
       await fs.appendFile(path.join(this.dataFolder, PostgreSQLServer.CONFIGURATION_FILE), PostgreSQLServer.PORT_SETTING + this.port + PostgreSQLServer.NEW_LINE);

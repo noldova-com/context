@@ -42,13 +42,18 @@ Package size never justifies moving an unrelated responsibility into Core.
 |---|---|
 | `noldova.context.core` | Foundational global identities with their complete standard behavior, utility types, and base Errors |
 | `noldova.context.exceptions` | Additional CONTEXT exceptions (`EXCEPTIONS-CONTRACT.md`) |
-| `noldova.context.collections` | Collection algorithms, Map, Set, weak collections, readonly views, and collection iterators |
-| `noldova.context.text` | Additional text abstractions, accepted String augmentations, and ECMAScript URI encoding functions |
-| `noldova.context.json` | JSON parsing and serialization |
+| `noldova.context.collections` | Collection algorithms; planned: Map, Set, weak collections, readonly views, and collection iterators |
+| `noldova.context.text` | Additional text abstractions and accepted String augmentations; planned: ECMAScript URI encoding functions |
+| `noldova.context.json` | JSON reading; planned: serialization |
 | `noldova.context.data` | The provider-independent data model: data sources, connections, transactions, migrations and their history, the change feed, and `DbContext` with its options (section 7) |
 | `noldova.context.data.sql` | The SQL implementation of the data model: the schema model, the migration builder, the SQL dialect, and SQL connections, transactions, migration history and change feed |
 | `noldova.context.data.sql.sqlite` | The SQLite provider: its dialect, its connection, and `useSQLite` |
 | `noldova.context.data.sql.postgresql` | The PostgreSQL provider: its dialect, its connection, `usePostgreSQL`, and the PostgreSQL client it talks to its server through (section 7.5) |
+| `noldova.context.testing` | The test framework: discovery of decorated test classes, parallel runs in worker threads, assertions, reports and code coverage (`TESTING-CONTRACT.md`) |
+| `noldova.context.diagnostics` | The diagnostic model parsers and tools report through: codes, categories, message chains, locations and templates (`DIAGNOSTIC-CONTRACT.md`) |
+| `noldova.context.parsers` | The shared parser foundation: sources, spans, line positions, the reader, and the lexer and parser bases; no grammar |
+| `noldova.context.parsers.regex` | The ECMAScript regular expression parser |
+| `noldova.context.parsers.typescript` | The TypeScript parser |
 
 Experimental resource-management and Temporal surfaces extend these owners or belong to separately accepted packages.
 ECMAScript years and TypeScript `lib.*.d.ts` filenames never become package identities.

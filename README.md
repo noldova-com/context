@@ -71,7 +71,7 @@ Each name opens the package's folder and its own README; each badge opens it on 
 ## How it's built
 
 - **No third-party runtime dependencies.** Each package depends only on other CONTEXT packages.
-- **Every file fully covered.** A full test run fails unless every source file is fully covered; on `main` today, over 21,000 tests pass with every file covered.
+- **Every file fully covered.** A full test run fails unless every source file is fully covered.
 - **Six targets.** Each change is built and tested on Linux, Windows and macOS, on x64 and arm64.
 - **Reproducible.** A second build of the same commit packs byte-identical archives.
 - **Published from `main`** by the release workflow, with npm provenance, so each version names the commit it was built from.
@@ -89,7 +89,7 @@ npm run build
 npm test
 ```
 
-`npm run build` installs the two locked development packages, TypeScript and Node.js's type declarations, without running their install scripts; then it builds, packs and installs every CONTEXT package into `_build/` and `_packages/`, at the version `version.json` holds; after each package it installs every archive packed so far with `npm install --no-save`, so the next package builds against them and none enters `package.json` or `package-lock.json`.
+`npm run build` installs the two locked development packages, TypeScript and Node.js's type declarations, without running their install scripts; then it builds, packs and installs every CONTEXT package into `_build/` and `_packages/`, at the version `version.json` holds; before it builds a package that needs an archive not yet installed, and once at the end, it installs every archive packed so far with `npm install --no-save`, so each package builds against them and none enters `package.json` or `package-lock.json`.
 It writes `Building "<package>"...` for each and ends the line with ` Done.` or ` Failed.`.
 The build writes the checkout's head commit into every package's `package.json` as `gitHead`, so each published version names the commit it was built from; it fails before building when git can't read the commit.
 `npm run build --silent -- --list-copies` builds nothing and prints each file the build copies into a package, one per line, with tabs between its source, the package's name and its path inside the package, and then `end of copies`.
@@ -126,14 +126,17 @@ const result = await new ParallelTestRunner(30_000).runAsync([new TestProject("S
 
 Every pull request into `main` must pass both checks before it merges.
 
-No test code pauses for a fixed time.
+Two test files wait on a real clock, because the wait is what they test; every other test waits on events or a fake clock:
+
+- `src/data/noldova.context.data.sql.postgresql/tests/models/client/postgresql-pool.server.test.ts`: its tests wait out a real 0.5 s query timeout against a 30 s `pg_sleep`, end the pool with real 0.01 s and 0.05 s deadlines, and run three 0.01 s `pg_sleep` queries.
+- `src/data/noldova.context.data.sql.postgresql/tests/models/client/client-timers.test.ts`: real 1 ms timers, since `ClientTimers` is what it tests.
 
 | Check | What it verifies |
 |---|---|
 | Check / Linked issue | `.github/workflows/require-linked-issue.yml`, the "PR" workflow: the PR description has a standalone `Issue: #N`, `Issue #N` or closing reference, such as `Closes #N`, that names an issue in this repository. |
 | Check / Runner / Versions | The shared check's own call of the shared settings, which name the runner "Check / Linked issue" uses. |
 | Build and test / Versions / Versions | The organization's shared settings, `.github`'s `versions.yml`, name the Node.js and npm versions and the runner for each target that "Build and test" uses. |
-| Build and test / Linux x64, Linux arm64, Windows x64, Windows arm64, macOS x64, macOS arm64 | One job per target of `.github`'s shared `build-and-test.yml`, each on the GitHub-hosted runner the shared settings name for it: `npm run build` installs the locked third-party packages with `npm ci --ignore-scripts`, then builds, packs and installs every package; the toolchain is the Node.js and npm versions the shared settings name, Node.js 24.21.0 with npm 11.19.0 today; `.gitattributes` holds `* text=auto eol=lf`, and every tracked text file outside the vendored inputs, which their own `.gitattributes` marks `-text`, uses LF line endings and ends with exactly one newline; `npm test` runs the whole suite, and the build and the tests leave every tracked file unchanged; a second build of the commit, in another folder, packs byte-identical archives; and the archives pass the release's own check at the version `version.json` holds. |
+| Build and test / Linux x64, Linux arm64, Windows x64, Windows arm64, macOS x64, macOS arm64 | One job per target of `.github`'s shared `build-and-test.yml`, each on the GitHub-hosted runner the shared settings name for it: `npm run build` installs the locked third-party packages with `npm ci --ignore-scripts`, then builds, packs and installs every package; the toolchain is the Node.js and npm versions the shared settings name, Node.js 24.21.0 with npm 11.19.0 today; `.gitattributes` holds `* text=auto eol=lf`, and every tracked text file outside the vendored inputs, which their own `.gitattributes` marks `-text`, uses LF line endings and ends with exactly one newline; `npm test` runs the whole suite, and the build and the tests leave every tracked file unchanged; on Linux x64, a second build of the commit, in another folder, packs byte-identical archives; and the archives pass the release's own check at the version `version.json` holds. |
 | Build and test / All targets | All six targets' jobs passed, and the shared settings named the versions and a runner for each target; it reports even when a job before it failed or was skipped, so `main` can require it. |
 
 

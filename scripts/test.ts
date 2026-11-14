@@ -117,7 +117,6 @@ export class Test extends Script {
         environment);
     }
     catch (error) {
-      // The run has printed its own failures; any other error, such as one starting it, propagates.
       if (!(error instanceof CommandFailedException))
         throw error;
 

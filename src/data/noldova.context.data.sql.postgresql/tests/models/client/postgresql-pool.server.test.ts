@@ -653,14 +653,10 @@ export class PostgreSQLPoolServerTests {
     Assert.isTrue(ended);
   }
 
-  // Opens the pool's connection through a lease, which has no deadline: a query's deadline also counts the time the pool takes to open a
-  // connection, which a loaded machine can stretch past it.
   private static async openAsync(real: RealPool): Promise<void> {
     (await real.pool.acquireLeaseAsync(LeaseKind.Reserve)).release();
   }
 
-  // Runs a query once the connection is free again, after the server has cancelled the timed-out ones, so its own deadline counts only
-  // its run.
   private static async selectOneOnceFreeAsync(real: RealPool): Promise<Result> {
     const lease = await real.pool.acquireLeaseAsync(LeaseKind.Reserve);
     try {

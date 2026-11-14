@@ -38,3 +38,8 @@ examples.
 
 MIT; see `LICENSE`. The Unicode identifier tables come from the Unicode
 Character Database, under the Unicode License v3 in `THIRD-PARTY-NOTICES.txt`.
+They are generated from the Unicode 15.1 `ID_Start` and `ID_Continue`
+properties in
+[DerivedCoreProperties.txt](https://www.unicode.org/Public/15.1.0/ucd/DerivedCoreProperties.txt),
+whose SHA-256 is
+`f55d0db69123431a7317868725b1fcbf1eab6b265d756d1bd7f0f6d9f9ee108b`.

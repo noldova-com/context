@@ -15,9 +15,6 @@ export class UnicodeCodePointService {
   private static readonly MINIMUM_LEADING_SURROGATE: number = 0xD800;
   private static readonly MINIMUM_TRAILING_SURROGATE: number = 0xDC00;
 
-  // Generated from Unicode 15.1 ID_Start and ID_Continue properties.
-  // Source: https://www.unicode.org/Public/15.1.0/ucd/DerivedCoreProperties.txt
-  // SHA-256: f55d0db69123431a7317868725b1fcbf1eab6b265d756d1bd7f0f6d9f9ee108b
   private static readonly IDENTIFIER_START_STARTS: readonly number[] = [
     0x41, 0x61, 0xAA, 0xBA, 0xC1, 0xD8, 0xF8, 0x2C6, 0x2E0, 0x2EC, 0x370, 0x376,
     0x37A, 0x37F, 0x388, 0x38C, 0x38F, 0x3A3, 0x3F7, 0x48A, 0x531, 0x559, 0x561, 0x5D0,
