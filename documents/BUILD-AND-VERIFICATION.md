@@ -54,8 +54,9 @@ Each derived script keeps its workflow in `runAsync` and reuses or overrides tho
 A narrow correction does not authorize adjacent changes to inheritance, workflow, names, or output.
 For packages that have not migrated documentation generation, `Build` copies the manual `src/api/index.d.ts` unchanged into the npm package.
 
-Scripts have no tests, as Noldova's [testing standard](https://github.com/noldova-com/.github/blob/main/standards/TESTING.md) says; strict compilation and the complete build and test workflow verify them.
-A package's own bootstrap automation, such as the TypeScript and Regex parsers' vendoring and generator scripts, has no tests either: its `scripts/tsconfig.json` compiles under the strict profile in the package build, it throws the host `Error` as the root scripts do, and the certification rehash verifies what it produces.
+The stage-zero root and package scripts that construct Testing are temporarily outside its mirrored unit-test and coverage boundary; strict compilation and the complete build and test workflow verify them.
+That exception ends when the workflows move into a Testing-capable tooling package or SDK provider, and it covers no other automation.
+A package's own bootstrap automation, such as the TypeScript and Regex parsers' vendoring and generator scripts, is recorded beside that exception on the same terms: its `scripts/tsconfig.json` compiles under the strict profile in the package build, it throws the host `Error` as the root scripts do, and the certification rehash verifies what it produces.
 Each parser package's build fails when its committed expected results are missing, were generated under another pin or reading rule, or no longer match the hash their manifest seals; only the vendoring and generator commands read the cases again.
 
 Launch processes with an executable, argument array, explicit working directory when needed, and `shell: false`; construct no shell command strings, pipes, redirects, globs, or platform-specific environment syntax.

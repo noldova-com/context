@@ -73,8 +73,8 @@ Upstream APIs and preserved conformance inputs are not renamed.
 
 ## 8. Comments and API documentation
 
-Stricter than the code standard: until a package has a verified source-owned documentation generation path, JSDoc lives only in declaration files.
-Other comments in source, test and script code follow the [code standard](https://github.com/noldova-com/.github/blob/main/standards/CODE.md#comments-and-api-documentation): none unless the code stays confusing after a rename or restructure.
+Stricter than the code standard: until a package has a verified source-owned documentation generation path, JSDoc lives only in declaration files, and source, test and script code carry no comments.
+The only comments in code are the license header, the Node-API note `TESTING-CONTRACT.md` requires, and a generated file's upstream attribution.
 
 Until then, a package's `src/api/index.d.ts` is its sole public-documentation authority, and `BUILD-AND-VERIFICATION.md` owns declaration copying.
 Each package's comments and generation migrate together; there are never two handwritten copies, stripped installed API docs, a temporary text or regex extractor, or a legacy compiler dependency.

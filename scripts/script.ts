@@ -50,7 +50,6 @@ export default abstract class Script {
     }
   }
 
-  // The build loads @noldova/context.json only once it has built it, so a script reads its exception type when it fails.
   private static async isJsonExceptionAsync(error: unknown): Promise<boolean> {
     try {
       const { JsonException } = await import(Script.JSON_PACKAGE_NAME);

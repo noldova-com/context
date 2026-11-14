@@ -8,9 +8,6 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
-// Runs an action with the coverage variable removed from this thread's environment, so the workers and processes it starts collect no
-// coverage. A test starts its workers this way when it stops them on purpose: a stopped thread drops its profile, and Node reports a profile
-// it was serializing when stopped on standard error.
 export class WithoutCoverage {
   private static readonly COVERAGE_VARIABLE: string = "NODE_V8_COVERAGE";
 
