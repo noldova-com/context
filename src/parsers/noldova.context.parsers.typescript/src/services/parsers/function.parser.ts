@@ -78,7 +78,7 @@ export class FunctionParser {
     parser.context.isFunctionScope = previousFunctionScope;
     const signatureDiagnosticCount = parser.context.diagnosticCollector.diagnostics.length;
     const typeParameterListNode = this.typeParameterListParser.parse(TypeScriptTypeParameterAnnotations.Const);
-    const parameterListNode = this.parameterListParser.parseFunctionParameters(flags, false, true);
+    const parameterListNode = this.parameterListParser.parseFunctionParameters(flags, true);
     this.parameterListParser.validate(parameterListNode, typeParameterListNode);
     const hasSignatureDiagnostics = parser.context.diagnosticCollector.diagnostics.length !== signatureDiagnosticCount;
     const colonNode = parser.tryConsume(TypeScriptColonNode);
