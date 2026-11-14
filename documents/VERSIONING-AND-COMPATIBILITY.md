@@ -32,6 +32,7 @@ A version-1 contract may change in place: the contract, writer, reader, validato
 ## 2. No development compatibility
 
 CONTEXT makes no backward- or forward-compatibility promise between development revisions, even when both sides report the same `0.0.<n>` and version `1`.
+The peer ranges of section 1 allow an install to pair a package with a sibling at another version in the range, so that an app gets one copy of each; they promise nothing about how that pair works together, as section 3 says.
 Do not add legacy readers or writers, migration or upgrade pipelines, field aliases, deprecated fields retained for compatibility, dual encoding, version negotiation or feature handshakes, probing of historical layouts, fallback parsing after current validation fails, or special cases for historical artifacts.
 
 When a contract changes: change the owning contract; change every producer and consumer atomically; replace tests and fixtures rather than preserving obsolete cases as accepted behavior; delete generated, cached, installed, and generation outputs; rebuild the affected dependency closure; and verify only the new state.
@@ -40,6 +41,8 @@ A historical test is retained only when it still proves a current invariant or i
 ## 3. Same version does not mean compatible
 
 The canonical workflow uses one exact compatible closure: packages freshly built, packed, and installed from the same source state; a compiler consuming only that closure; the SDK and Runtime as the exact pair selected by the build; and self-host and AOT steps recording the exact identities they consumed.
+That closure is the only one tested: the checks build, pack and install every package from one source state, so each package meets its siblings at its own version.
+A pair the peer ranges merely allow, such as a package with a sibling one patch apart, is accepted by npm but untested; the one such install the checks run proves only that npm shares one copy of the sibling, not that the pair works together.
 
 An older development artifact is disposable.
 The owning artifact, Runtime, SDK, package, or distribution schema defines an exact development compatibility identity: deterministic, host-independent, derived only from declared compatibility-relevant inputs, never from absolute paths, timestamps, machine or process identity, locale, or wall-clock time.

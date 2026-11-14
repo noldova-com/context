@@ -20,6 +20,7 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 export class CoreCopyTests {
   private static readonly PACKAGE_NAME: string = "@noldova/context.core";
   private static readonly PACKAGE_FOLDER: string = fileURLToPath(new URL("../", import.meta.resolve("@noldova/context.core")));
+  private static readonly TEMPORARY_FOLDER: string = "temporary";
   private static readonly COPIES_LOADED: string =
     "Two copies of @noldova/context.core are loaded, so this one cannot add its extensions. The app's packages need one context version that each of their ranges meets; npm ls @noldova/context.core names the packages that bring each copy.";
 
@@ -33,7 +34,7 @@ export class CoreCopyTests {
         `await import(${JSON.stringify(pathToFileURL(join(copy, "api", "index.js")).href)});`,
         `await import("${CoreCopyTests.PACKAGE_NAME}");`));
 
-      Assert.areEqual(CoreCopyTests.COPIES_LOADED, await CoreCopyTests.runAsync(scriptPath, directory));
+      Assert.areEqual(CoreCopyTests.COPIES_LOADED, await CoreCopyTests.runAsync(scriptPath, directory, directory));
     });
   }
 
@@ -45,7 +46,7 @@ export class CoreCopyTests {
         "Object.defineProperty(Object, \"isFunction\", { value: () => true, writable: false, enumerable: false, configurable: false });",
         `await import("${CoreCopyTests.PACKAGE_NAME}");`));
 
-      Assert.areEqual(CoreCopyTests.COPIES_LOADED, await CoreCopyTests.runAsync(scriptPath, directory));
+      Assert.areEqual(CoreCopyTests.COPIES_LOADED, await CoreCopyTests.runAsync(scriptPath, directory, directory));
     });
   }
 
@@ -63,8 +64,8 @@ export class CoreCopyTests {
         bundleDependencies: [CoreCopyTests.PACKAGE_NAME]
       }));
       await writeFile(join(dependent, "index.js"), `import "${CoreCopyTests.PACKAGE_NAME}";\n`);
-      await CoreCopyTests.runNpmAsync(["pack", "--silent", "--pack-destination", directory], dependent);
-      const coreArchive = (await CoreCopyTests.runNpmAsync(["pack", "--silent", "--pack-destination", directory, CoreCopyTests.PACKAGE_FOLDER], directory)).trim();
+      const packed = await CoreCopyTests.runNpmAsync(["pack", "--silent", "--pack-destination", directory, dependent, CoreCopyTests.PACKAGE_FOLDER], directory, directory);
+      const [dependentArchive = "", coreArchive = ""] = packed.trim().split(/\s+/u);
 
       const app = join(directory, "app");
       await mkdir(app);
@@ -72,19 +73,20 @@ export class CoreCopyTests {
         name: "app",
         private: true,
         type: "module",
-        dependencies: { [CoreCopyTests.PACKAGE_NAME]: `file:../${coreArchive}`, dependent: "file:../dependent-1.0.0.tgz" }
+        dependencies: { [CoreCopyTests.PACKAGE_NAME]: `file:../${coreArchive}`, dependent: `file:../${dependentArchive}` }
       }));
-      await CoreCopyTests.runNpmAsync(["install", "--offline", "--no-audit", "--no-fund", "--ignore-scripts", "--no-package-lock"], app);
+      await CoreCopyTests.runNpmAsync(["install", "--offline", "--no-audit", "--no-fund", "--ignore-scripts", "--no-package-lock"], app, directory);
       const scriptPath = join(app, "main.js");
       await writeFile(scriptPath, CoreCopyTests.loadingScript(`await import("${CoreCopyTests.PACKAGE_NAME}");`, "await import(\"dependent\");"));
 
-      Assert.areEqual(CoreCopyTests.COPIES_LOADED, await CoreCopyTests.runAsync(scriptPath, app));
+      Assert.areEqual(CoreCopyTests.COPIES_LOADED, await CoreCopyTests.runAsync(scriptPath, app, directory));
     });
   }
 
   private static async withDirectoryAsync(action: (directory: string) => Promise<void>): Promise<void> {
     const directory = await mkdtemp(resolve(import.meta.dirname, "../../../core-copies-"));
     try {
+      await mkdir(join(directory, CoreCopyTests.TEMPORARY_FOLDER));
       await action(directory);
     }
     finally {
@@ -97,18 +99,27 @@ export class CoreCopyTests {
     return `try {\n  ${first}\n  ${second}\n}\ncatch (error) {\n  process.stdout.write(error.message);\n}\n`;
   }
 
-  private static async runAsync(scriptPath: string, directory: string): Promise<string> {
-    const { stdout } = await promisify(execFile)(process.execPath, [scriptPath], { cwd: directory, windowsHide: true });
+  private static async runAsync(scriptPath: string, directory: string, root: string): Promise<string> {
+    const { stdout } = await promisify(execFile)(process.execPath, [scriptPath], { cwd: directory, env: CoreCopyTests.environment(root), windowsHide: true });
 
     return stdout;
   }
 
-  private static async runNpmAsync(values: readonly string[], directory: string): Promise<string> {
+  private static async runNpmAsync(values: readonly string[], directory: string, root: string): Promise<string> {
     const npmPath = process.env["npm_execpath"];
     Assert.isDefined(npmPath, "The suite runs through npm, which names its own path in npm_execpath.");
-    // npm turns on Node's compile cache, which writes into the run's temporary folder; the suite requires that folder left clean.
-    const { stdout } = await promisify(execFile)(process.execPath, [npmPath, ...values], { cwd: directory, env: { ...process.env, NODE_DISABLE_COMPILE_CACHE: "1" }, windowsHide: true });
+    const { stdout } = await promisify(execFile)(process.execPath, [npmPath, ...values], { cwd: directory, env: CoreCopyTests.environment(root), windowsHide: true });
 
     return stdout;
+  }
+
+  /**
+   * The children's environment, with a temporary folder of their own under the test's folder, which the test removes: npm turns on Node's
+   * compile cache, which would otherwise write into the run's temporary folder, and the suite requires that folder left clean.
+   */
+  private static environment(root: string): NodeJS.ProcessEnv {
+    const temporary = join(root, CoreCopyTests.TEMPORARY_FOLDER);
+
+    return { ...process.env, TMPDIR: temporary, TMP: temporary, TEMP: temporary };
   }
 }

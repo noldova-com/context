@@ -23,6 +23,7 @@ export class ExceptionsApiTests {
   private static readonly INSTALL_VALUES: readonly string[] = ["install", "--offline", "--no-audit", "--no-fund", "--ignore-scripts", "--no-package-lock"];
   private static readonly CORE_RANGE: RegExp = /"@noldova\/context\.core": ">=(\d+)\.(\d+)\.(\d+) <([^"]+)"/u;
   private static readonly VERSION_FIELD: RegExp = /"version": "[^"]+"/u;
+  private static readonly TEMPORARY_FOLDER: string = "temporary";
 
   @TestMethod
   public exportsTheCompleteCatalog(): void {
@@ -79,34 +80,38 @@ export class ExceptionsApiTests {
   }
 
   @TestMethod
-  public async sharesOneCoreAtAnotherVersionInItsRangeAsync(): Promise<void> {
-    const directory = await mkdtemp(resolve(import.meta.dirname, "../../../peer-range-"));
-    try {
+  public sharesOneCoreAtAnotherVersionInItsRangeAsync(): Promise<void> {
+    return ExceptionsApiTests.withDirectoryAsync(async directory => {
       const app = await ExceptionsApiTests.createAppAsync(directory, await ExceptionsApiTests.readCoreVersionInRangeAsync());
 
-      await ExceptionsApiTests.runNpmAsync(ExceptionsApiTests.INSTALL_VALUES, app);
+      await ExceptionsApiTests.runNpmAsync(ExceptionsApiTests.INSTALL_VALUES, app, directory);
       const scriptPath = join(app, "main.js");
       await writeFile(scriptPath, "import \"@noldova/context.core\";\nimport \"@noldova/context.exceptions\";\nprocess.stdout.write(\"loaded\");\n");
-      const { stdout } = await promisify(execFile)(process.execPath, [scriptPath], { cwd: app, windowsHide: true });
+      const { stdout } = await promisify(execFile)(process.execPath, [scriptPath], { cwd: app, env: ExceptionsApiTests.environment(directory), windowsHide: true });
 
       Assert.areEqual("loaded", stdout);
       Assert.isFalse(existsSync(join(app, "node_modules", "@noldova", "context.exceptions", "node_modules")));
-    }
-    finally {
-      await rm(directory, { recursive: true, force: true });
-    }
+    });
   }
 
   @TestMethod
-  public async refusesToInstallACoreOutsideItsRangeAsync(): Promise<void> {
-    const directory = await mkdtemp(resolve(import.meta.dirname, "../../../peer-range-"));
-    try {
+  public refusesToInstallACoreOutsideItsRangeAsync(): Promise<void> {
+    return ExceptionsApiTests.withDirectoryAsync(async directory => {
       const app = await ExceptionsApiTests.createAppAsync(directory, await ExceptionsApiTests.readCoreVersionPastRangeAsync());
 
-      const failure = await Assert.throwsAsync(() => ExceptionsApiTests.runNpmAsync(ExceptionsApiTests.INSTALL_VALUES, app), Error);
+      const failure = await Assert.throwsAsync(() => ExceptionsApiTests.runNpmAsync(ExceptionsApiTests.INSTALL_VALUES, app, directory), Error);
 
       Assert.isTrue(failure.message.includes("ERESOLVE"), failure.message);
       Assert.isFalse(existsSync(join(app, "node_modules", "@noldova", "context.exceptions")));
+    });
+  }
+
+  /** Runs the action in a new folder beside the tests, with a temporary folder of its own for the children, and removes it after. */
+  private static async withDirectoryAsync(action: (directory: string) => Promise<void>): Promise<void> {
+    const directory = await mkdtemp(resolve(import.meta.dirname, "../../../peer-range-"));
+    try {
+      await mkdir(join(directory, ExceptionsApiTests.TEMPORARY_FOLDER));
+      await action(directory);
     }
     finally {
       await rm(directory, { recursive: true, force: true });
@@ -142,10 +147,9 @@ export class ExceptionsApiTests {
     await cp(fileURLToPath(new URL("../", import.meta.resolve("@noldova/context.core"))), core, { recursive: true });
     const coreManifest = join(core, "package.json");
     await writeFile(coreManifest, (await readFile(coreManifest, "utf8")).replace(ExceptionsApiTests.VERSION_FIELD, `"version": "${coreVersion}"`));
-    const coreArchive = (await ExceptionsApiTests.runNpmAsync(["pack", "--silent", "--pack-destination", directory, core], directory)).trim();
-    const exceptionsArchive = (await ExceptionsApiTests.runNpmAsync(
-      ["pack", "--silent", "--pack-destination", directory, fileURLToPath(new URL("../", import.meta.resolve("@noldova/context.exceptions")))],
-      directory)).trim();
+    const exceptions = fileURLToPath(new URL("../", import.meta.resolve("@noldova/context.exceptions")));
+    const packed = await ExceptionsApiTests.runNpmAsync(["pack", "--silent", "--pack-destination", directory, core, exceptions], directory, directory);
+    const [coreArchive = "", exceptionsArchive = ""] = packed.trim().split(/\s+/u);
 
     const app = join(directory, "app");
     await mkdir(app);
@@ -158,12 +162,21 @@ export class ExceptionsApiTests {
     return app;
   }
 
-  private static async runNpmAsync(values: readonly string[], directory: string): Promise<string> {
+  private static async runNpmAsync(values: readonly string[], directory: string, root: string): Promise<string> {
     const npmPath = process.env["npm_execpath"];
     Assert.isDefined(npmPath, "The suite runs through npm, which names its own path in npm_execpath.");
-    // npm turns on Node's compile cache, which writes into the run's temporary folder; the suite requires that folder left clean.
-    const { stdout } = await promisify(execFile)(process.execPath, [npmPath, ...values], { cwd: directory, env: { ...process.env, NODE_DISABLE_COMPILE_CACHE: "1" }, windowsHide: true });
+    const { stdout } = await promisify(execFile)(process.execPath, [npmPath, ...values], { cwd: directory, env: ExceptionsApiTests.environment(root), windowsHide: true });
 
     return stdout;
+  }
+
+  /**
+   * The children's environment, with a temporary folder of their own under the test's folder, which the test removes: npm turns on Node's
+   * compile cache, which would otherwise write into the run's temporary folder, and the suite requires that folder left clean.
+   */
+  private static environment(root: string): NodeJS.ProcessEnv {
+    const temporary = join(root, ExceptionsApiTests.TEMPORARY_FOLDER);
+
+    return { ...process.env, TMPDIR: temporary, TMP: temporary, TEMP: temporary };
   }
 }
