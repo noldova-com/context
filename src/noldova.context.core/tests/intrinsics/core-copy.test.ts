@@ -19,60 +19,41 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 @TestClass
 export class CoreCopyTests {
   private static readonly PACKAGE_NAME: string = "@noldova/context.core";
-  private static readonly PACKAGE_FOLDER: URL = new URL("../", import.meta.resolve("@noldova/context.core"));
+  private static readonly PACKAGE_FOLDER: string = fileURLToPath(new URL("../", import.meta.resolve("@noldova/context.core")));
+  private static readonly COPIES_LOADED: string =
+    "Two copies of @noldova/context.core are loaded, so this one cannot add its extensions. The app's packages need one context version that each of their ranges meets; npm ls @noldova/context.core names the packages that bring each copy.";
 
   @TestMethod
-  public recordsTheFolderOfTheCopyItLoaded(): void {
-    const descriptor = Object.getOwnPropertyDescriptor(globalThis, Symbol.for(CoreCopyTests.PACKAGE_NAME));
-
-    Assert.isDefined(descriptor);
-    Assert.areEqual(CoreCopyTests.PACKAGE_FOLDER.href, descriptor.value);
-    Assert.isFalse(descriptor.writable ?? true);
-    Assert.isFalse(descriptor.configurable ?? true);
-  }
-
-  @TestMethod
-  public refusesASecondCopyNamingBothFoldersAsync(): Promise<void> {
+  public refusesASecondCopyAsync(): Promise<void> {
     return CoreCopyTests.withDirectoryAsync(async directory => {
       const copy = join(directory, "copy");
-      await cp(fileURLToPath(CoreCopyTests.PACKAGE_FOLDER), copy, { recursive: true });
+      await cp(CoreCopyTests.PACKAGE_FOLDER, copy, { recursive: true });
       const scriptPath = join(directory, "load.js");
       await writeFile(scriptPath, CoreCopyTests.loadingScript(
         `await import(${JSON.stringify(pathToFileURL(join(copy, "api", "index.js")).href)});`,
         `await import("${CoreCopyTests.PACKAGE_NAME}");`));
 
-      const output = await CoreCopyTests.runAsync(scriptPath, directory);
-
-      Assert.areEqual(
-        `Two copies of @noldova/context.core are loaded, from ${pathToFileURL(copy).href}/ and ${CoreCopyTests.PACKAGE_FOLDER.href}. An app loads one copy; npm ls @noldova/context.core names the packages that bring each.`,
-        output);
+      Assert.areEqual(CoreCopyTests.COPIES_LOADED, await CoreCopyTests.runAsync(scriptPath, directory));
     });
   }
 
   @TestMethod
-  public refusesToLoadBesideAnOlderCopyAsync(): Promise<void> {
+  public refusesToLoadBesideACopyFromBeforeTheCheckAsync(): Promise<void> {
     return CoreCopyTests.withDirectoryAsync(async directory => {
       const scriptPath = join(directory, "load.js");
       await writeFile(scriptPath, CoreCopyTests.loadingScript(
         "Object.defineProperty(Object, \"isFunction\", { value: () => true, writable: false, enumerable: false, configurable: false });",
         `await import("${CoreCopyTests.PACKAGE_NAME}");`));
 
-      const output = await CoreCopyTests.runAsync(scriptPath, directory);
-
-      Assert.areEqual(
-        `A copy of @noldova/context.core older than this check is already loaded, so this copy, from ${CoreCopyTests.PACKAGE_FOLDER.href}, cannot add its extensions beside it. An app loads one copy; npm ls @noldova/context.core names the packages that bring each.`,
-        output);
+      Assert.areEqual(CoreCopyTests.COPIES_LOADED, await CoreCopyTests.runAsync(scriptPath, directory));
     });
   }
 
   @TestMethod
   public refusesTwoCopiesNpmInstallsSideBySideAsync(): Promise<void> {
     return CoreCopyTests.withDirectoryAsync(async directory => {
-      const npmPath = process.env["npm_execpath"];
-      Assert.isDefined(npmPath, "The suite runs through npm, which names its own path in npm_execpath.");
-
       const dependent = join(directory, "dependent");
-      await cp(fileURLToPath(CoreCopyTests.PACKAGE_FOLDER), join(dependent, "node_modules", "@noldova", "context.core"), { recursive: true });
+      await cp(CoreCopyTests.PACKAGE_FOLDER, join(dependent, "node_modules", "@noldova", "context.core"), { recursive: true });
       await writeFile(join(dependent, "package.json"), JSON.stringify({
         name: "dependent",
         version: "1.0.0",
@@ -82,8 +63,8 @@ export class CoreCopyTests {
         bundleDependencies: [CoreCopyTests.PACKAGE_NAME]
       }));
       await writeFile(join(dependent, "index.js"), `import "${CoreCopyTests.PACKAGE_NAME}";\n`);
-      await CoreCopyTests.runNpmAsync(npmPath, ["pack", "--silent", "--pack-destination", directory], dependent);
-      const coreArchive = (await CoreCopyTests.runNpmAsync(npmPath, ["pack", "--silent", "--pack-destination", directory, fileURLToPath(CoreCopyTests.PACKAGE_FOLDER)], directory)).trim();
+      await CoreCopyTests.runNpmAsync(["pack", "--silent", "--pack-destination", directory], dependent);
+      const coreArchive = (await CoreCopyTests.runNpmAsync(["pack", "--silent", "--pack-destination", directory, CoreCopyTests.PACKAGE_FOLDER], directory)).trim();
 
       const app = join(directory, "app");
       await mkdir(app);
@@ -93,17 +74,11 @@ export class CoreCopyTests {
         type: "module",
         dependencies: { [CoreCopyTests.PACKAGE_NAME]: `file:../${coreArchive}`, dependent: "file:../dependent-1.0.0.tgz" }
       }));
-      await CoreCopyTests.runNpmAsync(npmPath, ["install", "--offline", "--no-audit", "--no-fund", "--ignore-scripts", "--no-package-lock"], app);
+      await CoreCopyTests.runNpmAsync(["install", "--offline", "--no-audit", "--no-fund", "--ignore-scripts", "--no-package-lock"], app);
       const scriptPath = join(app, "main.js");
       await writeFile(scriptPath, CoreCopyTests.loadingScript(`await import("${CoreCopyTests.PACKAGE_NAME}");`, "await import(\"dependent\");"));
 
-      const output = await CoreCopyTests.runAsync(scriptPath, app);
-
-      const installed = join(app, "node_modules", "@noldova", "context.core");
-      const nested = join(app, "node_modules", "dependent", "node_modules", "@noldova", "context.core");
-      Assert.areEqual(
-        `Two copies of @noldova/context.core are loaded, from ${pathToFileURL(installed).href}/ and ${pathToFileURL(nested).href}/. An app loads one copy; npm ls @noldova/context.core names the packages that bring each.`,
-        output);
+      Assert.areEqual(CoreCopyTests.COPIES_LOADED, await CoreCopyTests.runAsync(scriptPath, app));
     });
   }
 
@@ -128,7 +103,9 @@ export class CoreCopyTests {
     return stdout;
   }
 
-  private static async runNpmAsync(npmPath: string, values: readonly string[], directory: string): Promise<string> {
+  private static async runNpmAsync(values: readonly string[], directory: string): Promise<string> {
+    const npmPath = process.env["npm_execpath"];
+    Assert.isDefined(npmPath, "The suite runs through npm, which names its own path in npm_execpath.");
     const { stdout } = await promisify(execFile)(process.execPath, [npmPath, ...values], { cwd: directory, windowsHide: true });
 
     return stdout;

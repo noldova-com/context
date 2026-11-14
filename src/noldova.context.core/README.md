@@ -39,11 +39,13 @@ examples.
 ## One copy
 
 An app loads one copy of the package, since the additions can be installed only
-once. The first copy records its folder; a second copy, such as one npm nests
-under a package that pins another version, refuses to load with an `Error` that
-names both folders, and `npm ls @noldova/context.core` shows which packages
-bring each. When a copy from before this check loaded first, which records no
-folder, the error names this copy's folder and says the other is older.
+once. The CONTEXT packages take it as a peer in a range, so npm installs one
+copy for packages that need different versions in that range. A second copy that loads anyway, such as
+one npm nests under a package that pins another version, refuses to load with
+an `Error` saying two copies are loaded; `npm ls @noldova/context.core` shows
+which packages bring each. The error names no folder, since a module's own
+location is host plumbing outside the ECMAScript library the package compiles
+against.
 
 ## License
 

@@ -20,7 +20,7 @@ The one number lives in `version.json` at the repository's root, such as `{ "ver
 Until CONTEXT compiles itself, the `.ctxp` project manifests keep `0.0.1`, since nothing reads their version yet.
 The repository's root `package.json` and its lockfile have no version, since they are never published.
 A package takes the CONTEXT packages it uses as peer dependencies in the range from the current number to the next minor version, such as `>=0.0.9 <0.1.0`, never as dependencies, so an app whose packages need different versions in that range installs one copy of each; npm refuses an install whose ranges no single version meets, rather than nesting a second copy.
-`@noldova/context.core` refuses to load beside another copy of itself, naming both copies' folders.
+`@noldova/context.core` refuses to load beside another copy of itself, with an error that says two copies are loaded.
 No other caret, tilde, wildcard, floating tag, prerelease counter, date version, commit suffix, or independently incremented package version names a CONTEXT package.
 The packages are published to npm under `@noldova`.
 
