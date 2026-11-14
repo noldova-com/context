@@ -49,7 +49,7 @@ export class TestTimingCheck {
         times.set(file, [...times.get(file) ?? [], sum]);
     }
 
-    const files = [...new Set([...times.keys(), ...this.listed.keys()])].sort((left, right) => left < right ? -1 : Number(left > right));
+    const files = [...new Set([...times.keys(), ...this.listed.keys()])].sort();
     return files.map(t => {
       const allowed = this.listed.get(t);
       const limit = (allowed ?? this.budgetMilliseconds) * (1 + this.margin);
