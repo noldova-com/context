@@ -25,7 +25,7 @@ export class DiagnosticCollector {
 
   public add(diagnostic: Diagnostic): void;
   public add(template: DiagnosticTemplate, span: SourceSpan, messageArguments?: readonly (string | number)[]): void;
-  public add(...parameters: [Diagnostic] | [DiagnosticTemplate, SourceSpan, (readonly (string | number)[])?]): void {
+  public add(...parameters: [Diagnostic] | [DiagnosticTemplate, SourceSpan, (readonly (string | number)[] | undefined)?]): void {
     if (parameters.length === 1) {
       this.collectedDiagnostics.push(parameters[0]);
       return;
