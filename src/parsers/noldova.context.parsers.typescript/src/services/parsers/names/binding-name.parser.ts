@@ -80,7 +80,7 @@ export class BindingNameParser {
     const context = this.typescriptParser.context;
     const previousFlags = context.contextFlags;
     context.contextFlags &= ~TypeScriptContextFlags.DisallowIn;
-    context.enterList(TypeScriptListKind.ArrayBindingElements);
+    const outerListScope = context.enterList(TypeScriptListKind.ArrayBindingElements);
     try {
       this.typescriptParser.advance();
       const elementNodes: Node[] = [];
@@ -139,7 +139,7 @@ export class BindingNameParser {
       return patternNode;
     }
     finally {
-      context.leaveList();
+      context.leaveList(outerListScope);
       context.contextFlags = previousFlags;
     }
   }
@@ -148,7 +148,7 @@ export class BindingNameParser {
     const context = this.typescriptParser.context;
     const previousFlags = context.contextFlags;
     context.contextFlags &= ~TypeScriptContextFlags.DisallowIn;
-    context.enterList(TypeScriptListKind.ObjectBindingElements);
+    const outerListScope = context.enterList(TypeScriptListKind.ObjectBindingElements);
     try {
       this.typescriptParser.advance();
       const elementNodes: Node[] = [];
@@ -198,7 +198,7 @@ export class BindingNameParser {
       return patternNode;
     }
     finally {
-      context.leaveList();
+      context.leaveList(outerListScope);
       context.contextFlags = previousFlags;
     }
   }

@@ -16,9 +16,6 @@ import { TestWorkerRun } from "@noldova/context.testing/models/execution/test-wo
 
 import { FixtureTestProject } from "./fixture-test-project.fixture.js";
 
-// Stands in for a test worker in the supervisor's tests: an idle thread whose messages come from the test, so the test sets their order.
-// Each run the supervisor posts is kept in runs and calls the script on a later microtask, as a real worker answers later. Ending it and
-// terminating it wait until the test releases it, then tell the thread to end, so the thread ends by itself and writes its coverage.
 export class ScriptedWorker extends Worker {
   private readonly script: (worker: ScriptedWorker) => void;
   private readonly released: Promise<void>;

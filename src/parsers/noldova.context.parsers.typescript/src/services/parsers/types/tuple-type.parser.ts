@@ -32,7 +32,7 @@ export class TupleTypeParser {
   }
 
   public parse(openBracketNode: TypeScriptOpenBracketNode): TypeScriptTupleTypeNode {
-    this.typescriptParser.context.enterList(TypeScriptListKind.TupleElementTypes);
+    const outerListScope = this.typescriptParser.context.enterList(TypeScriptListKind.TupleElementTypes);
     try {
       const typescriptParser = this.typescriptParser;
       typescriptParser.advance();
@@ -87,7 +87,7 @@ export class TupleTypeParser {
         endNode.trailingTrivia);
     }
     finally {
-      this.typescriptParser.context.leaveList();
+      this.typescriptParser.context.leaveList(outerListScope);
     }
   }
 

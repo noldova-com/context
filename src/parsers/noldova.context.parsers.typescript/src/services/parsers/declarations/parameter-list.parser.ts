@@ -109,7 +109,7 @@ export class ParameterListParser {
     enclosingAwaitFlags: TypeScriptContextFlags, holdsParameterProperties: boolean): TypeScriptParameterListRead {
     const typescriptParser = this.typescriptParser;
     let endNode = openNode;
-    typescriptParser.context.enterList(TypeScriptListKind.Parameters);
+    const outerListScope = typescriptParser.context.enterList(TypeScriptListKind.Parameters);
     try {
       while (!typescriptParser.isEndOfFile && !typescriptParser.currentNode.isTypeScriptListTerminator(TypeScriptListKind.Parameters, typescriptParser)) {
         const startNode = typescriptParser.currentNode;
@@ -144,7 +144,7 @@ export class ParameterListParser {
       return new TypeScriptParameterListRead(endNode, true);
     }
     finally {
-      typescriptParser.context.leaveList();
+      typescriptParser.context.leaveList(outerListScope);
     }
   }
 

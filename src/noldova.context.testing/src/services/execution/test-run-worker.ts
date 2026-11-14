@@ -46,6 +46,13 @@ export class TestRunWorker implements ITestProgressListener {
   private isRunningStoppedMethod: boolean;
   private baseline: readonly string[];
 
+  public static forParentPort(port: MessagePort | null, start: TestWorkerStart): TestRunWorker {
+    if (port === null)
+      throw new TestingException(Resources.testWorkerParentPortMissing);
+
+    return new TestRunWorker(port, start);
+  }
+
   public constructor(port: MessagePort, start: TestWorkerStart, clock: IClock = new SystemClock()) {
     this.port = port;
     this.start = start;
@@ -65,7 +72,6 @@ export class TestRunWorker implements ITestProgressListener {
     const discovered = await discovery.discoverAsync(this.start.testProjects, filePath => this.post(TestWorkerMessage.imported(filePath)));
     this.selected = new TestRunner(discovery, this.executor).select(discovered, this.start.filters);
     this.port.on(Resources.messageEvent, (value: unknown) => {
-      // An empty message means no run is left: closing the port lets the thread end by itself and write its coverage.
       if (Object.isUndefined(value))
         this.port.close();
       else

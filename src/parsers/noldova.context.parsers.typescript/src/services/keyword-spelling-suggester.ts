@@ -8,6 +8,7 @@
 
 import "@noldova/context.core";
 
+import { TypeScriptSpellingDistanceRow } from "../models/typescript-spelling-distance-row.js";
 import { Resources } from "../resources.js";
 import { TypeScriptKeywordNodeFactory } from "./typescript-keyword-node-factory.js";
 
@@ -52,39 +53,36 @@ export class KeywordSpellingSuggester {
   }
 
   private static distance(source: readonly string[], target: readonly string[], budget: number): number | undefined {
-    let previous = target.map((_, index) => index + 1);
-    previous.unshift(0);
-    let current = new Array<number>(target.length + 1);
     const beyond = budget + Resources.spellingBudgetMargin;
+    let previous = new TypeScriptSpellingDistanceRow(beyond);
+    for (let column = 0; column <= target.length; column++)
+      previous.write(column, column);
 
     for (const [sourceIndex, character] of source.entries()) {
       const row = sourceIndex + 1;
       const firstColumn = Math.max(Math.ceil(row - budget), 1);
       const lastColumn = Math.min(Math.floor(budget + row), target.length);
+      const current = new TypeScriptSpellingDistanceRow(beyond);
       let columnMinimum = row;
-      current[0] = row;
-      for (let column = 1; column < firstColumn; column++)
-        current[column] = beyond;
-      for (let column = firstColumn; column <= lastColumn; column++) {
-        const other = target[column - 1]!;
-        const substitution = previous[column - 1]! + (character.toLowerCase() === other.toLowerCase()
+      current.write(0, row);
+      for (const [offset, other] of target.slice(firstColumn - 1, lastColumn).entries()) {
+        const column = firstColumn + offset;
+        const substitution = previous.read(column - 1) + (character.toLowerCase() === other.toLowerCase()
           ? Resources.spellingCaseChangeCost
           : Resources.spellingSubstitutionCost);
         const distance = character === other
-          ? previous[column - 1]!
-          : Math.min(previous[column]! + Resources.spellingEditCost, current[column - 1]! + Resources.spellingEditCost, substitution);
-        current[column] = distance;
+          ? previous.read(column - 1)
+          : Math.min(previous.read(column) + Resources.spellingEditCost, current.read(column - 1) + Resources.spellingEditCost, substitution);
+        current.write(column, distance);
         columnMinimum = Math.min(columnMinimum, distance);
       }
-      for (let column = lastColumn + 1; column <= target.length; column++)
-        current[column] = beyond;
       if (columnMinimum > budget)
         return undefined;
 
-      [previous, current] = [current, previous];
+      previous = current;
     }
 
-    const result = previous[target.length]!;
+    const result = previous.read(target.length);
 
     return result > budget ? undefined : result;
   }

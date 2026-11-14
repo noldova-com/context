@@ -81,7 +81,7 @@ export class TypeArgumentListParser {
     typescriptParser.advance();
     let endNode: Node = lessThanNode;
 
-    typescriptParser.context.enterList(TypeScriptListKind.TypeArguments);
+    const outerListScope = typescriptParser.context.enterList(TypeScriptListKind.TypeArguments);
     try {
       while (typescriptParser.currentNode.isTypeScriptListElement(TypeScriptListKind.TypeArguments, typescriptParser)) {
         const argumentNode = typescriptParser.parseType();
@@ -97,7 +97,7 @@ export class TypeArgumentListParser {
       }
     }
     finally {
-      typescriptParser.context.leaveList();
+      typescriptParser.context.leaveList(outerListScope);
     }
 
     return endNode;

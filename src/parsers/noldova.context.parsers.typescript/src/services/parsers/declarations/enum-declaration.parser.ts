@@ -76,7 +76,7 @@ export class EnumDeclarationParser {
   }
 
   private parseMembers(memberNodes: TypeScriptEnumMemberNode[], commaNodes: TypeScriptCommaNode[]): Node | undefined {
-    this.typescriptParser.context.enterList(TypeScriptListKind.EnumMembers);
+    const outerListScope = this.typescriptParser.context.enterList(TypeScriptListKind.EnumMembers);
     try {
       const parser = this.typescriptParser;
       let endNode: Node | undefined;
@@ -105,7 +105,7 @@ export class EnumDeclarationParser {
       return endNode;
     }
     finally {
-      this.typescriptParser.context.leaveList();
+      this.typescriptParser.context.leaveList(outerListScope);
     }
   }
 }
