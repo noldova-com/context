@@ -97,7 +97,7 @@ export class TypeMemberParser {
   }
 
   public parseList(memberNodes: Node[], isInterface: boolean = false): Node | undefined {
-    this.typescriptParser.context.enterList(TypeScriptListKind.TypeMembers);
+    const outerListScope = this.typescriptParser.context.enterList(TypeScriptListKind.TypeMembers);
     try {
       const parser = this.typescriptParser;
       let endNode: Node | undefined;
@@ -118,7 +118,7 @@ export class TypeMemberParser {
       return endNode;
     }
     finally {
-      this.typescriptParser.context.leaveList();
+      this.typescriptParser.context.leaveList(outerListScope);
     }
   }
 

@@ -282,6 +282,7 @@ declare module "@noldova/context.parsers.typescript/models/typescript-parser-con
   import { TypeScriptContextFlags } from "@noldova/context.parsers.typescript/enums/typescript-context-flags.js";
   import { TypeScriptListKind } from "@noldova/context.parsers.typescript/enums/typescript-list-kind.js";
   import type { TypeScriptDeferredRecords } from "@noldova/context.parsers.typescript/models/typescript-deferred-records.js";
+  import type { TypeScriptListScope } from "@noldova/context.parsers.typescript/models/typescript-list-scope.js";
   import { TypeScriptSyntaxParser } from "@noldova/context.parsers.typescript/services/typescript-syntax.parser.js";
 
   export class TypeScriptParserContext extends ParserContext {
@@ -300,8 +301,9 @@ declare module "@noldova/context.parsers.typescript/models/typescript-parser-con
     public readonly records: TypeScriptDeferredRecords;
 
     public clearRecognitionCaches(): void;
-    public enterList(kind: TypeScriptListKind): void;
-    public leaveList(): void;
+    public get listScope(): TypeScriptListScope;
+    public enterList(kind: TypeScriptListKind): TypeScriptListScope;
+    public leaveList(outerListScope: TypeScriptListScope): void;
     public isListBoundary(parser: TypeScriptSyntaxParser): boolean;
     public enterRecursion(span: SourceSpan): void;
     public leaveRecursion(): void;

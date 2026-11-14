@@ -91,6 +91,7 @@ export class ParenthesizedExpressionParser {
     const previousBoundaryRead = context.hasReadListBoundary;
     context.hasReadListBoundary = false;
     let hasReadParameterBoundary = false;
+    const outerListScope = context.listScope;
     if (readsParameters)
       context.enterList(TypeScriptListKind.Parameters);
     try {
@@ -114,8 +115,7 @@ export class ParenthesizedExpressionParser {
       hasReadParameterBoundary = readsParameters && context.hasReadListBoundary;
     }
     finally {
-      if (readsParameters)
-        context.leaveList();
+      context.leaveList(outerListScope);
       context.hasReadListBoundary ||= previousBoundaryRead;
     }
 

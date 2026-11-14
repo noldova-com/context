@@ -15,7 +15,7 @@ import { TestRunWorker } from "./test-run-worker.js";
 
 export class TestRunWorkerEntryPoint {
   public async runAsync(): Promise<void> {
-    await new TestRunWorker(parentPort!, TestWorkerStart.from(workerData)).startAsync();
+    await TestRunWorker.forParentPort(parentPort, TestWorkerStart.from(workerData)).startAsync();
   }
 }
 

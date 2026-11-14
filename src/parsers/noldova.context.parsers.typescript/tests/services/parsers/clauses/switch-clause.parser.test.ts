@@ -42,7 +42,7 @@ export class SwitchClauseParserTests {
     const parser = TypeScriptParserFixture.create("switch(x){case 1: switch(y){default:;} default:;}");
     const flags = parser.context.contextFlags;
     const rootArrows = parser.context.getRejectedArrowOffsets(flags);
-    parser.context.enterList(TypeScriptListKind.SwitchClauseStatements);
+    const outerListScope = parser.context.enterList(TypeScriptListKind.SwitchClauseStatements);
     const clauseArrows = parser.context.getRejectedArrowOffsets(flags);
     parser.lookAhead(() => {
       parser.parseStatement();
@@ -50,7 +50,7 @@ export class SwitchClauseParserTests {
       return true;
     });
     Assert.areEqual(clauseArrows, parser.context.getRejectedArrowOffsets(flags));
-    parser.context.leaveList();
+    parser.context.leaveList(outerListScope);
     parser.tryParse(() => { parser.parseStatement(); return undefined; });
     Assert.areEqual(rootArrows, parser.context.getRejectedArrowOffsets(flags));
     parser.parseStatement();

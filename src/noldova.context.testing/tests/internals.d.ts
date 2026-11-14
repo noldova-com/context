@@ -156,6 +156,7 @@ declare module "@noldova/context.testing/services/execution/test-run-worker.js" 
   import type { TestWorkerStart } from "@noldova/context.testing/models/execution/test-worker-start.js";
 
   export class TestRunWorker implements ITestProgressListener {
+    public static forParentPort(port: MessagePort | null, start: TestWorkerStart): TestRunWorker;
     public constructor(port: MessagePort, start: TestWorkerStart, clock?: IClock);
     public startAsync(): Promise<void>;
     public runAsync(run: TestWorkerRun): Promise<void>;

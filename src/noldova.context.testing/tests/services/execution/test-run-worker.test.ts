@@ -108,6 +108,13 @@ export class TestRunWorkerTests {
   }
 
   @TestMethod
+  public refusesToStartWithoutAParentPort(): void {
+    const failure = Assert.throws(() => TestRunWorker.forParentPort(null, new TestWorkerStart([], [], 100)), TestingException);
+
+    Assert.areEqual("The test worker runs only in a worker thread, which has a parent port.", failure.message);
+  }
+
+  @TestMethod
   public async failsAClassThatLeavesAResourceOpenAsync(): Promise<void> {
     const resourceCount = process.getActiveResourcesInfo().length;
     const project = await FixtureTestProject.createAsync(["leaking-timer-fixture"]);

@@ -75,7 +75,10 @@ export class SourceLineMap {
   }
 
   private getLine(lineIndex: number): SourceLine {
-    LineOutOfBoundsException.throwIfOutOfBounds(lineIndex, this.lines.length);
-    return this.lines[lineIndex]!;
+    const line = this.lines[lineIndex];
+    if (Object.isUndefined(line))
+      throw new LineOutOfBoundsException(lineIndex, this.lines.length);
+
+    return line;
   }
 }

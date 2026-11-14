@@ -79,7 +79,7 @@ export class BlockParser {
     const context = this.typescriptParser.context;
     const previousReportedAmbientStatement = context.hasReportedAmbientStatement;
     context.hasReportedAmbientStatement = hasReportedAmbientStatement;
-    context.enterList(TypeScriptListKind.BlockStatements);
+    const outerListScope = context.enterList(TypeScriptListKind.BlockStatements);
     try {
       const startNode = openBraceNode ?? this.typescriptParser.currentNode;
       const startOffset = startNode.span.startOffset;
@@ -117,7 +117,7 @@ export class BlockParser {
       return new TypeScriptBlockNode(openBraceNode, statements, span, closeBraceNode, startNode.leadingTrivia, trailingTrivia);
     }
     finally {
-      context.leaveList();
+      context.leaveList(outerListScope);
       context.hasReportedAmbientStatement = previousReportedAmbientStatement;
     }
   }

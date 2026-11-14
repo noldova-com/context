@@ -31,7 +31,7 @@ export class ArrayLiteralExpressionParser {
     const context = this.typescriptParser.context;
     const previousFlags = context.contextFlags;
     context.contextFlags &= ~(TypeScriptContextFlags.Decorator | TypeScriptContextFlags.ConditionalTrueBranch);
-    this.typescriptParser.context.enterList(TypeScriptListKind.ArrayLiteralMembers);
+    const outerListScope = this.typescriptParser.context.enterList(TypeScriptListKind.ArrayLiteralMembers);
     try {
       this.typescriptParser.advance();
       const elementNodes: Node[] = [];
@@ -80,7 +80,7 @@ export class ArrayLiteralExpressionParser {
         endNode.trailingTrivia);
     }
     finally {
-      this.typescriptParser.context.leaveList();
+      this.typescriptParser.context.leaveList(outerListScope);
       context.contextFlags = previousFlags;
     }
   }

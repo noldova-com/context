@@ -507,7 +507,7 @@ export class TypeScriptSyntaxParserTests {
   @TestMethod
   public keepsBoundaryDependentArrowRejectionsInTheirScope(content: string, headFlags: TypeScriptContextFlags): void {
     const parser = TypeScriptParserFixture.create(content);
-    parser.context.enterList(TypeScriptListKind.BlockStatements);
+    const outerListScope = parser.context.enterList(TypeScriptListKind.BlockStatements);
     parser.tryParse(() => {
       parser.parseAssignmentExpression();
       return undefined;
@@ -515,7 +515,7 @@ export class TypeScriptSyntaxParserTests {
 
     Assert.isTrue(parser.context.getRejectedArrowOffsets(headFlags).has(0));
     Assert.isFalse(parser.context.getSharedRejectedArrowOffsets(headFlags).has(0));
-    parser.context.leaveList();
+    parser.context.leaveList(outerListScope);
     Assert.isFalse(parser.context.getRejectedArrowOffsets(headFlags).has(0));
   }
 

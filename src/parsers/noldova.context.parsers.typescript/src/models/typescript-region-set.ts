@@ -12,9 +12,12 @@ export class TypeScriptRegionSet {
   private readonly regions: SourceSpan[] = [];
 
   public constructor(spans: readonly SourceSpan[]) {
+    let endOffset = Number.NEGATIVE_INFINITY;
     for (const span of [...spans].sort((first, second) => first.startOffset - second.startOffset))
-      if (this.regions.length === 0 || span.startOffset >= this.regions.at(-1)!.endOffset)
+      if (span.startOffset >= endOffset) {
         this.regions.push(span);
+        endOffset = span.endOffset;
+      }
   }
 
   public get isEmpty(): boolean {

@@ -54,7 +54,7 @@ export class ArgumentListParser {
     const context = this.typescriptParser.context;
     const previousFlags = context.contextFlags;
     context.contextFlags &= ~(TypeScriptContextFlags.Decorator | TypeScriptContextFlags.ConditionalTrueBranch | TypeScriptContextFlags.DisallowIn);
-    context.enterList(TypeScriptListKind.ArgumentExpressions);
+    const outerListScope = context.enterList(TypeScriptListKind.ArgumentExpressions);
     try {
       let endNode: Node | undefined = firstEndNode;
       while (!this.isTerminator()) {
@@ -109,7 +109,7 @@ export class ArgumentListParser {
         endNode?.trailingTrivia);
     }
     finally {
-      context.leaveList();
+      context.leaveList(outerListScope);
       context.contextFlags = previousFlags;
     }
   }

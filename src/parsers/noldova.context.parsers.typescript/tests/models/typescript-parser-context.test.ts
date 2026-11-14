@@ -62,12 +62,12 @@ export class TypeScriptParserContextTests {
     const normalArrows = context.getRejectedArrowOffsets(context.contextFlags);
     normalArrows.add(0);
 
-    context.enterList(TypeScriptListKind.SwitchClauseStatements);
+    const outerListScope = context.enterList(TypeScriptListKind.SwitchClauseStatements);
     const switchArrows = context.getRejectedArrowOffsets(context.contextFlags);
     Assert.areEqual(0, switchArrows.size);
     switchArrows.add(1);
 
-    context.leaveList();
+    context.leaveList(outerListScope);
     Assert.areEqual(normalArrows, context.getRejectedArrowOffsets(context.contextFlags));
     Assert.isFalse(normalArrows.has(1));
     context.clearRecognitionCaches();
@@ -166,38 +166,39 @@ export class TypeScriptParserContextTests {
     const context = braceParser.context;
     const rootCache = context.getRejectedArrowOffsets(context.contextFlags);
     Assert.isFalse(context.isListBoundary(braceParser));
-    context.enterList(TypeScriptListKind.EnumMembers);
+    const rootScope = context.enterList(TypeScriptListKind.EnumMembers);
     const braceCache = context.getRejectedArrowOffsets(context.contextFlags);
     Assert.areNotEqual(rootCache, braceCache);
     Assert.isTrue(context.isListBoundary(braceParser));
-    context.enterList(TypeScriptListKind.TupleElementTypes);
+    const braceScope = context.enterList(TypeScriptListKind.TupleElementTypes);
     const nestedCache = context.getRejectedArrowOffsets(context.contextFlags);
     Assert.areNotEqual(braceCache, nestedCache);
     Assert.isTrue(context.isListBoundary(braceParser));
-    context.enterList(TypeScriptListKind.EnumMembers);
+    const nestedScope = context.enterList(TypeScriptListKind.EnumMembers);
     Assert.areEqual(nestedCache, context.getRejectedArrowOffsets(context.contextFlags));
-    context.leaveList();
-    context.leaveList();
+    Assert.areEqual(nestedScope, context.listScope);
+    context.leaveList(nestedScope);
+    context.leaveList(braceScope);
     Assert.areEqual(braceCache, context.getRejectedArrowOffsets(context.contextFlags));
-    context.leaveList();
+    context.leaveList(rootScope);
     Assert.areEqual(rootCache, context.getRejectedArrowOffsets(context.contextFlags));
-    context.enterList(TypeScriptListKind.EnumMembers);
+    const reenteredScope = context.enterList(TypeScriptListKind.EnumMembers);
     Assert.areEqual(braceCache, context.getRejectedArrowOffsets(context.contextFlags));
-    context.leaveList();
+    context.leaveList(reenteredScope);
     context.clearRecognitionCaches();
-    context.enterList(TypeScriptListKind.EnumMembers);
+    const clearedScope = context.enterList(TypeScriptListKind.EnumMembers);
     Assert.areNotEqual(braceCache, context.getRejectedArrowOffsets(context.contextFlags));
-    context.leaveList();
+    context.leaveList(clearedScope);
 
     const bracketContext = bracketParser.context;
     Assert.isFalse(bracketContext.isListBoundary(bracketParser));
-    bracketContext.enterList(TypeScriptListKind.EnumMembers);
+    const bracketRootScope = bracketContext.enterList(TypeScriptListKind.EnumMembers);
     Assert.isFalse(bracketContext.isListBoundary(bracketParser));
     bracketContext.hasReadListBoundary = false;
-    bracketContext.enterList(TypeScriptListKind.TupleElementTypes);
+    const bracketScope = bracketContext.enterList(TypeScriptListKind.TupleElementTypes);
     Assert.isTrue(bracketContext.isListBoundary(bracketParser));
     Assert.isTrue(bracketContext.hasReadListBoundary);
-    bracketContext.leaveList();
-    bracketContext.leaveList();
+    bracketContext.leaveList(bracketScope);
+    bracketContext.leaveList(bracketRootScope);
   }
 }

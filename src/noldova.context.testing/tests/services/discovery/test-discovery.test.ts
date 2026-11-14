@@ -45,6 +45,17 @@ export class TestDiscoveryTests {
   }
 
   @TestMethod
+  public rejectsAMemberListedWithoutADescriptor(): void {
+    const phantomMember = new Proxy(OrderedFixtureTests, { ownKeys: target => [...Reflect.ownKeys(target), "phantom"] });
+
+    const failure = Assert.throws(() => {
+      new TestDiscovery().discoverModuleExports({ PhantomMemberTests: phantomMember }, "inline://sample", "TestPackage");
+    }, TestingException);
+
+    Assert.isTrue(failure.message.includes("\"phantom\" of \"PhantomMemberTests\""), failure.message);
+  }
+
+  @TestMethod
   public rejectsASubclassThatOnlyInheritsTheMark(): void {
     const failure = Assert.throws(() => {
       new TestDiscovery().discoverModuleExports({ DerivedFixtureTests }, "inline://sample", "TestPackage");

@@ -88,7 +88,7 @@ export class ParameterListParser {
     holdsParameterProperties: boolean = false): Node | undefined {
     const typescriptParser = this.typescriptParser;
     let endNode = openNode;
-    typescriptParser.context.enterList(TypeScriptListKind.Parameters);
+    const outerListScope = typescriptParser.context.enterList(TypeScriptListKind.Parameters);
     try {
       while (!typescriptParser.isEndOfFile && !typescriptParser.currentNode.isTypeScriptListTerminator(TypeScriptListKind.Parameters, typescriptParser)) {
         const startNode = typescriptParser.currentNode;
@@ -127,7 +127,7 @@ export class ParameterListParser {
       return endNode;
     }
     finally {
-      typescriptParser.context.leaveList();
+      typescriptParser.context.leaveList(outerListScope);
     }
   }
 

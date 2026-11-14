@@ -52,7 +52,7 @@ export class TypeParameterListParser {
     const commaNodes: TypeScriptCommaNode[] = [];
     let endNode: Node = lessThanNode;
 
-    typescriptParser.context.enterList(TypeScriptListKind.TypeParameters);
+    const outerListScope = typescriptParser.context.enterList(TypeScriptListKind.TypeParameters);
     try {
       while (!typescriptParser.isEndOfFile) {
         const startNode = typescriptParser.currentNode;
@@ -86,7 +86,7 @@ export class TypeParameterListParser {
       }
     }
     finally {
-      typescriptParser.context.leaveList();
+      typescriptParser.context.leaveList(outerListScope);
     }
 
     const greaterThanNode = typescriptParser.tryConsume(TypeScriptGreaterThanNode);

@@ -57,7 +57,7 @@ export class SwitchClauseParser {
 
   private parseStatements(statements: Node[]): Node | undefined {
     const parser = this.typescriptParser;
-    parser.context.enterList(TypeScriptListKind.SwitchClauseStatements);
+    const outerListScope = parser.context.enterList(TypeScriptListKind.SwitchClauseStatements);
     try {
       let endNode: Node | undefined;
       while (!parser.isEndOfFile && !parser.currentNode.isTypeScriptSwitchClauseStart() && !(parser.currentNode instanceof TypeScriptCloseBraceNode))
@@ -75,7 +75,7 @@ export class SwitchClauseParser {
       return endNode;
     }
     finally {
-      parser.context.leaveList();
+      parser.context.leaveList(outerListScope);
     }
   }
 }

@@ -71,7 +71,7 @@ export class ObjectLiteralExpressionParser {
     const context = this.typescriptParser.context;
     const previousFlags = context.contextFlags;
     context.contextFlags &= ~(TypeScriptContextFlags.Decorator | TypeScriptContextFlags.ConditionalTrueBranch);
-    this.typescriptParser.context.enterList(TypeScriptListKind.ObjectLiteralMembers);
+    const outerListScope = this.typescriptParser.context.enterList(TypeScriptListKind.ObjectLiteralMembers);
     try {
       const typescriptParser = this.typescriptParser;
       typescriptParser.advance();
@@ -132,7 +132,7 @@ export class ObjectLiteralExpressionParser {
       return resultNode;
     }
     finally {
-      this.typescriptParser.context.leaveList();
+      this.typescriptParser.context.leaveList(outerListScope);
       context.contextFlags = previousFlags;
     }
   }

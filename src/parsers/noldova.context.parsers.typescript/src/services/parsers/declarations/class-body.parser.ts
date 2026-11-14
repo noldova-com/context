@@ -34,7 +34,7 @@ export class ClassBodyParser {
     context.isClassBodyContext = true;
     context.isTypeMemberContext = false;
     context.isClassStaticBlock = false;
-    context.enterList(TypeScriptListKind.ClassMembers);
+    const outerListScope = context.enterList(TypeScriptListKind.ClassMembers);
     try {
       const typescriptParser = this.typescriptParser;
       typescriptParser.advance();
@@ -72,7 +72,7 @@ export class ClassBodyParser {
         endNode.trailingTrivia);
     }
     finally {
-      context.leaveList();
+      context.leaveList(outerListScope);
       context.isClassBodyContext = previousClassBodyContext;
       context.isTypeMemberContext = previousTypeMemberContext;
       context.isClassStaticBlock = previousClassStaticBlock;

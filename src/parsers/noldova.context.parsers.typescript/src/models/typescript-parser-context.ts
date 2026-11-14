@@ -23,8 +23,7 @@ import { TypeScriptListScope } from "./typescript-list-scope.js";
 export class TypeScriptParserContext extends ParserContext {
   private recursionDepth: number = 0;
   private readonly rootListScope: TypeScriptListScope = new TypeScriptListScope();
-  private listScope: TypeScriptListScope = this.rootListScope;
-  private readonly listScopeStack: TypeScriptListScope[] = [];
+  private activeListScope: TypeScriptListScope = this.rootListScope;
   private readonly sharedRejectedArrowOffsets: Map<TypeScriptContextFlags, Set<number>> = new Map();
 
   public contextFlags: TypeScriptContextFlags = TypeScriptContextFlags.None;
@@ -124,7 +123,7 @@ export class TypeScriptParserContext extends ParserContext {
   }
 
   public getRejectedArrowOffsets(flags: TypeScriptContextFlags): Set<number> {
-    return this.getArrowRejections(flags, this.listScope.rejectedArrowOffsetsByContext);
+    return this.getArrowRejections(flags, this.activeListScope.rejectedArrowOffsetsByContext);
   }
 
   public getSharedRejectedArrowOffsets(flags: TypeScriptContextFlags): Set<number> {
@@ -157,27 +156,32 @@ export class TypeScriptParserContext extends ParserContext {
     this.unclosedTypeArgumentOffsets.clear();
   }
 
-  public enterList(kind: TypeScriptListKind): void {
-    this.listScopeStack.push(this.listScope);
-    for (let current: TypeScriptListScope | undefined = this.listScope; !Object.isUndefined(current); current = current.parent)
-      if (current.kind === kind)
-        return;
-    let scope = this.listScope.nestedScopes.get(kind);
-    if (Object.isUndefined(scope)) {
-      scope = new TypeScriptListScope(this.listScope, kind);
-      this.listScope.nestedScopes.set(kind, scope);
-    }
-    this.listScope = scope;
+  public get listScope(): TypeScriptListScope {
+    return this.activeListScope;
   }
 
-  public leaveList(): void {
-    this.listScope = this.listScopeStack.pop()!;
+  public enterList(kind: TypeScriptListKind): TypeScriptListScope {
+    const outerListScope = this.activeListScope;
+    for (let current: TypeScriptListScope | undefined = this.activeListScope; !Object.isUndefined(current); current = current.parent)
+      if (current.kind === kind)
+        return outerListScope;
+    let scope = this.activeListScope.nestedScopes.get(kind);
+    if (Object.isUndefined(scope)) {
+      scope = new TypeScriptListScope(this.activeListScope, kind);
+      this.activeListScope.nestedScopes.set(kind, scope);
+    }
+    this.activeListScope = scope;
+    return outerListScope;
+  }
+
+  public leaveList(outerListScope: TypeScriptListScope): void {
+    this.activeListScope = outerListScope;
   }
 
   public isListBoundary(parser: TypeScriptSyntaxParser): boolean {
     this.hasReadListBoundary = true;
     const node = parser.currentNode;
-    for (let scope: TypeScriptListScope | undefined = this.listScope; !Object.isUndefined(scope); scope = scope.parent)
+    for (let scope: TypeScriptListScope | undefined = this.activeListScope; !Object.isUndefined(scope); scope = scope.parent)
       if (!Object.isUndefined(scope.kind) && (node.isTypeScriptListElement(scope.kind, parser) || node.isTypeScriptListTerminator(scope.kind, parser)))
         return true;
     return false;
