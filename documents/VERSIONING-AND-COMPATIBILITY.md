@@ -8,7 +8,7 @@ Until a later accepted decision declares a public release policy, CONTEXT uses e
 
 | Boundary | Value |
 |---|---:|
-| Every CONTEXT-owned product and package, including the `noldova.context` command host, every `noldova.context.*` package, the Runtime, the SDK, every tool, and the bootstrap npm metadata | `0.0.<n>`, one number for all, starting at `0.0.1` |
+| Every CONTEXT-owned product and package: every `noldova.context.*` package and the bootstrap npm metadata, and, once they exist, the `noldova.context` command host, the Runtime, the SDK and every tool | `0.0.<n>`, one number for all, starting at `0.0.1` |
 | Every CONTEXT-owned file format, schema, contract, protocol, instruction set, metadata format, or ABI that requires a version field | integer `1` |
 
 They identify the current development line, not a compatibility family.

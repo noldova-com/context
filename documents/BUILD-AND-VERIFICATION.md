@@ -36,7 +36,7 @@ The root configuration explicitly lists bootstrap packages in dependency order.
 It is not the final solution graph: the Runtime-hosted SDK build provider will read `.ctxs` and `.ctxp`, resolve the graph under `PACKAGE-CONTRACT.md`, and replace the list, the shared bootstrap bases, and the package build scripts.
 Each package is compiled against installed packed dependencies: npm packages during bootstrap, `.ctxl` artifacts later.
 
-Build requirements: stale outputs and prior installed CONTEXT packages are removed before use; generated output is confined to declared generated directories; tracked source, manifests, and package metadata finish unchanged; build commands never change declared versions or publish packages; packing consumes only the freshly built package contents; installation into root `node_modules` consumes the freshly packed artifacts, not source directories; the root `package-lock.json` is committed and pins every third-party package, which the build installs with `npm ci` when `node_modules` is missing, while the freshly packed CONTEXT packages are installed with `npm install --no-save`, so they never enter the manifest or the lockfile, as Noldova's [TypeScript standard](https://github.com/noldova-com/.github/blob/main/standards/stacks/TYPESCRIPT.md) requires; and failure of any dependency, build, pack, or install step stops the workflow before dependants run.
+Build requirements: each package's output folder under `_build/node` is removed before the package is built; generated output is confined to declared generated directories; tracked source, manifests, and package metadata finish unchanged; build commands never change declared versions or publish packages; packing consumes only the freshly built package contents; installation into root `node_modules` consumes the freshly packed artifacts, not source directories; the root `package-lock.json` is committed and pins every third-party package, which the build installs with `npm ci` when `node_modules` is missing, while the freshly packed CONTEXT packages are installed with `npm install --no-save`, so they never enter the manifest or the lockfile, as Noldova's [TypeScript standard](https://github.com/noldova-com/.github/blob/main/standards/stacks/TYPESCRIPT.md) requires; and failure of any dependency, build, pack, or install step stops the workflow before dependants run.
 Loose compiler output alone is not a completed build.
 
 ### Scripts
@@ -54,9 +54,8 @@ Each derived script keeps its workflow in `runAsync` and reuses or overrides tho
 A narrow correction does not authorize adjacent changes to inheritance, workflow, names, or output.
 For packages that have not migrated documentation generation, `Build` copies the manual `src/api/index.d.ts` unchanged into the npm package.
 
-The stage-zero root and package scripts that construct Testing are temporarily outside its mirrored unit-test and coverage boundary; strict compilation and the complete build and test workflow verify them.
-That exception ends when the workflows move into a Testing-capable tooling package or SDK provider, and it covers no other automation.
-A package's own bootstrap automation, such as the TypeScript and Regex parsers' vendoring and generator scripts, is recorded beside that exception on the same terms: its `scripts/tsconfig.json` compiles under the strict profile in the package build, it throws the host `Error` as the root scripts do, and the certification rehash verifies what it produces.
+Scripts have no tests, as Noldova's [testing standard](https://github.com/noldova-com/.github/blob/main/standards/TESTING.md) says; strict compilation and the complete build and test workflow verify them.
+A package's own bootstrap automation, such as the TypeScript and Regex parsers' vendoring and generator scripts, has no tests either: its `scripts/tsconfig.json` compiles under the strict profile in the package build, it throws the host `Error` as the root scripts do, and the certification rehash verifies what it produces.
 Each parser package's build fails when its committed expected results are missing, were generated under another pin or reading rule, or no longer match the hash their manifest seals; only the vendoring and generator commands read the cases again.
 
 Launch processes with an executable, argument array, explicit working directory when needed, and `shell: false`; construct no shell command strings, pipes, redirects, globs, or platform-specific environment syntax.
@@ -78,7 +77,7 @@ Nothing is installed on the machine and no container is used, so it works the sa
 
 TypeScript conformance runs inside this gate as the parser package's `TypeScriptConformance` tests, one per applicable case, against the committed expected diagnostics and known-failures ledger `TYPESCRIPT-COMPATIBILITY.md` owns; the exit criterion is `LANGUAGE-SURFACE.md`'s, and until the ledger is empty the result measures progress only.
 Regex conformance runs in it likewise, as the Regex package's `RegexConformance` tests, one per applicable Test262 case, against the expected patterns and ledger `TESTING-CONTRACT.md` section 7 owns.
-Standard-library surface verification is another: for every global claimed complete, it compares the implementation and public metadata with the exact generated inventory and requires zero missing, duplicated, misowned, unaccounted, or untested applicable entries, with runtime-bearing entries verified through the installed package and every relevant Runtime or AOT path.
+Standard-library surface verification will be another, once its inventory and tooling exist: for every global claimed complete, it compares the implementation and public metadata with the exact generated inventory and requires zero missing, duplicated, misowned, unaccounted, or untested applicable entries, with runtime-bearing entries verified through the installed package and every relevant Runtime or AOT path.
 Until the inventory and its tooling exist, investigative checks may guide implementation but cannot support a completeness claim.
 Runtime and platform witnesses are further named gates.
 Gates may be composed into a certification profile; none is silently counted as an ordinary unit test.
@@ -110,7 +109,7 @@ An artifact may be excluded only when an accepted contract identifies a necessar
 | Full | Complete build, pack, clean install, complete tests, exactly `gen1`–`gen5`, and every scope-required conformance, runtime, ABI, loader, and platform witness | Major milestone, release, format, ABI, or runtime change, or campaign exit |
 
 Three generations are the normal minimum because `gen1 == gen2` crosses the bootstrap-to-Runtime boundary and `gen2 == gen3` independently exercises portable self-reproduction; four generations have no distinct meaning.
-Certification commands never skip their build or test stages, and npm exposes the TypeScript entry point that owns profile selection without duplicating the workflow.
+Certification commands never skip their build or test stages, and npm will expose the TypeScript entry point that owns profile selection without duplicating the workflow.
 
 A change expected to be byte-neutral for a declared set of code-bearing or semantic artifacts is additionally compared literally against the last reviewed accepted manifest, and any unexpected difference fails.
 Source-sensitive artifacts may remain cross-generation-only only when their different cross-change behavior is explicitly documented.
