@@ -58,9 +58,6 @@ export class TestTimingCheck {
     });
   }
 
-  // Reads the files a suite lists as slower than the budget: the table rows, "| `package/file` | 6900 ms |", that follow the heading
-  // "Test files slower than the timing check's budget:" in a Markdown document such as README, up to the first line that is neither a row
-  // nor blank.
   public static readListed(markdown: string): Map<string, number> {
     const lines = markdown.split(Resources.lineEndPattern);
     const listed = new Map<string, number>();
