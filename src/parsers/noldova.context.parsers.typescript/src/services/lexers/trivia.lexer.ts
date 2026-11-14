@@ -24,25 +24,26 @@ import type { TypeScriptLexer } from "./typescript.lexer.js";
 export class TriviaLexer {
   public lex(lexer: TypeScriptLexer): Node | undefined {
     const reader = lexer.reader;
-    const trivia: Node[] = [];
+    const triviaStartOffset = reader.currentOffset;
+    let trivia: Node[] | undefined;
 
     while (!reader.isAtEnd) {
       const startOffset = reader.currentOffset;
 
       if (startOffset === 0 && reader.startsWith(Resources.shebang)) {
         const value = reader.readUntil(TypeScriptCharacterClassifier.isLineTerminator).toString();
-        trivia.push(new TypeScriptShebangNode(value, reader.createSpan(startOffset, value.length)));
+        (trivia ??= []).push(new TypeScriptShebangNode(value, reader.createSpan(startOffset, value.length)));
         continue;
       }
 
       if (this.isConflictMarker(lexer)) {
-        trivia.push(this.readConflictMarker(lexer));
+        (trivia ??= []).push(this.readConflictMarker(lexer));
         continue;
       }
 
       if (TypeScriptCharacterClassifier.isWhitespace(reader.source.content.charAt(startOffset))) {
         const value = reader.readWhile(TypeScriptCharacterClassifier.isWhitespace).toString();
-        trivia.push(new WhitespaceNode(value, reader.createSpan(startOffset, value.length)));
+        (trivia ??= []).push(new WhitespaceNode(value, reader.createSpan(startOffset, value.length)));
         continue;
       }
 
@@ -50,7 +51,7 @@ export class TriviaLexer {
         reader.advance(Resources.slashSlash.length);
         const value = reader.readUntil(TypeScriptCharacterClassifier.isLineTerminator).toString();
         const span = reader.createSpan(startOffset, reader.currentOffset - startOffset);
-        trivia.push(new TypeScriptLineCommentNode(value, span));
+        (trivia ??= []).push(new TypeScriptLineCommentNode(value, span));
         if (TriviaLexer.isLineCommentDirective(value))
           lexer.commentDirectiveOffsets.push(startOffset);
         continue;
@@ -71,7 +72,7 @@ export class TriviaLexer {
           reader.advance(Resources.asteriskSlash.length);
 
         const span = reader.createSpan(startOffset, reader.currentOffset - startOffset);
-        trivia.push(new TypeScriptBlockCommentNode(value, span));
+        (trivia ??= []).push(new TypeScriptBlockCommentNode(value, span));
         const lastLineStart = TriviaLexer.lastLineStart(value);
         const lastLineOffset = lastLineStart === 0 ? startOffset : bodyStartOffset + lastLineStart;
         if (TriviaLexer.isBlockCommentDirective(reader.source.getText(lastLineOffset, reader.currentOffset - lastLineOffset)))
@@ -82,14 +83,15 @@ export class TriviaLexer {
       break;
     }
 
-    const [first] = trivia;
-    if (Object.isUndefined(first))
+    if (Object.isUndefined(trivia))
       return undefined;
 
-    if (trivia.length === 1)
+    if (trivia.length === 1) {
+      const [first] = trivia;
       return first;
+    }
 
-    const span = reader.createSpan(first.span.startOffset, reader.currentOffset - first.span.startOffset);
+    const span = reader.createSpan(triviaStartOffset, reader.currentOffset - triviaStartOffset);
     return new TypeScriptTriviaNode(trivia, span);
   }
 
