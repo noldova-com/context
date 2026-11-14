@@ -67,7 +67,7 @@ export class ImportAttributesParser {
   private parseList(keywordNode: TypeScriptWithKeywordNode | TypeScriptAssertKeywordNode | undefined, startNode: Node | undefined,
     colonNode?: TypeScriptColonNode): TypeScriptImportAttributesNode {
     const parser = this.typescriptParser;
-    parser.context.enterList(TypeScriptListKind.ImportAttributes);
+    const outerListScope = parser.context.enterList(TypeScriptListKind.ImportAttributes);
     try {
       const openBraceNode = parser.tryConsume(TypeScriptOpenBraceNode);
       const attributeNodes: TypeScriptImportAttributeNode[] = [];
@@ -116,7 +116,7 @@ export class ImportAttributesParser {
         firstNode?.leadingTrivia, endNode?.trailingTrivia);
     }
     finally {
-      this.typescriptParser.context.leaveList();
+      this.typescriptParser.context.leaveList(outerListScope);
     }
   }
 

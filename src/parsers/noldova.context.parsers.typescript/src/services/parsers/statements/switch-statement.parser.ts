@@ -66,7 +66,7 @@ export class SwitchStatementParser {
     const previousSubstatement = context.isSubstatement;
     context.isCaseClause = true;
     context.isSubstatement = false;
-    context.enterList(TypeScriptListKind.SwitchClauses);
+    const outerListScope = context.enterList(TypeScriptListKind.SwitchClauses);
     try {
       const parser = this.typescriptParser;
       const startNode = parser.currentNode;
@@ -99,7 +99,7 @@ export class SwitchStatementParser {
         endNode?.trailingTrivia);
     }
     finally {
-      context.leaveList();
+      context.leaveList(outerListScope);
       context.isCaseClause = previousCaseClause;
       context.isSubstatement = previousSubstatement;
     }

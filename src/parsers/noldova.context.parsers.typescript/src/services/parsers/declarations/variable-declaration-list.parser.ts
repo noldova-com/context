@@ -53,7 +53,7 @@ export class VariableDeclarationListParser {
     context.contextFlags = isForInitializer
       ? previousFlags | TypeScriptContextFlags.DisallowIn
       : previousFlags & ~TypeScriptContextFlags.DisallowIn;
-    context.enterList(TypeScriptListKind.VariableDeclarations);
+    const outerListScope = context.enterList(TypeScriptListKind.VariableDeclarations);
     try {
       const startNode = awaitKeywordNode ?? keywordNode;
       typescriptParser.advance();
@@ -106,7 +106,7 @@ export class VariableDeclarationListParser {
       return resultNode;
     }
     finally {
-      context.leaveList();
+      context.leaveList(outerListScope);
       context.contextFlags = previousFlags;
     }
   }
