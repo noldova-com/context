@@ -42,7 +42,9 @@ export class TypeScriptDiagnosticsFixture {
   }
 
   private static position(diagnostic: Diagnostic): string {
-    return `${diagnostic.code.displayText}@${diagnostic.location?.start}:${diagnostic.location?.length}`;
+    const location = diagnostic.location;
+    Assert.isDefined(location);
+    return `${diagnostic.code.displayText}@${location.start}:${location.length}`;
   }
 
   private static text(content: string, diagnostic: Diagnostic): string {

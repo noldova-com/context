@@ -86,11 +86,8 @@ export default class TypeScriptVendoredCatalog {
 
   private static validatePlaceholders(messageTemplate: string, code: number): void {
     const indexes = new Set<number>();
-    for (const [, index] of messageTemplate.matchAll(TypeScriptVendoredCatalog.PLACEHOLDER_PATTERN)) {
-      if (index === undefined)
-        throw new Error(TypeScriptVendoredCatalog.invalidPlaceholder(code));
-      indexes.add(Number.parseInt(index, TypeScriptVendoredCatalog.DECIMAL_RADIX));
-    }
+    for (const [placeholder] of messageTemplate.matchAll(TypeScriptVendoredCatalog.PLACEHOLDER_PATTERN))
+      indexes.add(Number.parseInt(placeholder.slice(1, -1), TypeScriptVendoredCatalog.DECIMAL_RADIX));
 
     for (let index = 0; index < indexes.size; index++)
       if (!indexes.has(index))
