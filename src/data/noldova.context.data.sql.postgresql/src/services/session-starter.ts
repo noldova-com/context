@@ -19,6 +19,7 @@ import { SslMode } from "../enums/ssl-mode.js";
 import { ConnectionClosedException } from "../exceptions/connection-closed.exception.js";
 import { PostgreSQLException } from "../exceptions/postgresql.exception.js";
 import { BackendKey } from "../models/backend-key.js";
+import { ClientTimers } from "../models/client/client-timers.js";
 import type { ConnectionOptions } from "../models/connection-options.js";
 import { StartedSession } from "../models/started-session.js";
 import { Resources } from "../resources.js";
@@ -35,17 +36,19 @@ export class SessionStarter {
 
   private readonly options: ConnectionOptions;
   private readonly cancelTimeout: number;
+  private readonly timers: ClientTimers;
   private readonly frontend: Frontend = new Frontend();
   private readonly abort: AbortController = new AbortController();
   private socket: PostgreSQLSocket | null = null;
 
-  public constructor(options: ConnectionOptions, cancelTimeout: number = 0) {
+  public constructor(options: ConnectionOptions, cancelTimeout: number = 0, timers: ClientTimers = new ClientTimers()) {
     this.options = options;
     this.cancelTimeout = cancelTimeout;
+    this.timers = timers;
   }
 
   public async startAsync(): Promise<StartedSession> {
-    const timer = this.options.connectTimeout > 0 ? setTimeout(() => this.stop(), this.options.connectTimeout * 1000) : undefined;
+    const timer = this.options.connectTimeout > 0 ? this.timers.setTimeout(() => this.stop(), this.options.connectTimeout * 1000) : null;
     try {
       this.socket = await PostgreSQLSocket.connectAsync(this.options.host, this.options.port, this.abort.signal);
       return await this.openAsync(this.socket);
@@ -55,7 +58,7 @@ export class SessionStarter {
       throw this.abort.signal.aborted ? new DataException(Resources.connectTimeout, new ExceptionOptions(error)) : error;
     }
     finally {
-      clearTimeout(timer);
+      this.timers.clearTimeout(timer);
     }
   }
 
@@ -66,13 +69,13 @@ export class SessionStarter {
     return new Promise<void>((resolve, reject) => {
       let written = false;
       let settled = false;
-      let timer: ReturnType<typeof setTimeout> | undefined;
+      let timer: number | null = null;
       const done = (error: unknown): void => {
         if (settled)
           return;
 
         settled = true;
-        clearTimeout(timer);
+        this.timers.clearTimeout(timer);
         signal.removeEventListener("abort", stopped);
         abort.abort();
         sockets.forEach(socket => socket.destroy());
@@ -84,7 +87,7 @@ export class SessionStarter {
       const stopped = (): void => done(signal.reason);
       signal.addEventListener("abort", stopped, { once: true });
       if (limit > 0)
-        timer = setTimeout(() => done(written ? null : new DataException(Resources.connectTimeout)), limit * 1000);
+        timer = this.timers.setTimeout(() => done(written ? null : new DataException(Resources.connectTimeout)), limit * 1000);
 
       PostgreSQLSocket.connectAsync(this.options.host, this.options.port, AbortSignal.any([abort.signal, signal])).then(async connected => {
         sockets.push(connected);

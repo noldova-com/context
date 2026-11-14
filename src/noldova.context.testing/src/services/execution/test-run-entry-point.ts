@@ -8,7 +8,7 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -17,7 +17,9 @@ import { ExceptionOptions } from "@noldova/context.exceptions";
 
 import { TestingException } from "../../exceptions/testing.exception.js";
 import { TestProject } from "../../models/discovery/test-project.js";
+import type { TestRunResult } from "../../models/results/test-run-result.js";
 import { TestRunTotals } from "../../models/results/test-run-totals.js";
+import { TestTimeRecord } from "../../models/timing/test-time-record.js";
 import { Resources } from "../../resources.js";
 import { TestConsoleReporter } from "../reporting/test-console-reporter.js";
 import { TestRunSupervisor } from "./test-run-supervisor.js";
@@ -43,13 +45,14 @@ export class TestRunEntryPoint {
         testProjects.push(new TestProject(packageName, rootDirectory));
       }
 
-      const supervisor = new TestRunSupervisor(
-        Resources.defaultTimeoutMilliseconds, testProjects, filters, reporter, TestRunSupervisor.readCoverageDirectory());
+      const timeoutMilliseconds = TestRunSupervisor.readTimeoutMilliseconds(process.env[Resources.timeoutVariable]);
+      const supervisor = new TestRunSupervisor(timeoutMilliseconds, testProjects, filters, reporter, TestRunSupervisor.readCoverageDirectory());
       reporter.start();
       const result = await supervisor.runAsync();
       const totals = new TestRunTotals(result.passed, result.failed, result.skipped, supervisor.elapsedMilliseconds);
 
       reporter.writeSummary(totals, supervisor.selection);
+      await this.writeResultsAsync(result, process.env[Resources.resultsFileVariable]);
       if (supervisor.selection.isFiltered && supervisor.selection.selected === 0)
         console.error(Resources.noTestMatchedFilters);
 
@@ -66,6 +69,13 @@ export class TestRunEntryPoint {
       console.error(Resources.formatTemporaryLeftovers(leftovers));
       process.exitCode = 1;
     }
+  }
+
+  private async writeResultsAsync(result: TestRunResult, filePath: string | undefined): Promise<void> {
+    if (Object.isUndefined(filePath))
+      return;
+
+    await writeFile(filePath, TestTimeRecord.formatAll(TestTimeRecord.fromResult(result)));
   }
 
   private async isolateTemporaryFilesAsync(): Promise<string> {

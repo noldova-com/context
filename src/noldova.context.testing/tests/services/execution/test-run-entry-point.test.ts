@@ -7,7 +7,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -148,14 +148,64 @@ export class TestRunEntryPointTests {
     }
   }
 
+  @TestMethod
+  public async namesATestThatReachesTheLimitTheSuiteSetsWithThatLimitAsync(): Promise<void> {
+    const rootDirectory = await mkdtemp(join(tmpdir(), "context-entry-"));
+    try {
+      await FixtureTestProject.writeTestFileAsync(rootDirectory, "hanging.test.js", "hanging-fixture");
+      const result = await this.runEntryArgumentsAsync(["Sample", rootDirectory], "[]", undefined, true, { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "100" });
+
+      Assert.areEqual(1, result.exitCode);
+      Assert.isTrue(result.output.includes("HangingFixtureTests"), result.output);
+      Assert.isTrue(result.output.includes("hangsAsync"), result.output);
+      Assert.isTrue(result.output.includes("The test did not settle within its limit of 100 milliseconds."), result.output);
+    }
+    finally {
+      await rm(rootDirectory, { recursive: true, force: true });
+    }
+  }
+
+  @TestMethod
+  public async rejectsALimitThatIsNotAPositiveIntegerAsync(): Promise<void> {
+    const entryRun = await this.runEntryArgumentsAsync([], "[]", undefined, true, { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "soon" });
+
+    Assert.areEqual(1, entryRun.exitCode);
+    Assert.isTrue(entryRun.errorOutput.includes("CONTEXT_TEST_TIMEOUT_MILLISECONDS must be a positive integer of milliseconds"), entryRun.errorOutput);
+  }
+
+  @TestMethod
+  public async writesEachTestsResultToTheFileTheSuiteNamesAsync(): Promise<void> {
+    const rootDirectory = await mkdtemp(join(tmpdir(), "context-entry-"));
+    const resultsDirectory = await mkdtemp(join(tmpdir(), "context-entry-results-"));
+    try {
+      const resultsFile = join(resultsDirectory, "results.json");
+      await FixtureTestProject.writeTestFileAsync(rootDirectory, "passing.test.js", "passing-fixture");
+      const result = await this.runEntryArgumentsAsync(["Sample", rootDirectory], "[]", undefined, true, { CONTEXT_TEST_RESULTS_FILE: resultsFile });
+      const text = await readFile(resultsFile, "utf8");
+      const withoutDurations = JSON.stringify(JSON.parse(text), (key, value: unknown) => key === "durationMilliseconds" ? undefined : value);
+
+      Assert.areEqual(0, result.exitCode);
+      Assert.areEqual("[{\"packageName\":\"Sample\",\"filePath\":\"passing.test.js\",\"className\":\"PassingFixtureTests\",\"methodName\":\"passes\",\"outcome\":\"Passed\"}]",
+        withoutDurations);
+      Assert.isTrue(/"durationMilliseconds":[0-9.]+\}\]$/u.test(text), text);
+    }
+    finally {
+      await rm(rootDirectory, { recursive: true, force: true });
+      await rm(resultsDirectory, { recursive: true, force: true });
+    }
+  }
+
   private runEntryAsync(packageName: string, rootDirectory: string): Promise<EntryRun> {
     return this.runEntryArgumentsAsync([packageName, rootDirectory]);
   }
 
-  private runEntryArgumentsAsync(
-    arguments_: readonly string[], filters: string | null = "[]", temporaryDirectory?: string, coverage: boolean = true): Promise<EntryRun> {
+  private runEntryArgumentsAsync(arguments_: readonly string[], filters: string | null = "[]", temporaryDirectory?: string, coverage: boolean = true,
+    variables: Readonly<Record<string, string>> = {}): Promise<EntryRun> {
     return new Promise<EntryRun>((resolve, reject) => {
       const environment = { ...process.env };
+      delete environment["CONTEXT_TEST_TIMEOUT_MILLISECONDS"];
+      delete environment["CONTEXT_TEST_RESULTS_FILE"];
+      Object.assign(environment, variables);
       if (!coverage)
         delete environment["NODE_V8_COVERAGE"];
       if (!Object.isUndefined(temporaryDirectory))
@@ -173,11 +223,15 @@ export class TestRunEntryPointTests {
         { env: environment, shell: false });
 
       const errorOutput: string[] = [];
+      const output: string[] = [];
       child.stderr.on("data", (t: Buffer) => {
         errorOutput.push(t.toString());
       });
+      child.stdout.on("data", (t: Buffer) => {
+        output.push(t.toString());
+      });
       child.on("close", t => {
-        resolve(new EntryRun(t ?? -1, errorOutput.join(String.empty)));
+        resolve(new EntryRun(t ?? -1, errorOutput.join(String.empty), output.join(String.empty)));
       });
       child.on("error", reject);
     });

@@ -9,7 +9,9 @@
  * runs the complete suite through noldova.context.testing in a child process
  * measured by V8 coverage, and enforces complete production coverage. Each
  * test class's results print as soon as the class finishes; in a terminal, an
- * animated progress line shows until the totals print.
+ * animated progress line shows until the totals print. The slowest tests then
+ * print with their times, failing nothing: npm run test:timing is the timing
+ * check.
  *
  * @example
  * npm run test - runs the complete suite and the coverage gate.
@@ -22,27 +24,22 @@ import { join } from "node:path";
 
 import CommandFailedException from "./command-failed.exception.ts";
 import Config from "./config.ts";
-import PostgreSQLServer from "./postgresql-server.ts";
-import Script from "./script.ts";
+import SuiteScript from "./suite-script.ts";
 
-export class Test extends Script {
+export class Test extends SuiteScript {
   private static readonly BLANK_LINE: string = "";
   private static readonly COVERAGE_INCOMPLETE: string = "Production coverage is incomplete.";
   private static readonly COVERAGE_VARIABLE: string = "NODE_V8_COVERAGE";
   private static readonly ENABLED_VALUE: string = "1";
-  private static readonly FILTERS_VARIABLE: string = "CONTEXT_TEST_FILTERS";
   private static readonly FILTERED_COVERAGE_SKIPPED: string = "Coverage gate skipped for a filtered run.";
   private static readonly NODE_MODULES_DIRECTORY_NAME: string = "node_modules";
   private static readonly NO_TEST_PROJECTS: string = "No test projects were found.";
-  private static readonly POSTGRESQL_STARTED: string = "Started a PostgreSQL server for the data tests.";
   private static readonly OPTION_PREFIX: string = "--";
+  private static readonly RESULTS_FILE_PATH: string = `${Config.BUILD_FOLDER}/test-results.json`;
+  private static readonly SLOWEST_TEST_COUNT: number = 10;
   private static readonly SKIP_COVERAGE_DETAILS_OPTION: string = "--skip-coverage-details";
   private static readonly SKIP_TEST_DETAILS_OPTION: string = "--skip-test-details";
   private static readonly SKIP_TEST_DETAILS_VARIABLE: string = "CONTEXT_SKIP_TEST_DETAILS";
-  private static readonly SOURCE_MAPS_OPTION: string = "--enable-source-maps";
-  private static readonly TEST_ENTRY_PATH: string = "node_modules/@noldova/context.testing/services/execution/test-run-entry-point.js";
-  private static readonly TEST_PROJECT_SUFFIX: string = ".tests";
-  private static readonly TEST_TSCONFIG_PATH: string = "tests/tsconfig.json";
 
   public override async runAsync(): Promise<void> {
     const knownFlags = [Test.SKIP_TEST_DETAILS_OPTION, Test.SKIP_COVERAGE_DETAILS_OPTION];
@@ -64,25 +61,14 @@ export class Test extends Script {
       flags.add(argument);
     }
 
-    const testProjectArguments: string[] = [];
-
-    for (const packageInfo of Config.PACKAGES_INFO) {
-      const testTsconfigPath = `${Test.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Test.TEST_TSCONFIG_PATH}`;
-      if (!await this.pathExistsAsync(testTsconfigPath))
-        continue;
-
-      const testProjectName = `${packageInfo.name}${Test.TEST_PROJECT_SUFFIX}`;
-      const testBuildDirectory = `${Config.BUILD_FOLDER}/${testProjectName}`;
-
-      await this.runStepAsync(Test.compilingProject(testProjectName), async () => {
-        await this.removeDirectoryAsync(testBuildDirectory);
-        await this.executeTypeScriptCompilerAsync([Test.TYPESCRIPT_PROJECT_OPTION, testTsconfigPath]);
+    const projects = await this.listTestProjectsAsync();
+    for (const packageInfo of projects)
+      await this.runStepAsync(Test.compilingProject(Test.testProjectName(packageInfo)), async () => {
+        await this.removeDirectoryAsync(Test.testBuildDirectory(packageInfo));
+        await this.executeTypeScriptCompilerAsync([Test.TYPESCRIPT_PROJECT_OPTION, Test.testTsconfigPath(packageInfo)]);
       });
 
-      testProjectArguments.push(packageInfo.name, testBuildDirectory);
-    }
-
-    if (testProjectArguments.length === 0) {
+    if (projects.length === 0) {
       await this.writeLogAsync(Test.NO_TEST_PROJECTS);
       process.exitCode = 1;
       return;
@@ -92,6 +78,8 @@ export class Test extends Script {
 
     const environment: Record<string, string> = {};
     environment[Test.FILTERS_VARIABLE] = JSON.stringify(filters);
+    environment[Test.RESULTS_FILE_VARIABLE] = Test.RESULTS_FILE_PATH;
+    await this.removeDirectoryAsync(Test.RESULTS_FILE_PATH);
 
     if (flags.has(Test.SKIP_TEST_DETAILS_OPTION))
       environment[Test.SKIP_TEST_DETAILS_VARIABLE] = Test.ENABLED_VALUE;
@@ -102,19 +90,8 @@ export class Test extends Script {
       environment[Test.COVERAGE_VARIABLE] = Config.COVERAGE_FOLDER;
     }
 
-    const server = process.env[PostgreSQLServer.URL_VARIABLE] === undefined ? await PostgreSQLServer.startAsync() : null;
     try {
-      if (server !== null) {
-        environment[PostgreSQLServer.URL_VARIABLE] = server.url;
-        await this.writeLogAsync(Test.POSTGRESQL_STARTED);
-      }
-
-      await this.executeProcessAsync(
-        process.execPath,
-        [Test.SOURCE_MAPS_OPTION, Test.TEST_ENTRY_PATH, ...testProjectArguments],
-        process.cwd(),
-        false,
-        environment);
+      await this.runSuiteAsync(projects, environment);
     }
     catch (error) {
       if (!(error instanceof CommandFailedException))
@@ -122,9 +99,8 @@ export class Test extends Script {
 
       process.exitCode = 1;
     }
-    finally {
-      await server?.[Symbol.asyncDispose]();
-    }
+
+    await this.writeSlowestTestsAsync();
 
     if (filters.length > 0) {
       await this.writeLogAsync(Test.FILTERED_COVERAGE_SKIPPED);
@@ -157,6 +133,17 @@ export class Test extends Script {
       await this.writeLogAsync(Test.COVERAGE_INCOMPLETE);
       process.exitCode = 1;
     }
+  }
+
+  private async writeSlowestTestsAsync(): Promise<void> {
+    if (!await this.pathExistsAsync(Test.RESULTS_FILE_PATH))
+      return;
+
+    const testing = await import("@noldova/context.testing");
+    const records = testing.TestTimeRecord.parseAll(await this.readFileAsync(Test.RESULTS_FILE_PATH));
+    await this.writeLogAsync(Test.BLANK_LINE);
+    for (const line of testing.TestTimeRecord.formatSlowest(records, Test.SLOWEST_TEST_COUNT))
+      await this.writeLogAsync(line);
   }
 
   private static compilingProject(projectName: string): string {

@@ -18,7 +18,7 @@ export class TestTimeoutExceptionTests {
 
   @TestMethod
   public usesTheCanonicalMessage(): void {
-    Assert.areEqual("The test did not settle within the allotted timeout.", new TestTimeoutException(250).message);
+    Assert.areEqual("The test did not settle within its limit of 250 milliseconds.", new TestTimeoutException(250).message);
   }
 
   @TestMethod

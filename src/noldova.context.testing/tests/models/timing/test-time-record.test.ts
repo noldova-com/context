@@ -1,0 +1,86 @@
+/**
+ * @license
+ * Copyright (c) Noldova.
+ *
+ * This source code is licensed under the license found in the
+ * LICENSE file in the root directory of this source tree.
+ */
+
+import {
+  Assert, TestClass, TestClassResult, TestData, TestingException, TestMethod, TestMethodResult, TestOutcome, TestRunResult, TestTimeRecord
+} from "@noldova/context.testing";
+
+@TestClass
+export class TestTimeRecordTests {
+  @TestMethod
+  public formatsTheSlowestTestsUnderAHeadingSlowestFirst(): void {
+    const records = [
+      new TestTimeRecord("Sample", "a.test.js", "ATests", "adds", undefined, TestOutcome.Passed, 12.4),
+      new TestTimeRecord("Sample", "b.test.js", "BTests", "reads", 2, TestOutcome.Failed, 5650),
+      new TestTimeRecord("Sample", "c.test.js", "CTests", "waits", undefined, TestOutcome.Passed, 40)
+    ];
+
+    Assert.areEqual(["Slowest tests:", "  5650 ms  Sample/b.test.js — BTests.reads[2]", "  40 ms  Sample/c.test.js — CTests.waits"].join("\n"),
+      TestTimeRecord.formatSlowest(records, 2).join("\n"));
+    Assert.areEqual(0, TestTimeRecord.formatSlowest([], 10).length);
+  }
+
+  @TestMethod
+  public namesTheTestWithItsPackageFileClassMethodAndRow(): void {
+    const record = new TestTimeRecord("Sample", "math/adds.test.js", "AddsTests", "adds", 2, TestOutcome.Passed, 4);
+
+    Assert.areEqual("Sample/math/adds.test.js", record.file);
+    Assert.areEqual("Sample/math/adds.test.js — AddsTests.adds[2]", record.test);
+    Assert.areEqual("Sample/math/adds.test.js — AddsTests.adds", new TestTimeRecord("Sample", "math/adds.test.js", "AddsTests", "adds", undefined,
+      TestOutcome.Passed, 4).test);
+  }
+
+  @TestMethod
+  public listsEachTestOfARunWithItsClassFile(): void {
+    const passed = new TestMethodResult("Sample", "AddsTests", "adds", undefined, [], TestOutcome.Passed, 3, undefined, undefined);
+    const skipped = new TestMethodResult("Sample", "AddsTests", "addsRows", 1, [1], TestOutcome.Skipped, 0, undefined, "Not yet.");
+    const records = TestTimeRecord.fromResult(new TestRunResult([new TestClassResult("Sample", "AddsTests", "adds.test.js", [passed, skipped])]));
+
+    Assert.areEqual("Sample/adds.test.js — AddsTests.adds:Passed:3,Sample/adds.test.js — AddsTests.addsRows[1]:Skipped:0",
+      records.map(t => `${t.test}:${t.outcome}:${t.durationMilliseconds}`).join());
+  }
+
+  @TestMethod
+  public readsBackWhatItWrites(): void {
+    const written = [
+      new TestTimeRecord("Sample", "adds.test.js", "AddsTests", "adds", undefined, TestOutcome.Failed, 12.5),
+      new TestTimeRecord("Sample", "adds.test.js", "AddsTests", "addsRows", 0, TestOutcome.Passed, 0)
+    ];
+
+    const read = TestTimeRecord.parseAll(TestTimeRecord.formatAll(written));
+
+    Assert.areEqual(TestTimeRecord.formatAll(written), TestTimeRecord.formatAll(read));
+    Assert.isUndefined(read[0]?.testDataIndex);
+    Assert.areEqual(0, read[1]?.testDataIndex);
+  }
+
+  @TestData("not json")
+  @TestData("{}")
+  @TestData("[null]")
+  @TestData("[{\"packageName\":\"Sample\",\"filePath\":\"a.test.js\",\"className\":\"ATests\",\"methodName\":\"adds\",\"outcome\":\"Passed\"}]")
+  @TestData("[{\"packageName\":\"Sample\",\"filePath\":\"a.test.js\",\"className\":\"ATests\",\"methodName\":\"adds\",\"outcome\":\"Passed\",\"durationMilliseconds\":-1}]")
+  @TestData("[{\"packageName\":\"Sample\",\"filePath\":\"a.test.js\",\"className\":\"ATests\",\"methodName\":\"adds\",\"outcome\":\"Won\",\"durationMilliseconds\":1}]")
+  @TestData("[{\"packageName\":\"Sample\",\"filePath\":\"a.test.js\",\"className\":\"ATests\",\"methodName\":\"adds\",\"testDataIndex\":1.5,\"outcome\":\"Passed\",\"durationMilliseconds\":1}]")
+  @TestData("[{\"packageName\":\"Sample\",\"filePath\":\"a.test.js\",\"className\":\"ATests\",\"methodName\":\"adds\",\"testDataIndex\":\"1\",\"outcome\":\"Passed\",\"durationMilliseconds\":1}]")
+  @TestData("[{\"packageName\":\"Sample\",\"filePath\":7,\"className\":\"ATests\",\"methodName\":\"adds\",\"outcome\":\"Passed\",\"durationMilliseconds\":1}]")
+  @TestMethod
+  public rejectsTextThatIsNotAnArrayOfRecords(text: string): void {
+    const failure = Assert.throws(() => TestTimeRecord.parseAll(text), TestingException);
+
+    Assert.areEqual("The test times must be a JSON array of results, each with its package, file, class and method names, an optional non-negative "
+      + "integer data row, an outcome, and a non-negative duration.", failure.message);
+  }
+
+  @TestMethod
+  public listsTheSlowestFirstWithoutChangingItsInput(): void {
+    const records = [1, 9, 4, 7].map(t => new TestTimeRecord("Sample", "a.test.js", "ATests", `m${t}`, undefined, TestOutcome.Passed, t));
+
+    Assert.areEqual("m9,m7", TestTimeRecord.slowest(records, 2).map(t => t.methodName).join());
+    Assert.areEqual("m1,m9,m4,m7", records.map(t => t.methodName).join());
+  }
+}
