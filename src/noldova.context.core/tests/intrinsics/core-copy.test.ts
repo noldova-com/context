@@ -106,7 +106,8 @@ export class CoreCopyTests {
   private static async runNpmAsync(values: readonly string[], directory: string): Promise<string> {
     const npmPath = process.env["npm_execpath"];
     Assert.isDefined(npmPath, "The suite runs through npm, which names its own path in npm_execpath.");
-    const { stdout } = await promisify(execFile)(process.execPath, [npmPath, ...values], { cwd: directory, windowsHide: true });
+    // npm turns on Node's compile cache, which writes into the run's temporary folder; the suite requires that folder left clean.
+    const { stdout } = await promisify(execFile)(process.execPath, [npmPath, ...values], { cwd: directory, env: { ...process.env, NODE_DISABLE_COMPILE_CACHE: "1" }, windowsHide: true });
 
     return stdout;
   }
