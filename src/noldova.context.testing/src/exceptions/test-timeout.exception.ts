@@ -16,7 +16,7 @@ export class TestTimeoutException extends TestingException {
   public readonly timeoutMilliseconds: number;
 
   public constructor(timeoutMilliseconds: number, options?: ExceptionOptions) {
-    super(Resources.testTimedOut, options);
+    super(Resources.testTimedOut(timeoutMilliseconds), options);
 
     ArgumentOutOfRangeException.throwIfNotPositiveInteger(timeoutMilliseconds, nameof<TestTimeoutException>(t => t.timeoutMilliseconds), Resources.timeoutInvalid);
     this.timeoutMilliseconds = timeoutMilliseconds;

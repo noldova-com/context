@@ -15,6 +15,7 @@
     "generate:typescript-expected-diagnostics": "node src/parsers/noldova.context.parsers.typescript/scripts/generate-expected-diagnostics.ts",
     "generate:typescript-known-failures": "node src/parsers/noldova.context.parsers.typescript/scripts/generate-known-failures.ts",
     "test": "node scripts/test.ts",
+    "test:timing": "node scripts/test-timing.ts",
     "vendor:regex": "node src/parsers/noldova.context.parsers.regex/scripts/vendor-regex.ts",
     "vendor:typescript": "node src/parsers/noldova.context.parsers.typescript/scripts/vendor-typescript.ts"
   },

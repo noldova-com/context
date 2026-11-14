@@ -9,9 +9,11 @@
 export class EntryRun {
   public readonly exitCode: number;
   public readonly errorOutput: string;
+  public readonly output: string;
 
-  public constructor(exitCode: number, errorOutput: string) {
+  public constructor(exitCode: number, errorOutput: string, output: string) {
     this.exitCode = exitCode;
     this.errorOutput = errorOutput;
+    this.output = output;
   }
 }

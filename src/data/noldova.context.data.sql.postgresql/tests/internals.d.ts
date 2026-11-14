@@ -528,11 +528,12 @@ declare module "@noldova/context.data.sql.postgresql/services/tls-options.reader
 
 declare module "@noldova/context.data.sql.postgresql/services/session-starter.js" {
   import type { BackendKey } from "@noldova/context.data.sql.postgresql/models/backend-key.js";
+  import type { ClientTimers } from "@noldova/context.data.sql.postgresql/models/client/client-timers.js";
   import type { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
   import type { StartedSession } from "@noldova/context.data.sql.postgresql/models/started-session.js";
 
   export class SessionStarter {
-    public constructor(options: ConnectionOptions, cancelTimeout?: number);
+    public constructor(options: ConnectionOptions, cancelTimeout?: number, timers?: ClientTimers);
     public startAsync(): Promise<StartedSession>;
     public cancelAsync(backend: BackendKey, signal: AbortSignal): Promise<void>;
     public stop(): void;
