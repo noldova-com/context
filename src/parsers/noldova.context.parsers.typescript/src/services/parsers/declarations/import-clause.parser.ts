@@ -9,6 +9,7 @@
 import type { Node } from "@noldova/context.parsers";
 
 import { TypeScriptImportClauseNode } from "../../../models/nodes/declarations/typescript-import-clause.node.js";
+import type { TypeScriptNamedImportsNode } from "../../../models/nodes/declarations/typescript-named-imports.node.js";
 import { TypeScriptNamespaceImportNode } from "../../../models/nodes/declarations/typescript-namespace-import.node.js";
 import { TypeScriptCommaNode } from "../../../models/nodes/delimiters/typescript-comma.node.js";
 import { TypeScriptMissingIdentifierNode } from "../../../models/nodes/identifiers/typescript-missing-identifier.node.js";
@@ -42,12 +43,12 @@ export class ImportClauseParser {
     return this.create(defaultNameNode, defaultNameNode, commaNode, namedBindingsNode, namedBindingsNode ?? defaultNameNode);
   }
 
-  private parseNamedBindings(): Node {
+  private parseNamedBindings(): TypeScriptNamedImportsNode | TypeScriptNamespaceImportNode {
     return this.typescriptParser.currentNode instanceof TypeScriptAsteriskNode ? this.parseNamespace() : this.namedBindingsParser.parseImports();
   }
 
-  private create(startNode: Node, defaultNameNode: Node | undefined, commaNode: TypeScriptCommaNode | undefined, namedBindingsNode: Node | undefined,
-    endNode: Node): TypeScriptImportClauseNode {
+  private create(startNode: Node, defaultNameNode: Node | undefined, commaNode: TypeScriptCommaNode | undefined,
+    namedBindingsNode: TypeScriptNamedImportsNode | TypeScriptNamespaceImportNode | undefined, endNode: Node): TypeScriptImportClauseNode {
     const span = this.typescriptParser.typescriptLexer.reader.createSpan(startNode.span, endNode.span);
     return new TypeScriptImportClauseNode(span, defaultNameNode, commaNode, namedBindingsNode, startNode.leadingTrivia, endNode.trailingTrivia);
   }
