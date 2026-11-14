@@ -43,42 +43,52 @@ export class ParameterListParser {
   }
 
   public parseConstructorParameters(): TypeScriptParameterListNode {
-    return this.parseList(false, this.typescriptParser.context.awaitFlags, true);
+    return this.parseList(this.typescriptParser.context.awaitFlags, true);
   }
 
-  private parseList(isParameterNameRequired: false, enclosingAwaitFlags: TypeScriptContextFlags, holdsParameterProperties?: boolean): TypeScriptParameterListNode;
-  private parseList(isParameterNameRequired: boolean, enclosingAwaitFlags: TypeScriptContextFlags): TypeScriptParameterListNode | undefined;
-  private parseList(isParameterNameRequired: boolean, enclosingAwaitFlags: TypeScriptContextFlags,
-    holdsParameterProperties: boolean = false): TypeScriptParameterListNode | undefined {
+  private parseList(enclosingAwaitFlags: TypeScriptContextFlags, holdsParameterProperties: boolean = false): TypeScriptParameterListNode {
     const typescriptParser = this.typescriptParser;
-    const parsedOpenParenthesisNode = typescriptParser.tryConsume(TypeScriptOpenParenthesisNode);
-    if (Object.isUndefined(parsedOpenParenthesisNode)) {
+    const openParenthesisNode = typescriptParser.tryConsume(TypeScriptOpenParenthesisNode);
+    if (Object.isUndefined(openParenthesisNode)) {
       typescriptParser.reportExpected(Resources.openParenthesis);
       return new TypeScriptParameterListNode(undefined, [], [], typescriptParser.currentNode.getTypeScriptMissingNodeSpan());
     }
 
     const parameterNodes: TypeScriptParameterNode[] = [];
     const commaNodes: TypeScriptCommaNode[] = [];
-    let endNode = this.tryParseParameters(parsedOpenParenthesisNode, parameterNodes, commaNodes, isParameterNameRequired, enclosingAwaitFlags,
-      holdsParameterProperties);
-    if (Object.isUndefined(endNode))
-      return undefined;
+    const endNode = this.readParameters(openParenthesisNode, parameterNodes, commaNodes, () => true, enclosingAwaitFlags, holdsParameterProperties)
+      .endNode;
+    return this.closeList(openParenthesisNode, parameterNodes, commaNodes, endNode);
+  }
 
+  private tryParseList(openParenthesisNode: TypeScriptOpenParenthesisNode, isParameterNameRequired: boolean,
+    enclosingAwaitFlags: TypeScriptContextFlags): TypeScriptParameterListNode | undefined {
+    this.typescriptParser.advance();
+    const parameterNodes: TypeScriptParameterNode[] = [];
+    const commaNodes: TypeScriptCommaNode[] = [];
+    const endNode = this.tryParseParameters(openParenthesisNode, parameterNodes, commaNodes, isParameterNameRequired, enclosingAwaitFlags);
+    return Object.isUndefined(endNode) ? undefined : this.closeList(openParenthesisNode, parameterNodes, commaNodes, endNode);
+  }
+
+  private closeList(openParenthesisNode: TypeScriptOpenParenthesisNode, parameterNodes: readonly TypeScriptParameterNode[],
+    commaNodes: readonly TypeScriptCommaNode[], parametersEndNode: Node): TypeScriptParameterListNode {
+    const typescriptParser = this.typescriptParser;
+    let endNode = parametersEndNode;
     const closeParenthesisNode = typescriptParser.tryConsume(TypeScriptCloseParenthesisNode);
     if (Object.isUndefined(closeParenthesisNode))
       typescriptParser.reportExpected(Resources.closeParenthesis);
     else
       endNode = closeParenthesisNode;
 
-    const span = typescriptParser.typescriptLexer.reader.createSpan(parsedOpenParenthesisNode.span, endNode.span);
+    const span = typescriptParser.typescriptLexer.reader.createSpan(openParenthesisNode.span, endNode.span);
 
     const resultNode = new TypeScriptParameterListNode(
-      parsedOpenParenthesisNode,
+      openParenthesisNode,
       parameterNodes,
       commaNodes,
       span,
       closeParenthesisNode,
-      parsedOpenParenthesisNode.leadingTrivia,
+      openParenthesisNode.leadingTrivia,
       endNode.trailingTrivia);
 
     return resultNode;
@@ -89,10 +99,9 @@ export class ParameterListParser {
   }
 
   public tryParseParameters(openNode: Node, parameterNodes: TypeScriptParameterNode[], commaNodes: TypeScriptCommaNode[],
-    isParameterNameRequired: boolean, enclosingAwaitFlags: TypeScriptContextFlags = this.typescriptParser.context.awaitFlags,
-    holdsParameterProperties: boolean = false): Node | undefined {
+    isParameterNameRequired: boolean, enclosingAwaitFlags: TypeScriptContextFlags = this.typescriptParser.context.awaitFlags): Node | undefined {
     const read = this.readParameters(openNode, parameterNodes, commaNodes,
-      () => !isParameterNameRequired || this.startsNamedParameter(enclosingAwaitFlags), enclosingAwaitFlags, holdsParameterProperties);
+      () => !isParameterNameRequired || this.startsNamedParameter(enclosingAwaitFlags), enclosingAwaitFlags, false);
     return read.isComplete ? read.endNode : undefined;
   }
 
@@ -220,17 +229,25 @@ export class ParameterListParser {
     const enclosingAwaitFlags = context.awaitFlags;
     context.contextFlags = previousFlags & ~(TypeScriptContextFlags.Yield | enclosingAwaitFlags);
     try {
-      return this.parseList(false, enclosingAwaitFlags);
+      return this.parseList(enclosingAwaitFlags);
     }
     finally {
       context.contextFlags = previousFlags;
     }
   }
 
-  public parseFunctionParameters(flags?: TypeScriptContextFlags, isParameterNameRequired?: false, isNewTargetScope?: boolean): TypeScriptParameterListNode;
-  public parseFunctionParameters(flags: TypeScriptContextFlags, isParameterNameRequired: boolean, isNewTargetScope: boolean): TypeScriptParameterListNode | undefined;
-  public parseFunctionParameters(flags: TypeScriptContextFlags = TypeScriptContextFlags.None, isParameterNameRequired: boolean = false,
-    isNewTargetScope: boolean = false): TypeScriptParameterListNode | undefined {
+  public parseFunctionParameters(flags: TypeScriptContextFlags = TypeScriptContextFlags.None, isNewTargetScope: boolean = false): TypeScriptParameterListNode {
+    return this.inFunctionScope(flags, isNewTargetScope, enclosingAwaitFlags => this.parseList(enclosingAwaitFlags));
+  }
+
+  public tryParseFunctionParameters(openParenthesisNode: TypeScriptOpenParenthesisNode, flags: TypeScriptContextFlags, isParameterNameRequired: boolean,
+    isNewTargetScope: boolean): TypeScriptParameterListNode | undefined {
+    return this.inFunctionScope(flags, isNewTargetScope,
+      enclosingAwaitFlags => this.tryParseList(openParenthesisNode, isParameterNameRequired, enclosingAwaitFlags));
+  }
+
+  private inFunctionScope<TResult>(flags: TypeScriptContextFlags, isNewTargetScope: boolean,
+    parse: (enclosingAwaitFlags: TypeScriptContextFlags) => TResult): TResult {
     const context = this.typescriptParser.context;
     const previousFlags = context.contextFlags;
     const previousFunctionScope = context.isFunctionScope;
@@ -242,7 +259,7 @@ export class ParameterListParser {
     context.isNewTargetScope = isNewTargetScope;
     context.isClassStaticBlock = false;
     try {
-      return this.parseList(isParameterNameRequired, enclosingAwaitFlags);
+      return parse(enclosingAwaitFlags);
     }
     finally {
       context.contextFlags = previousFlags;

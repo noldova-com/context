@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type { Node, SourceSpan } from "@noldova/context.parsers";
+
 import { TypeScriptDiagnosticTemplates } from "../../../models/diagnostics/typescript-diagnostic-templates.js";
 import { TypeScriptExportSpecifierNode } from "../../../models/nodes/declarations/typescript-export-specifier.node.js";
 import type { TypeScriptImportExportSpecifierNode } from "../../../models/nodes/declarations/typescript-import-export-specifier.node.js";
@@ -28,16 +30,23 @@ export class ImportExportSpecifierParser {
   }
 
   public parseImport(): TypeScriptImportSpecifierNode {
-    return this.parse(true);
+    const parser = this.typescriptParser;
+    const specifierNode = this.parse(TypeScriptImportSpecifierNode);
+    const localNameNode = specifierNode.aliasNode ?? specifierNode.nameNode;
+    if ((localNameNode instanceof TypeScriptKeywordNode && !localNameNode.isTypeScriptBindingIdentifier())
+      || localNameNode instanceof TypeScriptStringLiteralNode)
+      parser.context.diagnosticCollector.addTypeScriptParseDiagnostic(TypeScriptDiagnosticTemplates.TS1003, localNameNode.span);
+    parser.readName(localNameNode);
+    return specifierNode;
   }
 
   public parseExport(): TypeScriptExportSpecifierNode {
-    return this.parse(false);
+    return this.parse(TypeScriptExportSpecifierNode);
   }
 
-  private parse(isImport: true): TypeScriptImportSpecifierNode;
-  private parse(isImport: false): TypeScriptExportSpecifierNode;
-  private parse(isImport: boolean): TypeScriptImportExportSpecifierNode {
+  private parse<TNode extends TypeScriptImportExportSpecifierNode>(
+    nodeType: new (span: SourceSpan, nameNode: Node, asKeywordNode: TypeScriptAsKeywordNode | undefined, aliasNode: Node | undefined,
+      typeKeywordNode: TypeScriptTypeKeywordNode | undefined, leadingTrivia: Node | undefined, trailingTrivia: Node | undefined) => TNode): TNode {
     const parser = this.typescriptParser;
     const startNode = parser.currentNode;
     const typeKeywordNode = this.isTypeOnly() ? parser.tryConsume(TypeScriptTypeKeywordNode) : undefined;
@@ -45,17 +54,9 @@ export class ImportExportSpecifierParser {
     const asKeywordNode = parser.tryConsume(TypeScriptAsKeywordNode);
     const aliasNode = Object.isUndefined(asKeywordNode) ? undefined
       : this.nameParser.parseIdentifierOrStringName() ?? new TypeScriptMissingIdentifierNode(parser.currentNode.getTypeScriptMissingNodeSpan());
-    const localNameNode = aliasNode ?? nameNode;
-    if (isImport && ((localNameNode instanceof TypeScriptKeywordNode && !localNameNode.isTypeScriptBindingIdentifier())
-      || localNameNode instanceof TypeScriptStringLiteralNode))
-      parser.context.diagnosticCollector.addTypeScriptParseDiagnostic(TypeScriptDiagnosticTemplates.TS1003, localNameNode.span);
-    if (isImport)
-      parser.readName(localNameNode);
-    const endNode = localNameNode;
+    const endNode = aliasNode ?? nameNode;
     const span = parser.typescriptLexer.reader.createSpan(startNode.span, endNode.span);
-    return isImport
-      ? new TypeScriptImportSpecifierNode(span, nameNode, asKeywordNode, aliasNode, typeKeywordNode, startNode.leadingTrivia, endNode.trailingTrivia)
-      : new TypeScriptExportSpecifierNode(span, nameNode, asKeywordNode, aliasNode, typeKeywordNode, startNode.leadingTrivia, endNode.trailingTrivia);
+    return new nodeType(span, nameNode, asKeywordNode, aliasNode, typeKeywordNode, startNode.leadingTrivia, endNode.trailingTrivia);
   }
 
   private isTypeOnly(): boolean {
