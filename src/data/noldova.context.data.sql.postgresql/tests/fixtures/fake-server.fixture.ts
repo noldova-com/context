@@ -26,6 +26,7 @@ export class FakePeer {
   public client: X509Certificate | null = null;
   private buffer: Buffer = Buffer.alloc(0);
   private started: boolean = false;
+  private isIgnoring: boolean = false;
   private readonly server: FakeServer;
 
   public constructor(socket: Socket, server: FakeServer) {
@@ -58,6 +59,11 @@ export class FakePeer {
   }
 
   private readonly data = (chunk: Buffer): void => {
+    if (this.isIgnoring) {
+      this.server.onIgnoredData(this);
+      return;
+    }
+
     this.buffer = Buffer.concat([this.buffer, chunk]);
     for (let message = this.take(); !Object.isNull(message); message = this.take())
       if (this.handle(message))
@@ -103,6 +109,8 @@ export class FakePeer {
 
   private negotiate(): boolean {
     const answer = this.server.ssl;
+    this.isIgnoring = answer === "silent" || answer === "ignore";
+    this.server.onNegotiate(this);
     if (answer === "silent")
       return true;
     if (answer === "refuse") {
@@ -156,6 +164,8 @@ export class FakeServer {
   public onStartup: (peer: FakePeer) => void = peer => peer.ready();
   public onMessage: (peer: FakePeer, type: string, body: Buffer) => void = () => undefined;
   public onCancel: (peer: FakePeer) => void = peer => peer.socket.end();
+  public onNegotiate: (peer: FakePeer) => void = () => undefined;
+  public onIgnoredData: (peer: FakePeer) => void = () => undefined;
   private readonly server: Server;
 
   private constructor(certificate: TestCertificate | null, authority: TestCertificate | null) {

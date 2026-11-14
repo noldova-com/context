@@ -678,6 +678,261 @@ export declare class TestSelection {
 }
 
 /**
+ * One test's identity, outcome and duration, as a run writes it to the file
+ * `CONTEXT_TEST_RESULTS_FILE` names, so a suite's scripts can read its times.
+ *
+ * @example
+ * ```ts
+ * import { Assert, TestOutcome, TestTimeRecord } from "@noldova/context.testing";
+ *
+ * const [record] = TestTimeRecord.parseAll('[{"packageName":"Sample","filePath":"a.test.js","className":"ATests","methodName":"adds","outcome":"Passed","durationMilliseconds":4}]');
+ * Assert.areEqual("Sample/a.test.js — ATests.adds", record?.test);
+ * Assert.areEqual(TestOutcome.Passed, record?.outcome);
+ * ```
+ */
+export declare class TestTimeRecord {
+  /**
+   * The test's package.
+   */
+  public readonly packageName: string;
+
+  /**
+   * The test's compiled file, relative to its package.
+   */
+  public readonly filePath: string;
+
+  /**
+   * The test's class.
+   */
+  public readonly className: string;
+
+  /**
+   * The test's method.
+   */
+  public readonly methodName: string;
+
+  /**
+   * The data row's index, or undefined for a method without data rows.
+   */
+  public readonly testDataIndex: number | undefined;
+
+  /**
+   * Whether the test passed, failed, or was skipped.
+   */
+  public readonly outcome: TestOutcome;
+
+  /**
+   * How long the test ran, in milliseconds.
+   */
+  public readonly durationMilliseconds: number;
+
+  /**
+   * The test's file with its package, as `package/file`.
+   */
+  public get file(): string;
+
+  /**
+   * The test's full identity, as `package/file — Class.method`, with `[row]` for a data row.
+   */
+  public get test(): string;
+
+  /**
+   * Creates the record; the values are kept as given.
+   *
+   * @param packageName The test's package.
+   * @param filePath The test's compiled file, relative to its package.
+   * @param className The test's class.
+   * @param methodName The test's method.
+   * @param testDataIndex The data row's index, or undefined.
+   * @param outcome The test's outcome.
+   * @param durationMilliseconds How long the test ran, in milliseconds.
+   *
+   * See {@link TestTimeRecord} for usage examples.
+   */
+  public constructor(packageName: string, filePath: string, className: string, methodName: string, testDataIndex: number | undefined,
+    outcome: TestOutcome, durationMilliseconds: number);
+
+  /**
+   * Lists one record per test of a run's result, in the result's order.
+   *
+   * @param result The run's result.
+   * @returns The records.
+   */
+  public static fromResult(result: TestRunResult): TestTimeRecord[];
+
+  /**
+   * Reads the records a run wrote.
+   *
+   * @param text The JSON array the run wrote.
+   * @returns The records, in the file's order.
+   * @throws TestingException if the text is not a JSON array of records, each with its names, an optional non-negative integer data row, a known
+   *   outcome, and a non-negative finite duration.
+   */
+  public static parseAll(text: string): TestTimeRecord[];
+
+  /**
+   * Lists the slowest records, slowest first.
+   *
+   * @param records The records to choose from; the array is not changed.
+   * @param count How many to list at most.
+   * @returns At most `count` records.
+   */
+  public static slowest(records: readonly TestTimeRecord[], count: number): TestTimeRecord[];
+
+  /**
+   * Formats the slowest records for a run's output: the heading `Slowest tests:`, then one line per record, slowest first, as
+   * `  <milliseconds> ms  <test>`.
+   *
+   * @param records The records to choose from; the array is not changed.
+   * @param count How many to list at most.
+   * @returns The lines, or none when there are no records.
+   */
+  public static formatSlowest(records: readonly TestTimeRecord[], count: number): string[];
+
+  /**
+   * Writes records as the JSON array {@link TestTimeRecord.parseAll} reads.
+   *
+   * @param records The records.
+   * @returns The JSON text.
+   */
+  public static formatAll(records: readonly TestTimeRecord[]): string;
+}
+
+/**
+ * A test file's time over several runs, against its limit.
+ *
+ * @example
+ * ```ts
+ * import { Assert, TestFileTiming } from "@noldova/context.testing";
+ *
+ * const timing = new TestFileTiming("Sample/a.test.js", 1300, 1200, 1200, false);
+ * Assert.isTrue(timing.isOver);
+ * Assert.areEqual("Over: Sample/a.test.js, median 1300 ms, limit 1200 ms.", timing.format());
+ * ```
+ */
+export declare class TestFileTiming {
+  /**
+   * The file with its package, as `package/file`.
+   */
+  public readonly file: string;
+
+  /**
+   * The median of the file's time over the runs, or undefined when no run ran it.
+   */
+  public readonly medianMilliseconds: number | undefined;
+
+  /**
+   * The time the file may take, margin included.
+   */
+  public readonly limitMilliseconds: number;
+
+  /**
+   * The time an unlisted file may take, margin included.
+   */
+  public readonly budgetLimitMilliseconds: number;
+
+  /**
+   * True when the suite lists the file with a time of its own.
+   */
+  public readonly isListed: boolean;
+
+  /**
+   * True when no run ran the file or its median exceeds its limit.
+   */
+  public readonly isOver: boolean;
+
+  /**
+   * True when the suite lists the file but its median is within the time an unlisted file may take, so the list should drop it.
+   */
+  public readonly isStale: boolean;
+
+  /**
+   * Creates the timing and decides whether it is over its limit.
+   *
+   * @param file The file with its package.
+   * @param medianMilliseconds The file's median time, or undefined when no run ran it.
+   * @param limitMilliseconds The time the file may take, margin included.
+   * @param budgetLimitMilliseconds The time an unlisted file may take, margin included.
+   * @param isListed Whether the suite lists the file with a time of its own.
+   *
+   * See {@link TestFileTiming} for usage examples.
+   */
+  public constructor(file: string, medianMilliseconds: number | undefined, limitMilliseconds: number, budgetLimitMilliseconds: number, isListed: boolean);
+
+  /**
+   * Formats the timing for the timing check's output, as `Over:`, `Stale:` or `Within:`, then the file, its median, and its limit or, for a
+   * stale file, the time an unlisted file may take.
+   *
+   * @returns The line.
+   */
+  public format(): string;
+}
+
+/**
+ * Judges test files by their time over several runs, for a timing check kept apart from the suite's pass condition: a run's time for a
+ * file is the sum of its tests' durations, a file's time is the median of its runs, and its limit is the budget, or the time the suite
+ * lists for it, plus the margin.
+ *
+ * @example
+ * ```ts
+ * import { Assert, TestOutcome, TestTimeRecord, TestTimingCheck } from "@noldova/context.testing";
+ *
+ * const run = (milliseconds: number): TestTimeRecord[] => [new TestTimeRecord("Sample", "a.test.js", "ATests", "adds", undefined, TestOutcome.Passed, milliseconds)];
+ * const [timing] = new TestTimingCheck(1000, 0.2, new Map()).judge([run(900), run(1500), run(1100)]);
+ * Assert.areEqual(1100, timing?.medianMilliseconds);
+ * Assert.isFalse(timing?.isOver ?? true);
+ * ```
+ */
+export declare class TestTimingCheck {
+  /**
+   * Creates the check.
+   *
+   * @param budgetMilliseconds The time an unlisted file may take, before the margin.
+   * @param margin The fraction a file's limit allows beyond its time, such as 0.2 for 20%.
+   * @param listed The files the suite lists with a time of their own, by `package/file`.
+   * @throws ArgumentOutOfRangeException if the budget is not a positive finite number or the margin is negative or not finite.
+   *
+   * See {@link TestTimingCheck} for usage examples.
+   */
+  public constructor(budgetMilliseconds: number, margin: number, listed: ReadonlyMap<string, number>);
+
+  /**
+   * The median of the values: the middle one, or the mean of the two middle ones.
+   *
+   * @param values The values; the array is not changed.
+   * @returns The median, or undefined for no values.
+   */
+  public static median(values: readonly number[]): number | undefined;
+
+  /**
+   * Reads the files a suite lists as slower than the budget from a Markdown document such as its README: the table rows, as
+   * ``| `package/file` | 6900 ms |``, after the line `Test files slower than the timing check's budget:`, up to the first line that is
+   * neither a row nor blank. A row of another shape, such as the table's header, is skipped.
+   *
+   * @param markdown The document's text.
+   * @returns Each listed file's time in milliseconds, by `package/file`; none when the heading is missing.
+   */
+  public static readListed(markdown: string): Map<string, number>;
+
+  /**
+   * Formats the timing check's summary of the judged files.
+   *
+   * @param timings The files {@link TestTimingCheck.judge} judged.
+   * @param runs How many runs they were judged over.
+   * @returns The line, with the counts of files over their limit and of listed files within the budget.
+   */
+  public static formatSummary(timings: readonly TestFileTiming[], runs: number): string;
+
+  /**
+   * Judges every file the runs ran or the suite lists, sorted by file.
+   *
+   * @param runs Each run's records.
+   * @returns One timing per file; a listed file that no run ran is over its limit.
+   */
+  public judge(runs: readonly (readonly TestTimeRecord[])[]): TestFileTiming[];
+}
+
+/**
  * The reconciled counts of a run: what passed, failed, and was skipped, and how long the tests took.
  *
  * @example

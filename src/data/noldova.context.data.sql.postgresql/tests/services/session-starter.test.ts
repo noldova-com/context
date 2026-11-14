@@ -27,6 +27,7 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { BackendMessages as M } from "../fixtures/backend-messages.fixture.js";
 import { type FakePeer, FakeServer } from "../fixtures/fake-server.fixture.js";
+import { FakeTimers } from "../fixtures/fake-timers.fixture.js";
 import { PostgreSQLServerFixture } from "../fixtures/postgresql-server.fixture.js";
 import { Released } from "../fixtures/released.fixture.js";
 import { ScramServer } from "../fixtures/scram-server.fixture.js";
@@ -107,10 +108,20 @@ export class SessionStarterTests {
   public async timesOutAServerThatNeverAnswersAsync(): Promise<void> {
     const server = await FakeServer.startAsync();
     server.ssl = "silent";
-    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Prefer, ChannelBinding.Prefer, "", 0.01));
+    const timers = new FakeTimers();
+    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Prefer, ChannelBinding.Prefer, "", 60), 0, timers);
+    let asked = Promise.withResolvers<void>();
+    server.onNegotiate = () => asked.resolve();
 
-    const error = await Assert.throwsAsync(() => starter.startAsync(), DataException);
-    const cancel = await Assert.throwsAsync(() => starter.cancelAsync(new BackendKey(1, 2), new AbortController().signal), DataException);
+    const starting = Assert.throwsAsync(() => starter.startAsync(), DataException);
+    await asked.promise;
+    timers.advance(60_000);
+    const error = await starting;
+    asked = Promise.withResolvers<void>();
+    const cancelling = Assert.throwsAsync(() => starter.cancelAsync(new BackendKey(1, 2), new AbortController().signal), DataException);
+    await asked.promise;
+    timers.advance(60_000);
+    const cancel = await cancelling;
 
     Assert.areEqual("The connection to the PostgreSQL server timed out.", error.message);
     Assert.isInstanceOf(error.cause, Error);
@@ -121,10 +132,15 @@ export class SessionStarterTests {
   @TestMethod
   public async treatsACancelTheServerKeepsAsSentAsync(): Promise<void> {
     const server = await FakeServer.startAsync();
-    server.onCancel = () => undefined;
-    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Prefer, ChannelBinding.Prefer, "", 0), 0.01);
+    const kept = Promise.withResolvers<void>();
+    server.onCancel = () => kept.resolve();
+    const timers = new FakeTimers();
+    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Prefer, ChannelBinding.Prefer, "", 0), 60, timers);
 
-    await starter.cancelAsync(new BackendKey(5, 6), new AbortController().signal);
+    const cancelling = starter.cancelAsync(new BackendKey(5, 6), new AbortController().signal);
+    await kept.promise;
+    timers.advance(60_000);
+    await cancelling;
 
     Assert.areEqual("5:6", server.cancels.join(","));
     await SessionStarterTests.closeAsync(server);
@@ -309,9 +325,15 @@ export class SessionStarterTests {
   public async timesOutATlsHandshakeTheServerNeverAnswersAsync(): Promise<void> {
     const server = await FakeServer.startAsync();
     server.ssl = "ignore";
+    const shaking = Promise.withResolvers<void>();
+    server.onIgnoredData = () => shaking.resolve();
+    const timers = new FakeTimers();
 
-    const error = await Assert.throwsAsync(
-      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Require, ChannelBinding.Prefer, "", 0.05)).startAsync(), DataException);
+    const starting = Assert.throwsAsync(
+      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Require, ChannelBinding.Prefer, "", 60), 0, timers).startAsync(), DataException);
+    await shaking.promise;
+    timers.advance(60_000);
+    const error = await starting;
 
     Assert.areEqual("The connection to the PostgreSQL server timed out.", error.message);
     await SessionStarterTests.closeAsync(server);

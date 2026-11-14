@@ -70,6 +70,21 @@ export class Resources {
   public static readonly defaultTimeoutMilliseconds: number = 30_000;
   public static readonly filtersVariable: string = "CONTEXT_TEST_FILTERS";
   public static readonly skipTestDetailsVariable: string = "CONTEXT_SKIP_TEST_DETAILS";
+  public static readonly timeoutVariable: string = "CONTEXT_TEST_TIMEOUT_MILLISECONDS";
+  public static readonly resultsFileVariable: string = "CONTEXT_TEST_RESULTS_FILE";
+  public static readonly timeoutVariablePattern: RegExp = /^[1-9][0-9]*$/u;
+  public static readonly testTimeFields: readonly string[] = ["packageName", "filePath", "className", "methodName", "testDataIndex", "outcome", "durationMilliseconds"];
+  public static readonly testTimesInvalid: string = "The test times must be a JSON array of results, each with its package, file, class and method names, an optional non-negative integer data row, an outcome, and a non-negative duration.";
+  public static readonly budgetMillisecondsParameter: string = "budgetMilliseconds";
+  public static readonly budgetInvalid: string = "The time budget must be a positive finite number of milliseconds.";
+  public static readonly marginParameter: string = "margin";
+  public static readonly marginInvalid: string = "The margin must be a non-negative finite fraction.";
+  public static readonly slowerFilesHeading: string = "Test files slower than the timing check's budget:";
+  public static readonly slowerFileRowPattern: RegExp = /^\| `([^`]+)` \| ([0-9]+) ms \|/u;
+  public static readonly tableRowPrefix: string = "|";
+  public static readonly lineEndPattern: RegExp = /\r?\n/u;
+  public static readonly slowestTestsHeading: string = "Slowest tests:";
+  public static readonly notRun: string = "not run";
   public static readonly coverageVariable: string = "NODE_V8_COVERAGE";
   public static readonly coverageProfilePattern: RegExp = /^coverage-(\d+)-\d+-(\d+)\.json$/u;
   public static readonly threadListPattern: RegExp = /^threads-(\d+)-[0-9a-f-]+\.txt$/u;
@@ -102,7 +117,6 @@ export class Resources {
   public static readonly expectedThrow: string = "Expected the action to throw.";
   public static readonly expectedThrowType: string = "Expected the action to throw the specified exception type.";
   public static readonly expectedNoThrow: string = "Expected the action not to throw.";
-  public static readonly testTimedOut: string = "The test did not settle within the allotted timeout.";
   public static readonly durationInvalid: string = "The duration must be a non-negative finite number of milliseconds.";
   public static readonly testCountInvalid: string = "The test count must be a non-negative integer.";
   public static readonly selectedCountInvalid: string = "The selected count cannot exceed the discovered count.";
@@ -213,6 +227,34 @@ export class Resources {
   public static testWorkerDiscoveryMismatch(classCount: number, methodCount: number, otherClassCount: number, otherMethodCount: number): string {
     return `The test workers discovered different tests: ${classCount} classes and ${methodCount} tests, then ${otherClassCount} classes and ` +
       `${otherMethodCount} tests.`;
+  }
+
+  public static testTimedOut(timeoutMilliseconds: number): string {
+    return `The test did not settle within its limit of ${timeoutMilliseconds} milliseconds.`;
+  }
+
+  public static slowestTest(durationMilliseconds: number, test: string): string {
+    return `  ${Math.round(durationMilliseconds)} ms  ${test}`;
+  }
+
+  public static fileTimingOver(file: string, median: string, limitMilliseconds: number): string {
+    return `Over: ${file}, median ${median}, limit ${Math.round(limitMilliseconds)} ms.`;
+  }
+
+  public static fileTimingStale(file: string, median: string, budgetLimitMilliseconds: number): string {
+    return `Stale: ${file}, median ${median}, within the ${Math.round(budgetLimitMilliseconds)} ms an unlisted file may take; drop it from the list.`;
+  }
+
+  public static fileTimingWithin(file: string, median: string, limitMilliseconds: number): string {
+    return `Within: ${file}, median ${median}, limit ${Math.round(limitMilliseconds)} ms.`;
+  }
+
+  public static timingSummary(files: number, runs: number, over: number, stale: number): string {
+    return `Timed ${files} test files over ${runs} runs; ${over} over their limit, ${stale} listed but within the budget.`;
+  }
+
+  public static timeoutVariableInvalid(text: string): string {
+    return `${Resources.timeoutVariable} must be a positive integer of milliseconds within the timer limit, not "${text}".`;
   }
 
   public static testWorkerStalled(limitMilliseconds: number): string {

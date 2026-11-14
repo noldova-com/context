@@ -93,8 +93,8 @@ npm test
 It writes `Building "<package>"...` for each and ends the line with ` Done.` or ` Failed.`.
 The build writes the checkout's head commit into every package's `package.json` as `gitHead`, so each published version names the commit it was built from; it fails before building when git can't read the commit.
 `npm run build --silent -- --list-copies` builds nothing and prints each file the build copies into a package, one per line, with tabs between its source, the package's name and its path inside the package, and then `end of copies`.
-`npm test` runs the whole suite, including the vendored conformance cases.
-Both entry points live in `scripts/`.
+`npm test` runs the whole suite, including the vendored conformance cases, and then prints its ten slowest tests with their times, which fail nothing; `npm run test:timing`, after `npm test`, is the timing check the Checks section describes.
+The entry points live in `scripts/`.
 Two options shorten its output, as the CI run uses them:
 
 ```bash
@@ -126,10 +126,33 @@ const result = await new ParallelTestRunner(30_000).runAsync([new TestProject("S
 
 Every pull request into `main` must pass both checks before it merges.
 
-Two test files wait on a real clock, because the wait is what they test; every other test waits on events or a fake clock:
+Four test files wait on a real clock, because the wait is what they test; every other test waits on events or a fake clock:
 
 - `src/data/noldova.context.data.sql.postgresql/tests/models/client/postgresql-pool.server.test.ts`: its tests wait out a real 0.5 s query timeout against a 30 s `pg_sleep`, end the pool with real 0.01 s and 0.05 s deadlines, and run three 0.01 s `pg_sleep` queries.
 - `src/data/noldova.context.data.sql.postgresql/tests/models/client/client-timers.test.ts`: real 1 ms timers, since `ClientTimers` is what it tests.
+- `src/noldova.context.testing/tests/services/timing/system-clock.test.ts`: real 0 ms timers, since `SystemClock` is what it tests.
+- `src/noldova.context.testing/tests/services/execution/test-run-entry-point.test.ts`: one run of a test that never settles waits out a real 100 ms limit, since the run's own limit is what it tests.
+
+The suite has one hang limit, 60 seconds, which `scripts/suite-script.ts` sets for every run of it; no test carries a limit of its own.
+It bounds a hang and is never what a test checks: a test that reaches it fails under its own name with the limit it waited for, and is a bug to fix, never a reason to raise the limit.
+The limit is at least three times the slowest test on any target, as each run prints its slowest tests.
+The figure comes from this change's own runs, before main's runs printed slowest tests: over its three "Build and test" runs on the six targets, the slowest test took 15.2 s, `ParameterListParserTests.readsTheFirstOperandOfALongChainInASignatureInitializer[1]` on macOS x64 in one run, where the same test took under 5 s in the other two and no test took over 6.6 s; on the other targets no test took over 4.3 s.
+60 seconds is 3.9 times the highest time seen; main's runs after the merge are read again to confirm it.
+
+`npm run test:timing` is the timing check, apart from `npm test` and the checks below since its pass condition is a time: it runs the built suite three times without coverage, takes each test file's median time, the sum of its tests' durations, and fails a file over 2 seconds, or a listed file over the time the list gives it, each with a margin of 50%, since a busy machine slows every file and the median of three runs drops one slow run but not a slower machine.
+It also names, as stale, a listed file whose median is within the 2 seconds, plus the margin, that an unlisted file may take, so the list drops it; a stale file fails nothing.
+
+Test files slower than the timing check's budget:
+
+| File | Time | Why |
+|---|---|---|
+| `noldova.context.parsers.typescript/conformance/conformance-cases.test.js` | 14000 ms | It runs every vendored TypeScript conformance case. |
+| `noldova.context.parsers.typescript/services/typescript-syntax.parser.test.js` | 6900 ms | Its long-chain tests parse inputs large enough to show the parser's work stays linear. |
+| `noldova.context.testing/services/execution/test-run-entry-point.test.js` | 5000 ms | Each of its tests starts a whole run in a child process. |
+| `noldova.context.data.sql.postgresql/models/client/postgresql-pool.server.test.js` | 4000 ms | It runs queries against a real PostgreSQL server and waits out its real timeouts. |
+| `noldova.context.parsers.typescript/services/parsers/declarations/parameter-list.parser.test.js` | 3500 ms | Its long-chain tests parse signature initializers large enough to show the work stays linear. |
+
+Each time is the file's slowest median over three runs on a Linux, a Windows and a macOS test machine, rounded up to 100 ms.
 
 | Check | What it verifies |
 |---|---|

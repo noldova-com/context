@@ -16,7 +16,7 @@ import { threadId } from "node:worker_threads";
 
 import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
 import {
-  Assert, TestClass, TestConsoleReporter, TestData, TestMethod, TestMethodResult, TestOutcome
+  Assert, TestClass, TestConsoleReporter, TestData, TestingException, TestMethod, TestMethodResult, TestOutcome
 } from "@noldova/context.testing";
 import { TestWorkerMessage } from "@noldova/context.testing/models/execution/test-worker-message.js";
 import { TestWorkerResult } from "@noldova/context.testing/models/execution/test-worker-result.js";
@@ -36,6 +36,30 @@ export class TestRunSupervisorTests {
   @TestMethod
   public rejectsATimeoutOutOfRange(timeoutMilliseconds: number): void {
     Assert.throws(() => new TestRunSupervisor(timeoutMilliseconds, [], [], TestRunSupervisorTests.reporter([]), null), ArgumentOutOfRangeException);
+  }
+
+  @TestMethod
+  public readsTheDefaultLimitWhenNoneIsSet(): void {
+    Assert.areEqual(30_000, TestRunSupervisor.readTimeoutMilliseconds(undefined));
+  }
+
+  @TestMethod
+  public readsTheLimitASuiteSets(): void {
+    Assert.areEqual(1500, TestRunSupervisor.readTimeoutMilliseconds("1500"));
+  }
+
+  @TestData("0")
+  @TestData("-5")
+  @TestData("1.5")
+  @TestData("1e3")
+  @TestData(" 100")
+  @TestData("")
+  @TestData("2147483647")
+  @TestMethod
+  public rejectsALimitThatIsNotAPositiveIntegerWithinTheTimerLimit(text: string): void {
+    const failure = Assert.throws(() => TestRunSupervisor.readTimeoutMilliseconds(text), TestingException);
+
+    Assert.areEqual(`CONTEXT_TEST_TIMEOUT_MILLISECONDS must be a positive integer of milliseconds within the timer limit, not "${text}".`, failure.message);
   }
 
   @TestData(0)

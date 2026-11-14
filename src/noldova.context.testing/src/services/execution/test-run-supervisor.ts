@@ -104,6 +104,17 @@ export class TestRunSupervisor {
     return process.env[Resources.coverageVariable] ?? null;
   }
 
+  public static readTimeoutMilliseconds(text: string | undefined): number {
+    if (Object.isUndefined(text))
+      return Resources.defaultTimeoutMilliseconds;
+
+    const timeoutMilliseconds = Number(text);
+    if (!Resources.timeoutVariablePattern.test(text) || !TestTimeoutLimit.isValid(timeoutMilliseconds))
+      throw new TestingException(Resources.timeoutVariableInvalid(text));
+
+    return timeoutMilliseconds;
+  }
+
   public static defaultWorkerCount(): number {
     return Math.max(availableParallelism(), Resources.minimumWorkerCount);
   }
