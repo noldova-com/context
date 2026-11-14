@@ -11,7 +11,9 @@
  * whose median exceeds 2 seconds that README's list of slower test files
  * doesn't name, or a listed file whose median exceeds the time the list gives
  * it, each with a margin of 50%, since a busy machine slows every file and the
- * median of three runs drops one slow run but not a slower machine. Run it
+ * median of three runs drops one slow run but not a slower machine. It names
+ * a listed file within the budget as stale, failing nothing. The list's
+ * reading and the output's lines come from @noldova/context.testing. Run it
  * after npm test, which builds the test projects.
  *
  * @example
@@ -27,11 +29,6 @@ export class TestTiming extends SuiteScript {
   private static readonly MARGIN: number = 0.5;
   private static readonly TIMING_FOLDER: string = "_build/timing";
   private static readonly README_PATH: string = "README.md";
-  private static readonly SLOWER_FILES_HEADING: string = "Test files slower than the timing check's budget:";
-  private static readonly SLOWER_FILE_ROW: RegExp = /^\| `([^`]+)` \| ([0-9]+) ms \|/u;
-  private static readonly TABLE_ROW_PREFIX: string = "|";
-  private static readonly BLANK_LINE: string = "";
-  private static readonly LINE_END: RegExp = /\r?\n/u;
   private static readonly ENABLED_VALUE: string = "1";
   private static readonly SKIP_TEST_DETAILS_VARIABLE: string = "CONTEXT_SKIP_TEST_DETAILS";
   private static readonly NOT_BUILT: string = "The test projects are not built; run npm test first.";
@@ -71,36 +68,13 @@ export class TestTiming extends SuiteScript {
       runs.push(testing.TestTimeRecord.parseAll(await this.readFileAsync(resultsFile)));
     }
 
-    const timings = new testing.TestTimingCheck(TestTiming.FILE_BUDGET_MILLISECONDS, TestTiming.MARGIN, await this.readListedAsync()).judge(runs);
+    const listed = testing.TestTimingCheck.readListed(await this.readFileAsync(TestTiming.README_PATH));
+    const timings = new testing.TestTimingCheck(TestTiming.FILE_BUDGET_MILLISECONDS, TestTiming.MARGIN, listed).judge(runs);
     for (const timing of timings.filter(t => t.isOver || t.isListed))
-      await this.writeLogAsync(TestTiming.fileTiming(timing.file, timing.medianMilliseconds, timing.limitMilliseconds, timing.isOver));
+      await this.writeLogAsync(timing.format());
 
-    const over = timings.filter(t => t.isOver).length;
-    await this.writeLogAsync(TestTiming.summary(timings.length, over));
-    process.exitCode = over === 0 ? 0 : 1;
-  }
-
-  private async readListedAsync(): Promise<Map<string, number>> {
-    const lines = (await this.readFileAsync(TestTiming.README_PATH)).split(TestTiming.LINE_END);
-    const listed = new Map<string, number>();
-    const start = lines.indexOf(TestTiming.SLOWER_FILES_HEADING);
-    if (start === -1)
-      return listed;
-
-    for (const line of lines.slice(start + 1)) {
-      if (!line.startsWith(TestTiming.TABLE_ROW_PREFIX)) {
-        if (line === TestTiming.BLANK_LINE)
-          continue;
-
-        break;
-      }
-
-      const match = TestTiming.SLOWER_FILE_ROW.exec(line);
-      if (match?.[1] !== undefined && match[2] !== undefined)
-        listed.set(match[1], Number(match[2]));
-    }
-
-    return listed;
+    await this.writeLogAsync(testing.TestTimingCheck.formatSummary(timings, TestTiming.RUNS));
+    process.exitCode = timings.some(t => t.isOver) ? 1 : 0;
   }
 
   private static startingRun(run: number): string {
@@ -109,15 +83,6 @@ export class TestTiming extends SuiteScript {
 
   private static runFailed(run: number): string {
     return `Timing run ${run} failed; the timing check judges only a passing suite.`;
-  }
-
-  private static fileTiming(file: string, medianMilliseconds: number | undefined, limitMilliseconds: number, isOver: boolean): string {
-    const median = medianMilliseconds === undefined ? "not run" : `${Math.round(medianMilliseconds)} ms`;
-    return `${isOver ? "Over" : "Within"}: ${file}, median ${median}, limit ${Math.round(limitMilliseconds)} ms.`;
-  }
-
-  private static summary(files: number, over: number): string {
-    return `Timed ${files} test files over ${TestTiming.RUNS} runs; ${over} over their limit.`;
   }
 }
 

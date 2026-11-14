@@ -44,6 +44,45 @@ export class TestTimingCheckTests {
   }
 
   @TestMethod
+  public marksAListedFileWithinTheBudgetAsStaleAndCountsItInTheSummary(): void {
+    const runs = [[TestTimingCheckTests.record("fast.test.js", "adds", 1100), TestTimingCheckTests.record("slow.test.js", "waits", 1300)]];
+
+    const timings = new TestTimingCheck(1000, 0.2, new Map([["Sample/fast.test.js", 2600], ["Sample/slow.test.js", 2600]])).judge(runs);
+
+    Assert.areEqual("Sample/fast.test.js:1200:stale,Sample/slow.test.js:1200:listed", timings.map(t =>
+      `${t.file}:${t.budgetLimitMilliseconds}:${t.isStale ? "stale" : "listed"}`).join());
+    Assert.areEqual("Timed 2 test files over 3 runs; 0 over their limit, 1 listed but within the budget.", TestTimingCheck.formatSummary(timings, 3));
+  }
+
+  @TestMethod
+  public readsTheListedFilesAfterTheHeadingUpToTheFirstLineThatIsNeitherARowNorBlank(): void {
+    const markdown = [
+      "Some text.",
+      "| `Sample/early.test.js` | 100 ms |",
+      "Test files slower than the timing check's budget:",
+      String.empty,
+      "| File | Listed time |",
+      "|---|---|",
+      "| `Sample/slow.test.js` | 6900 ms |",
+      "| `Sample/slower.test.js` | 14000 ms | why |",
+      String.empty,
+      "| `Sample/after-blank.test.js` | 3500 ms |",
+      "The next paragraph.",
+      "| `Sample/late.test.js` | 100 ms |"
+    ].join("\r\n");
+
+    const listed = TestTimingCheck.readListed(markdown);
+
+    Assert.areEqual("Sample/slow.test.js:6900,Sample/slower.test.js:14000,Sample/after-blank.test.js:3500",
+      [...listed].map(([file, milliseconds]) => `${file}:${milliseconds}`).join());
+  }
+
+  @TestMethod
+  public readsNoListedFilesWithoutTheHeading(): void {
+    Assert.areEqual(0, TestTimingCheck.readListed("| `Sample/slow.test.js` | 6900 ms |\n").size);
+  }
+
+  @TestMethod
   public failsAListedFileNoRunRan(): void {
     const [timing] = new TestTimingCheck(1000, 0.2, new Map([["Sample/gone.test.js", 2000]])).judge([[]]);
 

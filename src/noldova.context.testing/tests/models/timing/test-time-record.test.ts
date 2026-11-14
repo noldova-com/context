@@ -13,6 +13,19 @@ import {
 @TestClass
 export class TestTimeRecordTests {
   @TestMethod
+  public formatsTheSlowestTestsUnderAHeadingSlowestFirst(): void {
+    const records = [
+      new TestTimeRecord("Sample", "a.test.js", "ATests", "adds", undefined, TestOutcome.Passed, 12.4),
+      new TestTimeRecord("Sample", "b.test.js", "BTests", "reads", 2, TestOutcome.Failed, 5650),
+      new TestTimeRecord("Sample", "c.test.js", "CTests", "waits", undefined, TestOutcome.Passed, 40)
+    ];
+
+    Assert.areEqual(["Slowest tests:", "  5650 ms  Sample/b.test.js — BTests.reads[2]", "  40 ms  Sample/c.test.js — CTests.waits"].join("\n"),
+      TestTimeRecord.formatSlowest(records, 2).join("\n"));
+    Assert.areEqual(0, TestTimeRecord.formatSlowest([], 10).length);
+  }
+
+  @TestMethod
   public namesTheTestWithItsPackageFileClassMethodAndRow(): void {
     const record = new TestTimeRecord("Sample", "math/adds.test.js", "AddsTests", "adds", 2, TestOutcome.Passed, 4);
 

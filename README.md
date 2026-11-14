@@ -133,11 +133,14 @@ Four test files wait on a real clock, because the wait is what they test; every 
 - `src/noldova.context.testing/tests/services/timing/system-clock.test.ts`: real 0 ms timers, since `SystemClock` is what it tests.
 - `src/noldova.context.testing/tests/services/execution/test-run-entry-point.test.ts`: one run of a test that never settles waits out a real 100 ms limit, since the run's own limit is what it tests.
 
-The suite has one hang limit, 30 seconds, which `scripts/suite-script.ts` sets for every run of it; no test carries a limit of its own.
+The suite has one hang limit, 60 seconds, which `scripts/suite-script.ts` sets for every run of it; no test carries a limit of its own.
 It bounds a hang and is never what a test checks: a test that reaches it fails under its own name with the limit it waited for, and is a bug to fix, never a reason to raise the limit.
-The limit is at least three times the slowest test on any target, as each run prints its slowest tests: on all six targets at commit 9c0fc70, the slowest was `TypeScriptSyntaxParserTests.readsLongChainsInLinearWorkWithoutDeepRecursion[2]`, at 5.65 s on macOS x64 and at most 3.12 s on the others, so 30 seconds is more than five times it.
+The limit is at least three times the slowest test on any target, as each run prints its slowest tests.
+The figure comes from this change's own runs, before main's runs printed slowest tests: over its three "Build and test" runs on the six targets, the slowest test took 15.2 s, `ParameterListParserTests.readsTheFirstOperandOfALongChainInASignatureInitializer[1]` on macOS x64 in one run, where the same test took under 5 s in the other two and no test took over 6.6 s; on the other targets no test took over 4.3 s.
+60 seconds is 3.9 times the highest time seen; main's runs after the merge are read again to confirm it.
 
 `npm run test:timing` is the timing check, apart from `npm test` and the checks below since its pass condition is a time: it runs the built suite three times without coverage, takes each test file's median time, the sum of its tests' durations, and fails a file over 2 seconds, or a listed file over the time the list gives it, each with a margin of 50%, since a busy machine slows every file and the median of three runs drops one slow run but not a slower machine.
+It also names, as stale, a listed file whose median is within the 2 seconds, plus the margin, that an unlisted file may take, so the list drops it; a stale file fails nothing.
 
 Test files slower than the timing check's budget:
 

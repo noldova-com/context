@@ -36,7 +36,6 @@ export class Test extends SuiteScript {
   private static readonly NO_TEST_PROJECTS: string = "No test projects were found.";
   private static readonly OPTION_PREFIX: string = "--";
   private static readonly RESULTS_FILE_PATH: string = `${Config.BUILD_FOLDER}/test-results.json`;
-  private static readonly SLOWEST_HEADING: string = "Slowest tests:";
   private static readonly SLOWEST_TEST_COUNT: number = 10;
   private static readonly SKIP_COVERAGE_DETAILS_OPTION: string = "--skip-coverage-details";
   private static readonly SKIP_TEST_DETAILS_OPTION: string = "--skip-test-details";
@@ -143,13 +142,8 @@ export class Test extends SuiteScript {
     const testing = await import("@noldova/context.testing");
     const records = testing.TestTimeRecord.parseAll(await this.readFileAsync(Test.RESULTS_FILE_PATH));
     await this.writeLogAsync(Test.BLANK_LINE);
-    await this.writeLogAsync(Test.SLOWEST_HEADING);
-    for (const record of testing.TestTimeRecord.slowest(records, Test.SLOWEST_TEST_COUNT))
-      await this.writeLogAsync(Test.slowestTest(record.durationMilliseconds, record.test));
-  }
-
-  private static slowestTest(durationMilliseconds: number, test: string): string {
-    return `  ${Math.round(durationMilliseconds)} ms  ${test}`;
+    for (const line of testing.TestTimeRecord.formatSlowest(records, Test.SLOWEST_TEST_COUNT))
+      await this.writeLogAsync(line);
   }
 
   private static compilingProject(projectName: string): string {

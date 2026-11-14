@@ -50,10 +50,43 @@ export class TestTimingCheck {
     }
 
     const files = [...new Set([...times.keys(), ...this.listed.keys()])].sort();
+    const budgetLimit = this.budgetMilliseconds * (1 + this.margin);
     return files.map(t => {
       const allowed = this.listed.get(t);
-      const limit = (allowed ?? this.budgetMilliseconds) * (1 + this.margin);
-      return new TestFileTiming(t, TestTimingCheck.median(times.get(t) ?? []), limit, !Object.isUndefined(allowed));
+      const limit = Object.isUndefined(allowed) ? budgetLimit : allowed * (1 + this.margin);
+      return new TestFileTiming(t, TestTimingCheck.median(times.get(t) ?? []), limit, budgetLimit, !Object.isUndefined(allowed));
     });
+  }
+
+  // Reads the files a suite lists as slower than the budget: the table rows, "| `package/file` | 6900 ms |", that follow the heading
+  // "Test files slower than the timing check's budget:" in a Markdown document such as README, up to the first line that is neither a row
+  // nor blank.
+  public static readListed(markdown: string): Map<string, number> {
+    const lines = markdown.split(Resources.lineEndPattern);
+    const listed = new Map<string, number>();
+    const start = lines.indexOf(Resources.slowerFilesHeading);
+    if (start === -1)
+      return listed;
+
+    for (const line of lines.slice(start + 1)) {
+      if (!line.startsWith(Resources.tableRowPrefix)) {
+        if (line === String.empty)
+          continue;
+
+        break;
+      }
+
+      const match = Resources.slowerFileRowPattern.exec(line);
+      const file = match?.[1];
+      const milliseconds = match?.[2];
+      if (!Object.isUndefined(file) && !Object.isUndefined(milliseconds))
+        listed.set(file, Number(milliseconds));
+    }
+
+    return listed;
+  }
+
+  public static formatSummary(timings: readonly TestFileTiming[], runs: number): string {
+    return Resources.timingSummary(timings.length, runs, timings.filter(t => t.isOver).length, timings.filter(t => t.isStale).length);
   }
 }

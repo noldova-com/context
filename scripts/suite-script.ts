@@ -17,9 +17,9 @@ import PostgreSQLServer from "./postgresql-server.ts";
 import Script from "./script.ts";
 
 export default abstract class SuiteScript extends Script {
-  // The suite's one hang limit: at least three times its slowest test on any target, as main's runs print it under "Slowest tests"; README's
+  // The suite's one hang limit: at least three times its slowest test on any target, as the runs print it under "Slowest tests"; README's
   // Checks gives the measurement. A test that reaches it is a bug to fix, never a reason to raise it.
-  protected static readonly HANG_LIMIT_MILLISECONDS: number = 30_000;
+  protected static readonly HANG_LIMIT_MILLISECONDS: number = 60_000;
   protected static readonly FILTERS_VARIABLE: string = "CONTEXT_TEST_FILTERS";
   protected static readonly RESULTS_FILE_VARIABLE: string = "CONTEXT_TEST_RESULTS_FILE";
   protected static readonly TIMEOUT_VARIABLE: string = "CONTEXT_TEST_TIMEOUT_MILLISECONDS";

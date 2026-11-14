@@ -780,6 +780,16 @@ export declare class TestTimeRecord {
   public static slowest(records: readonly TestTimeRecord[], count: number): TestTimeRecord[];
 
   /**
+   * Formats the slowest records for a run's output: the heading `Slowest tests:`, then one line per record, slowest first, as
+   * `  <milliseconds> ms  <test>`.
+   *
+   * @param records The records to choose from; the array is not changed.
+   * @param count How many to list at most.
+   * @returns The lines, or none when there are no records.
+   */
+  public static formatSlowest(records: readonly TestTimeRecord[], count: number): string[];
+
+  /**
    * Writes records as the JSON array {@link TestTimeRecord.parseAll} reads.
    *
    * @param records The records.
@@ -795,8 +805,9 @@ export declare class TestTimeRecord {
  * ```ts
  * import { Assert, TestFileTiming } from "@noldova/context.testing";
  *
- * const timing = new TestFileTiming("Sample/a.test.js", 1300, 1200, false);
+ * const timing = new TestFileTiming("Sample/a.test.js", 1300, 1200, 1200, false);
  * Assert.isTrue(timing.isOver);
+ * Assert.areEqual("Over: Sample/a.test.js, median 1300 ms, limit 1200 ms.", timing.format());
  * ```
  */
 export declare class TestFileTiming {
@@ -816,6 +827,11 @@ export declare class TestFileTiming {
   public readonly limitMilliseconds: number;
 
   /**
+   * The time an unlisted file may take, margin included.
+   */
+  public readonly budgetLimitMilliseconds: number;
+
+  /**
    * True when the suite lists the file with a time of its own.
    */
   public readonly isListed: boolean;
@@ -826,16 +842,30 @@ export declare class TestFileTiming {
   public readonly isOver: boolean;
 
   /**
+   * True when the suite lists the file but its median is within the time an unlisted file may take, so the list should drop it.
+   */
+  public readonly isStale: boolean;
+
+  /**
    * Creates the timing and decides whether it is over its limit.
    *
    * @param file The file with its package.
    * @param medianMilliseconds The file's median time, or undefined when no run ran it.
    * @param limitMilliseconds The time the file may take, margin included.
+   * @param budgetLimitMilliseconds The time an unlisted file may take, margin included.
    * @param isListed Whether the suite lists the file with a time of its own.
    *
    * See {@link TestFileTiming} for usage examples.
    */
-  public constructor(file: string, medianMilliseconds: number | undefined, limitMilliseconds: number, isListed: boolean);
+  public constructor(file: string, medianMilliseconds: number | undefined, limitMilliseconds: number, budgetLimitMilliseconds: number, isListed: boolean);
+
+  /**
+   * Formats the timing for the timing check's output, as `Over:`, `Stale:` or `Within:`, then the file, its median, and its limit or, for a
+   * stale file, the time an unlisted file may take.
+   *
+   * @returns The line.
+   */
+  public format(): string;
 }
 
 /**
@@ -873,6 +903,25 @@ export declare class TestTimingCheck {
    * @returns The median, or undefined for no values.
    */
   public static median(values: readonly number[]): number | undefined;
+
+  /**
+   * Reads the files a suite lists as slower than the budget from a Markdown document such as its README: the table rows, as
+   * ``| `package/file` | 6900 ms |``, after the line `Test files slower than the timing check's budget:`, up to the first line that is
+   * neither a row nor blank. A row of another shape, such as the table's header, is skipped.
+   *
+   * @param markdown The document's text.
+   * @returns Each listed file's time in milliseconds, by `package/file`; none when the heading is missing.
+   */
+  public static readListed(markdown: string): Map<string, number>;
+
+  /**
+   * Formats the timing check's summary of the judged files.
+   *
+   * @param timings The files {@link TestTimingCheck.judge} judged.
+   * @param runs How many runs they were judged over.
+   * @returns The line, with the counts of files over their limit and of listed files within the budget.
+   */
+  public static formatSummary(timings: readonly TestFileTiming[], runs: number): string;
 
   /**
    * Judges every file the runs ran or the suite lists, sorted by file.

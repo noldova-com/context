@@ -66,6 +66,11 @@ export class TestTimeRecord {
     return [...records].sort((left, right) => right.durationMilliseconds - left.durationMilliseconds).slice(0, count);
   }
 
+  public static formatSlowest(records: readonly TestTimeRecord[], count: number): string[] {
+    const slowest = TestTimeRecord.slowest(records, count);
+    return slowest.length === 0 ? [] : [Resources.slowestTestsHeading, ...slowest.map(t => Resources.slowestTest(t.durationMilliseconds, t.test))];
+  }
+
   public static formatAll(records: readonly TestTimeRecord[]): string {
     return JSON.stringify(records.map(t => ({
       packageName: t.packageName,
