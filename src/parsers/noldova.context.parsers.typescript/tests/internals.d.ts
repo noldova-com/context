@@ -300,8 +300,9 @@ declare module "@noldova/context.parsers.typescript/models/typescript-parser-con
     public readonly records: TypeScriptDeferredRecords;
 
     public clearRecognitionCaches(): void;
-    public enterList(kind: TypeScriptListKind): void;
-    public leaveList(): void;
+    public get listScope(): TypeScriptListScope;
+    public enterList(kind: TypeScriptListKind): TypeScriptListScope;
+    public leaveList(outerListScope: TypeScriptListScope): void;
     public isListBoundary(parser: TypeScriptSyntaxParser): boolean;
     public enterRecursion(span: SourceSpan): void;
     public leaveRecursion(): void;

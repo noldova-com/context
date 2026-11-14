@@ -28,13 +28,13 @@ export class HeritageClauseParser {
   public parseList(): TypeScriptHeritageClauseNode[] {
     const typescriptParser = this.typescriptParser;
     const clauseNodes: TypeScriptHeritageClauseNode[] = [];
-    typescriptParser.context.enterList(TypeScriptListKind.HeritageClauses);
+    const outerListScope = typescriptParser.context.enterList(TypeScriptListKind.HeritageClauses);
     try {
       while (typescriptParser.currentNode instanceof TypeScriptExtendsKeywordNode || typescriptParser.currentNode instanceof TypeScriptImplementsKeywordNode)
         clauseNodes.push(this.parse(typescriptParser.currentNode));
     }
     finally {
-      typescriptParser.context.leaveList();
+      typescriptParser.context.leaveList(outerListScope);
     }
     return clauseNodes;
   }
@@ -46,7 +46,7 @@ export class HeritageClauseParser {
     const typeNodes: Node[] = [];
     const commaNodes: TypeScriptCommaNode[] = [];
     let endNode: Node = keywordNode;
-    typescriptParser.context.enterList(TypeScriptListKind.HeritageClauseElement);
+    const outerListScope = typescriptParser.context.enterList(TypeScriptListKind.HeritageClauseElement);
     try {
       while (!typescriptParser.isEndOfFile) {
         const node = typescriptParser.currentNode;
@@ -84,7 +84,7 @@ export class HeritageClauseParser {
       }
     }
     finally {
-      typescriptParser.context.leaveList();
+      typescriptParser.context.leaveList(outerListScope);
     }
 
     const span = typescriptParser.typescriptLexer.reader.createSpan(keywordNode.span, endNode.span);

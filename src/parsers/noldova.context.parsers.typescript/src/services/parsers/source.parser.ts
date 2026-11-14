@@ -52,30 +52,26 @@ export class SourceParser {
     }
 
     const originalDiagnostics = [...context.diagnosticCollector.diagnostics];
-    const statements: Node[] = [];
     const regions: TypeScriptReparsedRegion[] = [];
     const replacedDiagnosticSpans: SourceSpan[] = [];
-    let statementIndex = 0;
-    let rangeIndex = 0;
-    while (rangeIndex < ranges.length) {
-      const range = ranges[rangeIndex]!;
-      while (statementIndex < rootNode.children.length && rootNode.children[statementIndex]!.span.endOffset <= range.startOffset)
-        statements.push(rootNode.children[statementIndex++]!);
-      const region = this.reparseRegion(ranges, rangeIndex);
+    let regionEndOffset = 0;
+    for (const [rangeIndex, range] of ranges.entries()) {
+      if (range.startOffset < regionEndOffset)
+        continue;
+
+      const region = this.reparseRegion(range, ranges.slice(rangeIndex + 1));
       regions.push(region);
-      for (const statement of region.statements)
-        statements.push(statement);
-      while (statementIndex < rootNode.children.length && rootNode.children[statementIndex]!.span.startOffset < region.span.endOffset)
-        statementIndex++;
-      const followingStatement = rootNode.children[statementIndex];
+      regionEndOffset = region.span.endOffset;
+      const followingStatement = rootNode.children.find(t => t.span.startOffset >= regionEndOffset);
       const followingOffset = followingStatement?.leadingTrivia?.span.startOffset ?? followingStatement?.span.startOffset ?? rootNode.span.endOffset;
       replacedDiagnosticSpans.push(new SourceSpan(range.startOffset, followingOffset - range.startOffset));
-      do
-        rangeIndex++;
-      while (rangeIndex < ranges.length && ranges[rangeIndex]!.startOffset < region.span.endOffset);
     }
-    while (statementIndex < rootNode.children.length)
-      statements.push(rootNode.children[statementIndex++]!);
+    const statements = [
+      ...rootNode.children
+        .filter(t => !regions.some(region => t.span.endOffset > region.span.startOffset && t.span.startOffset < region.span.endOffset))
+        .map(t => ({ offset: t.span.startOffset, nodes: [t] })),
+      ...regions.map(t => ({ offset: t.span.startOffset, nodes: t.statements })),
+    ].sort((first, second) => first.offset - second.offset).flatMap(t => t.nodes);
     const replacedDiagnosticRegions = new TypeScriptRegionSet(replacedDiagnosticSpans);
     context.diagnosticCollector.truncate(0);
     for (const diagnostic of originalDiagnostics)
@@ -181,7 +177,7 @@ export class SourceParser {
     const statements: Node[] = [];
     let statementStartNode = parser.currentNode;
     let isInterrupted = false;
-    context.enterList(TypeScriptListKind.SourceElements);
+    const outerListScope = context.enterList(TypeScriptListKind.SourceElements);
     try {
       while (!parser.isEndOfFile) {
         statementStartNode = parser.currentNode;
@@ -212,7 +208,7 @@ export class SourceParser {
       isInterrupted = true;
     }
     finally {
-      context.leaveList();
+      context.leaveList(outerListScope);
     }
     const endOfFileNode = parser.currentNode;
     const span = parser.typescriptLexer.reader.createSpan(this.startOffset, endOfFileNode.span.endOffset - this.startOffset);
@@ -220,12 +216,13 @@ export class SourceParser {
     return new TypeScriptNode(statements, span, this.leadingTrivia, trailingTrivia);
   }
 
-  private reparseRegion(ranges: readonly SourceSpan[], index: number): TypeScriptReparsedRegion {
+  private reparseRegion(range: SourceSpan, followingRanges: readonly SourceSpan[]): TypeScriptReparsedRegion {
     const originalContext = this.typescriptParser.context;
     const reader = this.typescriptParser.typescriptLexer.reader;
     const savedOffset = reader.currentOffset;
-    const startOffset = ranges[index]!.startOffset;
-    let endOffset = ranges[index]!.endOffset;
+    const startOffset = range.startOffset;
+    let endOffset = range.endOffset;
+    let followingIndex = 0;
     const context = new TypeScriptParserContext(reader.source);
     context.contextFlags = originalContext.contextFlags | TypeScriptContextFlags.TopLevelAwait;
     const statements: Node[] = [];
@@ -243,7 +240,7 @@ export class SourceParser {
         if (nextOffset === endOffset)
           break;
         if (nextOffset > endOffset)
-          endOffset = ranges[++index]?.endOffset ?? reader.endOffset;
+          endOffset = followingRanges[followingIndex++]?.endOffset ?? reader.endOffset;
       }
       if (parser.isEndOfFile)
         endOffset = reader.endOffset;

@@ -41,6 +41,7 @@ export class Resources {
   public static readonly temporaryRemovalRetries: number = 5;
   public static readonly minimumWorkerCount: number = 2;
   public static readonly testWorkerDataInvalid: string = "The test worker exchanged data that is not a test worker message.";
+  public static readonly testWorkerParentPortMissing: string = "The test worker runs only in a worker thread, which has a parent port.";
   public static readonly secondUnit: string = "s";
   public static readonly minuteUnit: string = "min";
   public static readonly hourUnit: string = "h";
@@ -272,6 +273,10 @@ export class Resources {
 
   public static timeoutWithoutTestMethod(memberName: string, className: string, filePath: string): string {
     return `Method "${memberName}" of "${className}" in "${filePath}" carries @Timeout but is not marked with @TestMethod.`;
+  }
+
+  public static memberDescriptorMissing(memberName: string, className: string, filePath: string): string {
+    return `Member "${memberName}" of "${className}" in "${filePath}" is listed among its own members but has no property descriptor.`;
   }
 
   public static staticTestMetadataInvalid(memberName: string, className: string, filePath: string): string {
