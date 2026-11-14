@@ -72,7 +72,8 @@ re-verification:
 ## 4. Verdict
 
 `PROVENANCE.json` is accurate in every checkable claim. The intake claim is
-**Verified** under the claims discipline of the repository's `AGENTS.md`.
+**Verified** under the claim discipline of `documents/BUILD-AND-VERIFICATION.md`
+section 1.
 
 `npm run vendor:typescript` now mechanizes this procedure; section 5 records
 its reproduction of this intake.

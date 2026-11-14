@@ -43,7 +43,7 @@ Symbol-named and generator test methods are unsupported and fail discovery; they
 Default and rest forms that do not expose a fixed runtime arity are not data-test inputs.
 `@Category` is valid only on a class marked with `@TestClass` or an instance method marked with `@TestMethod`; empty, whitespace, static, unmarked, and corrupt uses fail discovery.
 `@Timeout(milliseconds)` is valid only on an instance method marked with `@TestMethod`, and gives each of its invocations that time limit instead of the run's; a limit that is not a positive integer within the timer limit less the main thread's grace throws, and a class, static, unmarked, or corrupt use fails discovery.
-Using either decorator outside its permitted targets fails discovery.
+Using any of these decorators outside its permitted targets fails discovery.
 
 ## 3. Execution
 

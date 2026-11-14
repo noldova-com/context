@@ -65,7 +65,6 @@ export class TestRunWorker implements ITestProgressListener {
     const discovered = await discovery.discoverAsync(this.start.testProjects, filePath => this.post(TestWorkerMessage.imported(filePath)));
     this.selected = new TestRunner(discovery, this.executor).select(discovered, this.start.filters);
     this.port.on(Resources.messageEvent, (value: unknown) => {
-      // An empty message means no run is left: closing the port lets the thread end by itself and write its coverage.
       if (Object.isUndefined(value))
         this.port.close();
       else
