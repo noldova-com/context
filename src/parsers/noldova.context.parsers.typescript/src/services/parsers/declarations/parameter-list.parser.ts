@@ -83,6 +83,9 @@ export class ParameterListParser {
     return resultNode;
   }
 
+  public parseParameters(openNode: Node, parameterNodes: TypeScriptParameterNode[], commaNodes: TypeScriptCommaNode[]): Node;
+  public parseParameters(openNode: Node, parameterNodes: TypeScriptParameterNode[], commaNodes: TypeScriptCommaNode[],
+    isParameterNameRequired: boolean, enclosingAwaitFlags?: TypeScriptContextFlags, holdsParameterProperties?: boolean): Node | undefined;
   public parseParameters(openNode: Node, parameterNodes: TypeScriptParameterNode[], commaNodes: TypeScriptCommaNode[],
     isParameterNameRequired: boolean = false, enclosingAwaitFlags: TypeScriptContextFlags = this.typescriptParser.context.awaitFlags,
     holdsParameterProperties: boolean = false): Node | undefined {

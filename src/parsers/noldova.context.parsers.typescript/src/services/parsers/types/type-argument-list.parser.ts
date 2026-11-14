@@ -41,9 +41,15 @@ export class TypeArgumentListParser {
       if (typescriptParser.currentNode instanceof TypeScriptShiftLeftNode)
         typescriptParser.reLexLessThan();
 
-      const node = this.parseArguments(typescriptParser.requireCurrentNode(TypeScriptLessThanNode), true);
-      if (Object.isUndefined(node) || Object.isUndefined(node.greaterThanNode)
-        || !typescriptParser.currentNode.canFollowTypeScriptTypeArguments(typescriptParser))
+      const lessThanNode = typescriptParser.requireCurrentNode(TypeScriptLessThanNode);
+      const argumentNodes: Node[] = [];
+      const commaNodes: TypeScriptCommaNode[] = [];
+      const endNode = this.parseArguments(lessThanNode, argumentNodes, commaNodes);
+      if (!typescriptParser.currentNode.isTypeScriptSingleGreaterThan(typescriptParser))
+        return undefined;
+
+      const node = this.close(lessThanNode, argumentNodes, commaNodes, endNode);
+      if (Object.isUndefined(node.greaterThanNode) || !typescriptParser.currentNode.canFollowTypeScriptTypeArguments(typescriptParser))
         return undefined;
 
       if (!(calleeNode instanceof TypeScriptImportKeywordNode))
@@ -57,7 +63,9 @@ export class TypeArgumentListParser {
     const lessThanNode = this.typescriptParser.currentNode;
     if (!(lessThanNode instanceof TypeScriptLessThanNode))
       return undefined;
-    const resultNode = this.parseArguments(lessThanNode, false)!;
+    const argumentNodes: Node[] = [];
+    const commaNodes: TypeScriptCommaNode[] = [];
+    const resultNode = this.close(lessThanNode, argumentNodes, commaNodes, this.parseArguments(lessThanNode, argumentNodes, commaNodes));
     resultNode.validateTypeScriptGrammar(this.typescriptParser.context);
     return resultNode;
   }
@@ -68,11 +76,9 @@ export class TypeArgumentListParser {
     return this.parse();
   }
 
-  private parseArguments(lessThanNode: TypeScriptLessThanNode, isExpressionContext: boolean): TypeScriptTypeArgumentListNode | undefined {
+  private parseArguments(lessThanNode: TypeScriptLessThanNode, argumentNodes: Node[], commaNodes: TypeScriptCommaNode[]): Node {
     const typescriptParser = this.typescriptParser;
     typescriptParser.advance();
-    const argumentNodes: Node[] = [];
-    const commaNodes: TypeScriptCommaNode[] = [];
     let endNode: Node = lessThanNode;
 
     typescriptParser.context.enterList(TypeScriptListKind.TypeArguments);
@@ -94,8 +100,13 @@ export class TypeArgumentListParser {
       typescriptParser.context.leaveList();
     }
 
-    if (isExpressionContext && !typescriptParser.currentNode.isTypeScriptSingleGreaterThan(typescriptParser))
-      return undefined;
+    return endNode;
+  }
+
+  private close(lessThanNode: TypeScriptLessThanNode, argumentNodes: readonly Node[], commaNodes: readonly TypeScriptCommaNode[],
+    argumentsEndNode: Node): TypeScriptTypeArgumentListNode {
+    const typescriptParser = this.typescriptParser;
+    let endNode = argumentsEndNode;
     const greaterThanNode = typescriptParser.tryConsume(TypeScriptGreaterThanNode);
     if (Object.isUndefined(greaterThanNode))
       typescriptParser.reportExpected(Resources.greaterThan);

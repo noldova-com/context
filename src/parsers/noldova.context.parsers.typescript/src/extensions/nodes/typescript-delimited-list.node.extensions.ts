@@ -24,6 +24,6 @@ TypeScriptDelimitedListNode.prototype.getTypeScriptTrailingComma = function (thi
 
 TypeScriptDelimitedListNode.prototype.reportTypeScriptRestTrailingComma = function (this: TypeScriptDelimitedListNode, context: TypeScriptParserContext): void {
   const trailingCommaNode = this.getTypeScriptTrailingComma();
-  if (!Object.isUndefined(trailingCommaNode) && this.children.at(-1)!.isTypeScriptRestElement())
+  if (!Object.isUndefined(trailingCommaNode) && this.children.slice(-1).some(t => t.isTypeScriptRestElement()))
     context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source, TypeScriptDiagnosticTemplates.TS1013, trailingCommaNode.span);
 };
