@@ -36,6 +36,15 @@ while `Object.isPlainObject` accepts only object literals, such as the records
 declaration file `api/index.d.ts` documents every member with its contract and
 examples.
 
+## One copy
+
+An app loads one copy of the package, since the additions can be installed only
+once. The first copy records its folder; a second copy, such as one npm nests
+under a package that pins another version, refuses to load with an `Error` that
+names both folders, and `npm ls @noldova/context.core` shows which packages
+bring each. When a copy from before this check loaded first, which records no
+folder, the error names this copy's folder and says the other is older.
+
 ## License
 
 MIT; see `LICENSE`.
