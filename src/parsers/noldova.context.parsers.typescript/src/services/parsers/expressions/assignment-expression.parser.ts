@@ -66,8 +66,9 @@ export class AssignmentExpressionParser {
       const unaryNode = Object.isUndefined(expressionNode)
         ? typescriptParser.parseUnaryExpression()
         : typescriptParser.parseUnaryExpression(typescriptParser.parseLeftHandSideExpression(expressionNode));
-      if (unaryNode.isTypeScriptBindingIdentifier() && typescriptParser.currentNode instanceof TypeScriptArrowNode)
-        return typescriptParser.parseArrowFunctionWithParameter(unaryNode);
+      const arrowNode = typescriptParser.currentNode;
+      if (unaryNode.isTypeScriptBindingIdentifier() && arrowNode instanceof TypeScriptArrowNode)
+        return typescriptParser.parseArrowFunctionWithParameter(unaryNode, arrowNode);
 
       const binaryNode = typescriptParser.parseBinaryExpression(unaryNode);
       const operatorNode = typescriptParser.currentNode;

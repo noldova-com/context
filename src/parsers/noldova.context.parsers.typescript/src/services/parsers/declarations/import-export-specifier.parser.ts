@@ -50,7 +50,7 @@ export class ImportExportSpecifierParser {
     const parser = this.typescriptParser;
     const startNode = parser.currentNode;
     const typeKeywordNode = this.isTypeOnly() ? parser.tryConsume(TypeScriptTypeKeywordNode) : undefined;
-    const nameNode = this.nameParser.parseIdentifierOrStringName()!;
+    const nameNode = parser.consumeIdentifierName();
     const asKeywordNode = parser.tryConsume(TypeScriptAsKeywordNode);
     const aliasNode = Object.isUndefined(asKeywordNode) ? undefined
       : this.nameParser.parseIdentifierOrStringName() ?? new TypeScriptMissingIdentifierNode(parser.currentNode.getTypeScriptMissingNodeSpan());

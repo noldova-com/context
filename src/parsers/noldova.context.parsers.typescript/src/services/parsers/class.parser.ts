@@ -16,6 +16,7 @@ import type { TypeScriptClassBodyNode } from "../../models/nodes/declarations/ty
 import { TypeScriptClassDeclarationNode } from "../../models/nodes/declarations/typescript-class-declaration.node.js";
 import type { TypeScriptHeritageClauseNode } from "../../models/nodes/declarations/typescript-heritage-clause.node.js";
 import { TypeScriptMissingDeclarationNode } from "../../models/nodes/declarations/typescript-missing-declaration.node.js";
+import type { TypeScriptAtNode } from "../../models/nodes/delimiters/typescript-at.node.js";
 import { TypeScriptOpenBraceNode } from "../../models/nodes/delimiters/typescript-open-brace.node.js";
 import { TypeScriptClassExpressionNode } from "../../models/nodes/expressions/typescript-class-expression.node.js";
 import { TypeScriptAbstractKeywordNode } from "../../models/nodes/keywords/typescript-abstract-keyword.node.js";
@@ -54,21 +55,21 @@ export class ClassParser {
     return this.parse(classKeywordNode, [], TypeScriptClassExpressionNode);
   }
 
-  public parseDecoratedExpression(): Node {
+  public parseDecoratedExpression(atNode: TypeScriptAtNode): Node {
     const parser = this.typescriptParser;
-    const startNode = parser.currentNode;
-    const modifierNodes = this.modifierParser.parseDeclaration();
+    const modifierList = this.modifierParser.parseDecoratedDeclaration(atNode);
+    const modifierNodes = modifierList.nodes;
     const classKeywordNode = parser.currentNode;
     if (classKeywordNode instanceof TypeScriptClassKeywordNode) {
       const expressionNode = this.parse(classKeywordNode, modifierNodes, TypeScriptClassExpressionNode);
       this.modifierParser.validate(modifierNodes, TypeScriptModifierTarget.ModuleElement, expressionNode);
       return expressionNode;
     }
-    const endNode = modifierNodes.at(-1)!;
+    const endNode = modifierList.lastNode;
     parser.context.diagnosticCollector.addTypeScriptParseDiagnostic(TypeScriptDiagnosticTemplates.TS1109,
       parser.typescriptLexer.reader.createSpan(endNode.span.endOffset, 0));
-    return new TypeScriptMissingDeclarationNode(modifierNodes, parser.typescriptLexer.reader.createSpan(startNode.span, endNode.span),
-      startNode.leadingTrivia, endNode.trailingTrivia);
+    return new TypeScriptMissingDeclarationNode(modifierNodes, parser.typescriptLexer.reader.createSpan(atNode.span, endNode.span),
+      atNode.leadingTrivia, endNode.trailingTrivia);
   }
 
   private parse<TNode extends TypeScriptClassNode>(classKeywordNode: TypeScriptClassKeywordNode, modifierNodes: readonly Node[],

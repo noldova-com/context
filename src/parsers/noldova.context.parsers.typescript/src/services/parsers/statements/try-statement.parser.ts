@@ -39,13 +39,16 @@ export class TryStatementParser {
     const catchClauseNode = catchKeywordNode instanceof TypeScriptCatchKeywordNode ? this.catchClauseParser.parse(catchKeywordNode) : undefined;
     let finallyKeywordNode: TypeScriptFinallyKeywordNode | undefined;
     let finallyBlockNode: TypeScriptBlockNode | undefined;
+    let endNode: Node;
     if (Object.isUndefined(catchClauseNode) || parser.currentNode instanceof TypeScriptFinallyKeywordNode) {
       finallyKeywordNode = parser.tryConsume(TypeScriptFinallyKeywordNode);
       if (Object.isUndefined(finallyKeywordNode))
         parser.context.diagnosticCollector.addTypeScriptParseDiagnostic(TypeScriptDiagnosticTemplates.TS1472, parser.currentNode.span);
       finallyBlockNode = parser.parseRequiredBlock();
+      endNode = finallyBlockNode;
     }
-    const endNode: Node = finallyBlockNode ?? catchClauseNode!;
+    else
+      endNode = catchClauseNode;
     return new TypeScriptTryStatementNode(tryKeywordNode, parser.typescriptLexer.reader.createSpan(startNode.span, endNode.span),
       tryBlockNode, catchClauseNode, finallyKeywordNode, finallyBlockNode, startNode.leadingTrivia, endNode.trailingTrivia);
   }
