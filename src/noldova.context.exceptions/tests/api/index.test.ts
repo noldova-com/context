@@ -9,7 +9,8 @@
 // This file uses Node APIs and will change when we replace Node.
 
 import { execFile } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -19,6 +20,10 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 @TestClass
 export class ExceptionsApiTests {
+  private static readonly INSTALL_VALUES: readonly string[] = ["install", "--offline", "--no-audit", "--no-fund", "--ignore-scripts", "--no-package-lock"];
+  private static readonly CORE_RANGE: RegExp = /"@noldova\/context\.core": ">=(\d+)\.(\d+)\.(\d+) <([^"]+)"/u;
+  private static readonly VERSION_FIELD: RegExp = /"version": "[^"]+"/u;
+
   @TestMethod
   public exportsTheCompleteCatalog(): void {
     const exportNames = [
@@ -71,5 +76,93 @@ export class ExceptionsApiTests {
     finally {
       await rm(directory, { recursive: true, force: true });
     }
+  }
+
+  @TestMethod
+  public async sharesOneCoreAtAnotherVersionInItsRangeAsync(): Promise<void> {
+    const directory = await mkdtemp(resolve(import.meta.dirname, "../../../peer-range-"));
+    try {
+      const app = await ExceptionsApiTests.createAppAsync(directory, await ExceptionsApiTests.readCoreVersionInRangeAsync());
+
+      await ExceptionsApiTests.runNpmAsync(ExceptionsApiTests.INSTALL_VALUES, app);
+      const scriptPath = join(app, "main.js");
+      await writeFile(scriptPath, "import \"@noldova/context.core\";\nimport \"@noldova/context.exceptions\";\nprocess.stdout.write(\"loaded\");\n");
+      const { stdout } = await promisify(execFile)(process.execPath, [scriptPath], { cwd: app, windowsHide: true });
+
+      Assert.areEqual("loaded", stdout);
+      Assert.isFalse(existsSync(join(app, "node_modules", "@noldova", "context.exceptions", "node_modules")));
+    }
+    finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }
+
+  @TestMethod
+  public async refusesToInstallACoreOutsideItsRangeAsync(): Promise<void> {
+    const directory = await mkdtemp(resolve(import.meta.dirname, "../../../peer-range-"));
+    try {
+      const app = await ExceptionsApiTests.createAppAsync(directory, await ExceptionsApiTests.readCoreVersionPastRangeAsync());
+
+      const failure = await Assert.throwsAsync(() => ExceptionsApiTests.runNpmAsync(ExceptionsApiTests.INSTALL_VALUES, app), Error);
+
+      Assert.isTrue(failure.message.includes("ERESOLVE"), failure.message);
+      Assert.isFalse(existsSync(join(app, "node_modules", "@noldova", "context.exceptions")));
+    }
+    finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }
+
+  /** A core version inside the range the installed package takes core in, a patch above its lower bound. */
+  private static async readCoreVersionInRangeAsync(): Promise<string> {
+    const range = await ExceptionsApiTests.readCoreRangeAsync();
+
+    return `${range[1]}.${range[2]}.${Number(range[3]) + 1}`;
+  }
+
+  /** The first core version past that range: its upper bound. */
+  private static async readCoreVersionPastRangeAsync(): Promise<string> {
+    const range = await ExceptionsApiTests.readCoreRangeAsync();
+
+    return String(range[4]);
+  }
+
+  /** The installed package's peer range of core, from its manifest: the lower bound's three numbers, then the upper bound. */
+  private static async readCoreRangeAsync(): Promise<RegExpExecArray> {
+    const manifest = await readFile(fileURLToPath(new URL("../package.json", import.meta.resolve("@noldova/context.exceptions"))), "utf8");
+    const range = ExceptionsApiTests.CORE_RANGE.exec(manifest);
+    Assert.isNotNull(range, manifest);
+
+    return range;
+  }
+
+  /** An app that installs the package and a copy of core at the version given, each from a tarball, and returns the app's folder. */
+  private static async createAppAsync(directory: string, coreVersion: string): Promise<string> {
+    const core = join(directory, "core");
+    await cp(fileURLToPath(new URL("../", import.meta.resolve("@noldova/context.core"))), core, { recursive: true });
+    const coreManifest = join(core, "package.json");
+    await writeFile(coreManifest, (await readFile(coreManifest, "utf8")).replace(ExceptionsApiTests.VERSION_FIELD, `"version": "${coreVersion}"`));
+    const coreArchive = (await ExceptionsApiTests.runNpmAsync(["pack", "--silent", "--pack-destination", directory, core], directory)).trim();
+    const exceptionsArchive = (await ExceptionsApiTests.runNpmAsync(
+      ["pack", "--silent", "--pack-destination", directory, fileURLToPath(new URL("../", import.meta.resolve("@noldova/context.exceptions")))],
+      directory)).trim();
+
+    const app = join(directory, "app");
+    await mkdir(app);
+    await writeFile(join(app, "package.json"), JSON.stringify({
+      name: "app",
+      private: true,
+      type: "module",
+      dependencies: { "@noldova/context.core": `file:../${coreArchive}`, "@noldova/context.exceptions": `file:../${exceptionsArchive}` }
+    }));
+    return app;
+  }
+
+  private static async runNpmAsync(values: readonly string[], directory: string): Promise<string> {
+    const npmPath = process.env["npm_execpath"];
+    Assert.isDefined(npmPath, "The suite runs through npm, which names its own path in npm_execpath.");
+    const { stdout } = await promisify(execFile)(process.execPath, [npmPath, ...values], { cwd: directory, windowsHide: true });
+
+    return stdout;
   }
 }

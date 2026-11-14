@@ -16,10 +16,12 @@ Age, feature count, milestones, distribution to another machine, or use by anoth
 
 Only the last number goes up, and only when the packages are published: a publish run is started by hand, when a maintainer decides, and it publishes every package at the next number, as the README's [Releases](../README.md#releases) says.
 Major and minor stay `0` until the first public release, and the internal version stays `1`.
-The one number lives in `version.json` at the repository's root, such as `{ "version": "0.0.4" }`, which `scripts/config.ts` reads; the bootstrap `package.json` files write `__VERSION__` for their own version and for CONTEXT-owned dependencies, and the build fills it in and records the commit it built from as each package's `gitHead`.
+The one number lives in `version.json` at the repository's root, such as `{ "version": "0.0.4" }`, which `scripts/config.ts` reads; the bootstrap `package.json` files write `__VERSION__` for their own version and as the lower bound of each CONTEXT-owned peer range, and `__NEXT_MINOR__`, the next minor version, as its upper bound; the build fills both in and records the commit it built from as each package's `gitHead`.
 Until CONTEXT compiles itself, the `.ctxp` project manifests keep `0.0.1`, since nothing reads their version yet.
 The repository's root `package.json` and its lockfile have no version, since they are never published.
-CONTEXT-owned dependencies name the current number exactly: no caret, tilde, wildcard, range, floating tag, prerelease counter, date version, commit suffix, or independently incremented package version.
+A package takes the CONTEXT packages it uses as peer dependencies in the range from the current number to the next minor version, such as `>=0.0.9 <0.1.0`, never as dependencies, so an app whose packages need different versions in that range installs one copy of each; npm refuses an install whose ranges no single version meets, rather than nesting a second copy.
+`@noldova/context.core` refuses to load beside another copy of itself, naming both copies' folders.
+No other caret, tilde, wildcard, floating tag, prerelease counter, date version, commit suffix, or independently incremented package version names a CONTEXT package.
 The packages are published to npm under `@noldova`.
 
 The internal version is the integer `1`, not `1.0`, `v1`, `0.0.1`, or a counter per revision.

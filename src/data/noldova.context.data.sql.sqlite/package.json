@@ -18,10 +18,10 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "dependencies": {
-    "@noldova/context.core": "__VERSION__",
-    "@noldova/context.data": "__VERSION__",
-    "@noldova/context.data.sql": "__VERSION__",
-    "@noldova/context.exceptions": "__VERSION__"
+  "peerDependencies": {
+    "@noldova/context.core": ">=__VERSION__ <__NEXT_MINOR__",
+    "@noldova/context.data": ">=__VERSION__ <__NEXT_MINOR__",
+    "@noldova/context.data.sql": ">=__VERSION__ <__NEXT_MINOR__",
+    "@noldova/context.exceptions": ">=__VERSION__ <__NEXT_MINOR__"
   }
 }
