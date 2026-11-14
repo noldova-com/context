@@ -125,7 +125,8 @@ export class ArrowFunctionParser {
       const node = typescriptParser.currentNode;
       if (node instanceof TypeScriptOpenParenthesisNode) {
         const flags = Object.isUndefined(asyncKeywordNode) ? TypeScriptContextFlags.None : TypeScriptContextFlags.Await;
-        parameterListNode = this.parameterListParser.parseFunctionParameters(flags, !isAmbiguityAllowed, typescriptParser.context.isNewTargetScope);
+        parameterListNode = this.parameterListParser.tryParseFunctionParameters(node, flags, !isAmbiguityAllowed,
+          typescriptParser.context.isNewTargetScope);
         if (Object.isUndefined(parameterListNode))
           return undefined;
         this.parameterListParser.validate(parameterListNode, typeParameterListNode);
