@@ -64,7 +64,8 @@ TypeScriptImportDeclarationNode.prototype.getTypeScriptAllowedModifiers = functi
 
 TypeScriptImportDeclarationNode.prototype.reportTypeScriptGrammarAfterModifiers = function (this: TypeScriptImportDeclarationNode,
   context: TypeScriptParserContext, hasModifierDiagnostics: boolean): void {
-  if (hasModifierDiagnostics || context.isNestedStatement || context.isSubstatement || this.modifierNodes.length === 0)
+  const [firstModifierNode] = this.modifierNodes;
+  if (hasModifierDiagnostics || context.isNestedStatement || context.isSubstatement || Object.isUndefined(firstModifierNode))
     return;
 
   const declareNode = this.modifierNodes.findLast(t => t instanceof TypeScriptDeclareKeywordNode);
@@ -72,5 +73,5 @@ TypeScriptImportDeclarationNode.prototype.reportTypeScriptGrammarAfterModifiers 
     context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source, TypeScriptDiagnosticTemplates.TS1079, declareNode.span,
       [context.source.getText(declareNode.span)]);
   else
-    context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source, TypeScriptDiagnosticTemplates.TS1191, this.modifierNodes[0]!.getTypeScriptFirstTokenSpan());
+    context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source, TypeScriptDiagnosticTemplates.TS1191, firstModifierNode.getTypeScriptFirstTokenSpan());
 };
