@@ -57,8 +57,8 @@ export class KeywordSpellingSuggester {
     let current = new Array<number>(target.length + 1);
     const beyond = budget + Resources.spellingBudgetMargin;
 
-    for (let row = 1; row <= source.length; row++) {
-      const character = source[row - 1]!;
+    for (const [sourceIndex, character] of source.entries()) {
+      const row = sourceIndex + 1;
       const firstColumn = Math.max(Math.ceil(row - budget), 1);
       const lastColumn = Math.min(Math.floor(budget + row), target.length);
       let columnMinimum = row;

@@ -66,7 +66,7 @@ export default class TypeScriptExpectedDiagnosticsGenerator extends Script {
       const accountedBefore = checkpoint.accountedCount;
       const outcome = await new TypeScriptExpectedWorkerSupervisor(
         workerPath, batchPath, TypeScriptExpectedDiagnosticsGenerator.CASE_TIMEOUT_MILLISECONDS, TypeScriptExpectedDiagnosticsGenerator.MEMORY_BUDGET_BYTES)
-        .runAsync(t => { checkpoint.addResult(t.record!); });
+        .runAsync(t => { checkpoint.addResult(t); });
 
       if (outcome.reason !== undefined) {
         if (outcome.chargedPath === undefined && outcome.exitCode !== null && outcome.exitCode !== 0)
@@ -145,7 +145,10 @@ export default class TypeScriptExpectedDiagnosticsGenerator extends Script {
     const lines: string[] = [];
 
     for (const casePath of cases) {
-      const line = checkpoint.resultLines.get(casePath)!;
+      const line = checkpoint.resultLines.get(casePath);
+      if (line === undefined)
+        throw new Error(TypeScriptExpectedDiagnosticsGenerator.resultMissing(casePath));
+
       const record: TypeScriptExpectedApplicableRecord | TypeScriptExpectedInapplicableRecord = JSON.parse(line);
       if (record.applicability === TypeScriptExpectedApplicableRecord.APPLICABILITY) {
         applicable++;
@@ -165,7 +168,8 @@ export default class TypeScriptExpectedDiagnosticsGenerator extends Script {
       TypeScriptReferenceInvocation.hash(),
       TypeScriptConformanceCase.SPLITTING_VERSION,
       new TypeScriptExpectedManifestTotals(
-        cases.length, applicable, Object.fromEntries([...inapplicableByReason.keys()].sort().map(t => [t, inapplicableByReason.get(t)!] as const)), diagnostics),
+        cases.length, applicable, Object.fromEntries([...inapplicableByReason]
+          .sort(([first], [second]) => first < second ? -1 : first > second ? 1 : 0)), diagnostics),
       checkpoint.retries,
       TypeScriptExpectedDiagnosticsGenerator.hash(results));
 
@@ -218,6 +222,10 @@ export default class TypeScriptExpectedDiagnosticsGenerator extends Script {
 
   private static casesExceeded(exceeded: ReadonlyMap<string, string>): string {
     return `${exceeded.size} cases never answered and no expected diagnostics were sealed:\n${[...exceeded].map(([casePath, reason]) => `  ${reason}: ${casePath}`).join("\n")}`;
+  }
+
+  private static resultMissing(casePath: string): string {
+    return `The checkpoint holds no result for ${casePath}.`;
   }
 
   private static starting(total: number, accounted: number): string {

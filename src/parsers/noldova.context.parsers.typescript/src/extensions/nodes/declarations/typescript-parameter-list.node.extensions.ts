@@ -25,8 +25,7 @@ TypeScriptParameterListNode.prototype.validateTypeScriptGrammar = function (this
   const diagnosticCount = diagnostics.diagnostics.length;
   const trailingCommaNode = this.getTypeScriptTrailingComma();
   let hasOptionalParameter = false;
-  for (let index = 0; index < this.children.length; index++) {
-    const parameterNode = this.children[index]!;
+  for (const [index, parameterNode] of this.children.entries()) {
     const isOptionalParameter = parameterNode.isTypeScriptOptionalParameter();
     if (!Object.isUndefined(parameterNode.dotDotDotNode) && index < this.children.length - 1)
       diagnostics.addTypeScriptGrammarDiagnostic(context.source, TypeScriptDiagnosticTemplates.TS1014, parameterNode.dotDotDotNode.span);

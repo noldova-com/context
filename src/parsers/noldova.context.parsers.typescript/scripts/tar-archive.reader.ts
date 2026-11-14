@@ -72,7 +72,7 @@ export default class TarArchiveReader {
 
       const size = TarArchiveReader.readSize(header);
       const storedSize = Math.ceil(size / TarArchiveReader.BLOCK_SIZE) * TarArchiveReader.BLOCK_SIZE;
-      const type = String.fromCharCode(header[TarArchiveReader.TYPE_OFFSET]!);
+      const type = String.fromCharCode(header.readUInt8(TarArchiveReader.TYPE_OFFSET));
       if (type === TarArchiveReader.PAX_ENTRY_TYPE || type === TarArchiveReader.GNU_LONG_NAME_TYPE) {
         const data = (await this.takeAsync(storedSize)).subarray(0, size);
         extendedName = type === TarArchiveReader.PAX_ENTRY_TYPE ? TarArchiveReader.readPaxPath(data) ?? extendedName : TarArchiveReader.readText(data);

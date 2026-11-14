@@ -17,7 +17,9 @@ export default class TypeScriptConformanceCase {
 
   private static readonly BYTE_ORDER_MARK: string = String.fromCharCode(0xFEFF);
   private static readonly CURRENT_DIRECTORY_PREFIX: string = "./";
+  private static readonly DIRECTIVE_MARK: string = "@";
   private static readonly DIRECTIVE_PATTERN: RegExp = /^\/\/\s*@(\w+)\s*:\s*([^\r\n]*)/u;
+  private static readonly DIRECTIVE_SEPARATOR: string = ":";
   private static readonly DRIVE_LETTER_PATTERN: RegExp = /^([A-Za-z]):\/?/u;
   private static readonly FILENAME_DIRECTIVE: string = "filename";
   private static readonly HASH_ALGORITHM: string = "sha256";
@@ -44,9 +46,10 @@ export default class TypeScriptConformanceCase {
   public readonly hasDiscardedPreamble: boolean;
   public readonly hasRepeatedUnitName: boolean;
   private readonly noImplicitReferences: boolean;
+  private readonly lastUnit: TypeScriptConformanceUnit;
 
-  private constructor(casePath: string, sha256: string, units: readonly TypeScriptConformanceUnit[], libraries: readonly string[] | undefined,
-    hasDiscardedPreamble: boolean, hasRepeatedUnitName: boolean, noImplicitReferences: boolean) {
+  private constructor(casePath: string, sha256: string, units: readonly TypeScriptConformanceUnit[], lastUnit: TypeScriptConformanceUnit,
+    libraries: readonly string[] | undefined, hasDiscardedPreamble: boolean, hasRepeatedUnitName: boolean, noImplicitReferences: boolean) {
     this.path = casePath;
     this.sha256 = sha256;
     this.units = units;
@@ -54,10 +57,11 @@ export default class TypeScriptConformanceCase {
     this.hasDiscardedPreamble = hasDiscardedPreamble;
     this.hasRepeatedUnitName = hasRepeatedUnitName;
     this.noImplicitReferences = noImplicitReferences;
+    this.lastUnit = lastUnit;
   }
 
   public get rootUnits(): readonly TypeScriptConformanceUnit[] {
-    const lastUnit = this.units.at(-1)!;
+    const lastUnit = this.lastUnit;
     const isExplicit = this.noImplicitReferences || lastUnit.content.includes(TypeScriptConformanceCase.REQUIRE_CALL)
       || TypeScriptConformanceCase.REFERENCE_PATTERN.test(lastUnit.content);
 
@@ -106,7 +110,7 @@ export default class TypeScriptConformanceCase {
     let hasRepeatedUnitName = false;
     let noImplicitReferences = false;
 
-    const flush = (): void => {
+    const flush = (): TypeScriptConformanceUnit => {
       while (unitLines[0] === "")
         unitLines.shift();
 
@@ -114,6 +118,7 @@ export default class TypeScriptConformanceCase {
       if (units.some(t => t.name === unit.name))
         hasRepeatedUnitName = true;
       units.push(unit);
+      return unit;
     };
 
     for (const line of content.split(TypeScriptConformanceCase.LINE_BREAK_PATTERN)) {
@@ -123,8 +128,11 @@ export default class TypeScriptConformanceCase {
         continue;
       }
 
-      const name = directive[1]!.toLowerCase();
-      const value = directive[2]!.trim();
+      const [directiveText] = directive;
+      const nameAndValue = directiveText.slice(directiveText.indexOf(TypeScriptConformanceCase.DIRECTIVE_MARK) + 1);
+      const separatorIndex = nameAndValue.indexOf(TypeScriptConformanceCase.DIRECTIVE_SEPARATOR);
+      const name = nameAndValue.slice(0, separatorIndex).trim().toLowerCase();
+      const value = nameAndValue.slice(separatorIndex + 1).trim();
       if (name === TypeScriptConformanceCase.FILENAME_DIRECTIVE) {
         if (unitName === undefined)
           hasDiscardedPreamble = unitLines.some(t => t.trim().length !== 0);
@@ -140,9 +148,10 @@ export default class TypeScriptConformanceCase {
         noImplicitReferences = value.length !== 0;
     }
 
-    flush();
+    const lastUnit = flush();
 
-    return new TypeScriptConformanceCase(casePath, sha256, units, libraries, hasDiscardedPreamble, hasRepeatedUnitName, noImplicitReferences);
+    return new TypeScriptConformanceCase(casePath, sha256, units, lastUnit, libraries, hasDiscardedPreamble, hasRepeatedUnitName,
+      noImplicitReferences);
   }
 
   private static normalizeUnitName(value: string): string {

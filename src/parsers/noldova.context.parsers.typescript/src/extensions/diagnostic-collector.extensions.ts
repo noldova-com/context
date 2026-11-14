@@ -111,19 +111,9 @@ DiagnosticCollector.prototype.addTypeScriptRelatedGrammarDiagnostic = function (
 };
 
 DiagnosticCollector.prototype.getLastTypeScriptParseDiagnosticIndex = function (this: DiagnosticCollector): number {
-  for (let index = this.diagnostics.length - 1; index >= 0; index--) {
-    const diagnostic = this.diagnostics[index]!;
-    if (!(diagnostic instanceof TypeScriptGrammarDiagnostic) && diagnostic.code.authority === DiagnosticAuthority.typeScript)
-      return index;
-  }
-  return -1;
+  return this.diagnostics.findLastIndex(t => !(t instanceof TypeScriptGrammarDiagnostic) && t.code.authority === DiagnosticAuthority.typeScript);
 };
 
 DiagnosticCollector.prototype.hasTypeScriptParseDiagnosticsSince = function (this: DiagnosticCollector, count: number): boolean {
-  for (let index = count; index < this.diagnostics.length; index++) {
-    const diagnostic = this.diagnostics[index]!;
-    if (!(diagnostic instanceof TypeScriptGrammarDiagnostic) && diagnostic.code.authority === DiagnosticAuthority.typeScript)
-      return true;
-  }
-  return false;
+  return this.diagnostics.slice(count).some(t => !(t instanceof TypeScriptGrammarDiagnostic) && t.code.authority === DiagnosticAuthority.typeScript);
 };

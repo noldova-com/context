@@ -95,6 +95,8 @@ export class HeritageClauseParserTests {
     const node = parser.parseStatement();
 
     Assert.isInstanceOf(node, TypeScriptClassDeclarationNode);
-    Assert.areEqual(expected, parser.context.source.getText(node.heritageClauseNodes[0]!.span));
+    const heritageClauseNode = node.heritageClauseNodes[0];
+    Assert.isDefined(heritageClauseNode);
+    Assert.areEqual(expected, parser.context.source.getText(heritageClauseNode.span));
   }
 }

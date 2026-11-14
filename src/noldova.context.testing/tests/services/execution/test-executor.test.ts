@@ -50,14 +50,14 @@ export class TestExecutorTests {
       new DiscoveredTestMethod("recordsExecution", 1, [events, "runs"], undefined),
     ]);
 
-    const [stoppedResult, runResult] = (await new TestExecutor(250).executeAsync([testClass], undefined, new Set([stoppedMethod])))[0]!.methodResults;
+    const [stoppedResult, runResult] = (await new TestExecutor(250).executeAsync([testClass], undefined, new Set([stoppedMethod])))[0]?.methodResults ?? [];
 
-    Assert.areEqual(TestOutcome.Failed, stoppedResult!.outcome);
-    const failure = stoppedResult!.failure;
+    Assert.areEqual(TestOutcome.Failed, stoppedResult?.outcome);
+    const failure = stoppedResult?.failure;
     Assert.isInstanceOf(failure, TestTimeoutException);
     Assert.areEqual(250, failure.timeoutMilliseconds);
-    Assert.areEqual(250, stoppedResult!.durationMilliseconds);
-    Assert.areEqual(TestOutcome.Passed, runResult!.outcome);
+    Assert.areEqual(250, stoppedResult?.durationMilliseconds);
+    Assert.areEqual(TestOutcome.Passed, runResult?.outcome);
     Assert.areEqual("run:runs", events.join());
   }
 

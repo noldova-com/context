@@ -28,7 +28,7 @@ export class TestWorkerRecordTests {
     Assert.areEqual(3, record.count("count"));
     Assert.areEqual(1.5, record.duration("duration"));
     Assert.areEqual("a,b", record.strings("names").join());
-    Assert.areEqual("inner", record.records("records")[0]!.string("name"));
+    Assert.areEqual("inner", record.records("records")[0]?.string("name"));
     Assert.areEqual(true, record.value("flag"));
     Assert.areEqual("1,two", record.values("values").join());
   }

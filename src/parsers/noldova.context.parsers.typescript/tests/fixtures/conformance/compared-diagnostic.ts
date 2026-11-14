@@ -7,6 +7,7 @@
  */
 
 import type { Diagnostic, DiagnosticRelatedInformation } from "@noldova/context.diagnostics";
+import { Assert } from "@noldova/context.testing";
 
 import { ComparedMessage } from "./compared-message.js";
 import type { ConformanceCaseUnit } from "./conformance-case-unit.js";
@@ -43,7 +44,8 @@ export class ComparedDiagnostic {
   }
 
   public static fromExpected(diagnostic: ExpectedDiagnostic, units: readonly ConformanceCaseUnit[]): ComparedDiagnostic {
-    const unit = typeof diagnostic.file === "number" ? units[diagnostic.file]!.name : diagnostic.file;
+    const unit = typeof diagnostic.file === "number" ? units[diagnostic.file]?.name : diagnostic.file;
+    Assert.isDefined(unit);
     return new ComparedDiagnostic(unit, diagnostic.start, diagnostic.length, ComparedMessage.fromExpected(diagnostic),
       diagnostic.related.map(t => ComparedDiagnostic.fromExpected(t, units)), diagnostic.tags);
   }

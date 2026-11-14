@@ -11,6 +11,8 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+import { Assert } from "@noldova/context.testing";
+
 export class ParserDiagnosticScope {
   private static readonly CATALOG_FILE_NAME: string = "typescript-diagnostic-templates.ts";
   private static readonly CODE_PATTERN: RegExp = /TypeScriptDiagnosticTemplates\.TS(\d+)/gu;
@@ -36,8 +38,10 @@ export class ParserDiagnosticScope {
         continue;
 
       const content = readFileSync(path.join(entry.parentPath, entry.name), ParserDiagnosticScope.TEXT_ENCODING);
-      for (const match of content.matchAll(ParserDiagnosticScope.CODE_PATTERN))
-        codes.add(Number.parseInt(match[1]!, 10));
+      for (const [, code] of content.matchAll(ParserDiagnosticScope.CODE_PATTERN)) {
+        Assert.isDefined(code);
+        codes.add(Number.parseInt(code, 10));
+      }
     }
 
     ParserDiagnosticScope.instance = new ParserDiagnosticScope(codes);

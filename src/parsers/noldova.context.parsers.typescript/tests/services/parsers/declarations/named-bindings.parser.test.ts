@@ -133,7 +133,9 @@ export class NamedBindingsParserTests {
     const node = parser.parseStatement();
 
     Assert.isInstanceOf(node, TypeScriptImportDeclarationNode);
-    Assert.areEqual(expected, parser.context.source.getText(node.importClauseNode!.namedBindingsNode!.span));
+    const namedBindingsNode = node.importClauseNode?.namedBindingsNode;
+    Assert.isDefined(namedBindingsNode);
+    Assert.areEqual(expected, parser.context.source.getText(namedBindingsNode.span));
   }
 
   @TestData("export { )", "{ )")

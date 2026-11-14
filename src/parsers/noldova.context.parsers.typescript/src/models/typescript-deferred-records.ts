@@ -44,10 +44,10 @@ export class TypeScriptDeferredRecords {
 
   public readReservedNameAsBinding(nameNode: Node): void {
     const index = this.reservedNames.findLastIndex(t => t.nameNode === nameNode);
-    if (index < 0)
+    const reservedName = this.reservedNames[index];
+    if (Object.isUndefined(reservedName))
       return;
 
-    const reservedName = this.reservedNames[index]!;
     this.reservedNames[index] = new TypeScriptReservedBindingName(nameNode, reservedName.reservation, reservedName.hasEnclosingClass,
       reservedName.isAwaitContext, false);
   }
@@ -63,8 +63,8 @@ export class TypeScriptDeferredRecords {
     this.awaitNameCount = mark.awaitNameCount;
     this.writtenAwaits.length = mark.writtenAwaitCount;
     this.writtenGlobalExports.length = mark.writtenGlobalExportCount;
-    for (let index = mark.reservedBindingNameCount; index < this.reservedNames.length; index++)
-      this.reservedNameNodes.delete(this.reservedNames[index]!.nameNode);
+    for (const reservedName of this.reservedNames.values().drop(mark.reservedBindingNameCount))
+      this.reservedNameNodes.delete(reservedName.nameNode);
     this.reservedNames.length = mark.reservedBindingNameCount;
     this.writtenTypePredicates.length = mark.writtenTypePredicateCount;
     this.writtenObjectLiterals.length = mark.writtenObjectLiteralCount;

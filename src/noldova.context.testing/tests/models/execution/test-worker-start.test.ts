@@ -17,8 +17,8 @@ export class TestWorkerStartTests {
 
     const received = TestWorkerStart.from(structuredClone(start.toData()));
 
-    Assert.areEqual("Sample", received.testProjects[0]!.packageName);
-    Assert.areEqual("/tests", received.testProjects[0]!.rootDirectory);
+    Assert.areEqual("Sample", received.testProjects[0]?.packageName);
+    Assert.areEqual("/tests", received.testProjects[0]?.rootDirectory);
     Assert.areEqual("category:Unit", received.filters.join());
     Assert.areEqual(250, received.timeoutMilliseconds);
   }

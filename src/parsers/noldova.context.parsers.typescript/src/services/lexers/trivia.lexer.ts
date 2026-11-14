@@ -24,6 +24,7 @@ import type { TypeScriptLexer } from "./typescript.lexer.js";
 export class TriviaLexer {
   public lex(lexer: TypeScriptLexer): Node | undefined {
     const reader = lexer.reader;
+    const triviaStartOffset = reader.currentOffset;
     let trivia: Node[] | undefined;
 
     while (!reader.isAtEnd) {
@@ -85,11 +86,12 @@ export class TriviaLexer {
     if (Object.isUndefined(trivia))
       return undefined;
 
-    const first = trivia[0]!;
-    if (trivia.length === 1)
+    if (trivia.length === 1) {
+      const [first] = trivia;
       return first;
+    }
 
-    const span = reader.createSpan(first.span.startOffset, reader.currentOffset - first.span.startOffset);
+    const span = reader.createSpan(triviaStartOffset, reader.currentOffset - triviaStartOffset);
     return new TypeScriptTriviaNode(trivia, span);
   }
 
@@ -120,7 +122,7 @@ export class TriviaLexer {
 
   private static lastLineStart(text: string): number {
     for (let index = text.length - 1; index >= 0; index--)
-      if (TypeScriptCharacterClassifier.isLineTerminator(text[index]!))
+      if (TypeScriptCharacterClassifier.isLineTerminator(text.charAt(index)))
         return index + 1;
     return 0;
   }
