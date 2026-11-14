@@ -18,6 +18,7 @@ import { TypeScriptAtNode } from "../../../models/nodes/delimiters/typescript-at
 import { TypeScriptDefaultKeywordNode } from "../../../models/nodes/keywords/typescript-default-keyword.node.js";
 import { TypeScriptExportKeywordNode } from "../../../models/nodes/keywords/typescript-export-keyword.node.js";
 import { TypeScriptStaticKeywordNode } from "../../../models/nodes/keywords/typescript-static-keyword.node.js";
+import { TypeScriptModifierList } from "../../../models/typescript-modifier-list.js";
 import type { TypeScriptSyntaxParser } from "../../typescript-syntax.parser.js";
 import { DecoratorParser } from "./decorator.parser.js";
 
@@ -114,7 +115,13 @@ export class ModifierParser {
   }
 
   public parseDeclaration(): readonly Node[] {
-    return this.parseModifiers((node, writtenNodes) => node.canParseTypeScriptDeclarationModifier(this.typescriptParser, writtenNodes));
+    return this.parseModifiers((node, writtenNodes) => this.canParseDeclarationModifier(node, writtenNodes));
+  }
+
+  public parseDecoratedDeclaration(atNode: TypeScriptAtNode): TypeScriptModifierList {
+    const firstNode = this.decoratorParser.parse(atNode);
+    const modifierNodes = this.parseModifiers((node, writtenNodes) => this.canParseDeclarationModifier(node, writtenNodes), [firstNode]);
+    return new TypeScriptModifierList(firstNode, modifierNodes.slice(1));
   }
 
   public parseParameter(): readonly Node[] {
@@ -139,8 +146,11 @@ export class ModifierParser {
     return modifierNodes;
   }
 
-  private parseModifiers(canParseModifier: (node: Node, writtenNodes: readonly Node[]) => boolean): readonly Node[] {
-    const modifierNodes: Node[] = [];
+  private canParseDeclarationModifier(node: Node, writtenNodes: readonly Node[]): boolean {
+    return node.canParseTypeScriptDeclarationModifier(this.typescriptParser, writtenNodes);
+  }
+
+  private parseModifiers(canParseModifier: (node: Node, writtenNodes: readonly Node[]) => boolean, modifierNodes: Node[] = []): readonly Node[] {
     this.parseDecorators(modifierNodes);
     const hasReadKeyword = this.parseKeywords(modifierNodes, canParseModifier);
     if (hasReadKeyword && this.typescriptParser.currentNode instanceof TypeScriptAtNode) {

@@ -27,6 +27,7 @@ import type { TypeScriptModuleDeclarationNode } from "../models/nodes/declaratio
 import type { TypeScriptNamespaceExportDeclarationNode } from "../models/nodes/declarations/typescript-namespace-export-declaration.node.js";
 import type { TypeScriptParameterListNode } from "../models/nodes/declarations/typescript-parameter-list.node.js";
 import type { TypeScriptTypeAliasDeclarationNode } from "../models/nodes/declarations/typescript-type-alias-declaration.node.js";
+import type { TypeScriptAtNode } from "../models/nodes/delimiters/typescript-at.node.js";
 import type { TypeScriptDotNode } from "../models/nodes/delimiters/typescript-dot.node.js";
 import { TypeScriptOpenBraceNode } from "../models/nodes/delimiters/typescript-open-brace.node.js";
 import type { TypeScriptOpenBracketNode } from "../models/nodes/delimiters/typescript-open-bracket.node.js";
@@ -86,6 +87,7 @@ import type { TypeScriptWhileKeywordNode } from "../models/nodes/keywords/typesc
 import type { TypeScriptWithKeywordNode } from "../models/nodes/keywords/typescript-with-keyword.node.js";
 import type { TypeScriptNoSubstitutionTemplateLiteralNode } from "../models/nodes/literals/typescript-no-substitution-template-literal.node.js";
 import type { TypeScriptTemplateHeadNode } from "../models/nodes/literals/typescript-template-head.node.js";
+import type { TypeScriptArrowNode } from "../models/nodes/operators/typescript-arrow.node.js";
 import { TypeScriptEqualsNode } from "../models/nodes/operators/typescript-equals.node.js";
 import type { TypeScriptExclamationNode } from "../models/nodes/operators/typescript-exclamation.node.js";
 import type { TypeScriptLessThanNode } from "../models/nodes/operators/typescript-less-than.node.js";
@@ -494,8 +496,8 @@ export class TypeScriptSyntaxParser extends Parser<TypeScriptNode, TypeScriptPar
     return this.classParser.parseExpression(classKeywordNode);
   }
 
-  public parseDecoratedClassExpression(): Node {
-    return this.classParser.parseDecoratedExpression();
+  public parseDecoratedClassExpression(atNode: TypeScriptAtNode): Node {
+    return this.classParser.parseDecoratedExpression(atNode);
   }
 
   public parseFunctionExpression(): TypeScriptFunctionExpressionNode {
@@ -697,8 +699,8 @@ export class TypeScriptSyntaxParser extends Parser<TypeScriptNode, TypeScriptPar
     return this.parenthesizedExpressionParser.tryParseExpressionOrArrowFunction();
   }
 
-  public parseArrowFunctionWithParameter(nameNode: Node): TypeScriptArrowFunctionNode {
-    return this.arrowFunctionParser.parseWithParameter(nameNode);
+  public parseArrowFunctionWithParameter(nameNode: Node, arrowNode: TypeScriptArrowNode): TypeScriptArrowFunctionNode {
+    return this.arrowFunctionParser.parseWithParameter(nameNode, arrowNode);
   }
 
   public parseParenthesizedExpression(openParenthesisNode: TypeScriptOpenParenthesisNode): TypeScriptParenthesizedExpressionNode {

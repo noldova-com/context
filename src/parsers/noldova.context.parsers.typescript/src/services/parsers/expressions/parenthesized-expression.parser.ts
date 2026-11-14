@@ -209,7 +209,7 @@ export class ParenthesizedExpressionParser {
       let endNode = closeParenthesisNode;
       if (Object.isUndefined(endNode)) {
         parser.reportExpected(Resources.comma);
-        if (Object.isUndefined(this.parameterListParser.parseParameters(openParenthesisNode, parameterNodes, parameterCommaNodes, true)))
+        if (Object.isUndefined(this.parameterListParser.tryParseParameters(openParenthesisNode, parameterNodes, parameterCommaNodes, true)))
           return undefined;
         endNode = parser.tryConsume(TypeScriptCloseParenthesisNode);
         if (Object.isUndefined(endNode))

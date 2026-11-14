@@ -43,12 +43,13 @@ export class DeclarationParser {
     const parser = this.typescriptParser;
     const startNode = parser.currentNode;
     const modifierNodes = this.modifierParser.parseDeclaration();
+    const lastModifierNode = modifierNodes.at(-1);
 
     const previousAmbient = parser.context.hasAmbientDeclaration;
     if (modifierNodes.some(t => t instanceof TypeScriptDeclareKeywordNode))
       parser.context.hasAmbientDeclaration = true;
     try {
-      if (parser.currentNode.isTypeScriptDeclarationKeyword(parser)) {
+      if (Object.isUndefined(lastModifierNode) || parser.currentNode.isTypeScriptDeclarationKeyword(parser)) {
         const declarationNode = parser.currentNode.parseTypeScriptStatement(parser, modifierNodes);
         parser.context.hasAmbientDeclaration = previousAmbient;
         const hasModifierDiagnostics = this.modifierParser.validate(modifierNodes, TypeScriptModifierTarget.ModuleElement, declarationNode);
@@ -56,7 +57,7 @@ export class DeclarationParser {
         return declarationNode;
       }
 
-      const endNode = modifierNodes.at(-1)!;
+      const endNode = lastModifierNode;
       parser.context.diagnosticCollector.addTypeScriptParseDiagnostic(TypeScriptDiagnosticTemplates.TS1146,
         parser.typescriptLexer.reader.createSpan(endNode.span.endOffset, 0));
       const span = parser.typescriptLexer.reader.createSpan(startNode.span, endNode.span);

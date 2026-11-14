@@ -21,15 +21,12 @@ import { TypeScriptAssertKeywordNode } from "../../../models/nodes/keywords/type
 import { TypeScriptWithKeywordNode } from "../../../models/nodes/keywords/typescript-with-keyword.node.js";
 import { Resources } from "../../../resources.js";
 import type { TypeScriptSyntaxParser } from "../../typescript-syntax.parser.js";
-import { IdentifierNameParser } from "../names/identifier-name.parser.js";
 
 export class ImportAttributesParser {
   private readonly typescriptParser: TypeScriptSyntaxParser;
-  private readonly nameParser: IdentifierNameParser;
 
   public constructor(typescriptParser: TypeScriptSyntaxParser) {
     this.typescriptParser = typescriptParser;
-    this.nameParser = new IdentifierNameParser(typescriptParser);
   }
 
   public parse(): TypeScriptImportAttributesNode | undefined {
@@ -72,7 +69,13 @@ export class ImportAttributesParser {
       const openBraceNode = parser.tryConsume(TypeScriptOpenBraceNode);
       const attributeNodes: TypeScriptImportAttributeNode[] = [];
       const commaNodes: TypeScriptCommaNode[] = [];
-      let endNode: Node | undefined = openBraceNode ?? startNode;
+      const firstNode = startNode ?? openBraceNode;
+      if (Object.isUndefined(firstNode)) {
+        parser.reportExpected(Resources.openBrace);
+        return new TypeScriptImportAttributesNode(keywordNode, attributeNodes, commaNodes, parser.currentNode.getTypeScriptMissingNodeSpan(),
+          undefined, undefined, colonNode, undefined, undefined);
+      }
+      let endNode: Node = openBraceNode ?? firstNode;
       if (Object.isUndefined(openBraceNode))
         parser.reportExpected(Resources.openBrace);
       else
@@ -108,12 +111,9 @@ export class ImportAttributesParser {
           Resources.closeBrace);
       }
       endNode = closeBraceNode ?? endNode;
-      const firstNode = startNode ?? openBraceNode;
-      const span = Object.isUndefined(endNode)
-        ? parser.currentNode.getTypeScriptMissingNodeSpan()
-        : parser.typescriptLexer.reader.createSpan(firstNode!.span, endNode.span);
+      const span = parser.typescriptLexer.reader.createSpan(firstNode.span, endNode.span);
       return new TypeScriptImportAttributesNode(keywordNode, attributeNodes, commaNodes, span, openBraceNode, closeBraceNode, colonNode,
-        firstNode?.leadingTrivia, endNode?.trailingTrivia);
+        firstNode.leadingTrivia, endNode.trailingTrivia);
     }
     finally {
       this.typescriptParser.context.leaveList();
@@ -123,7 +123,7 @@ export class ImportAttributesParser {
   private parseAttribute(): TypeScriptImportAttributeNode {
     const parser = this.typescriptParser;
     const startNode = parser.currentNode;
-    const nameNode = this.nameParser.parseIdentifierOrStringName()!;
+    const nameNode = parser.consumeIdentifierName();
     const colonNode = parser.tryConsume(TypeScriptColonNode);
     if (Object.isUndefined(colonNode))
       parser.reportExpected(Resources.colon);
