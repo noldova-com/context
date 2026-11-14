@@ -133,8 +133,8 @@ export default class RegexConformanceCase {
 
   private expectsSyntaxError(scope: Node): boolean {
     if (isCallExpression(scope)) {
-      const errorNode = scope.arguments[0]!;
-      return isIdentifier(errorNode) && errorNode.text === RegexConformanceCase.SYNTAX_ERROR_NAME;
+      const [errorNode] = scope.arguments;
+      return errorNode !== undefined && isIdentifier(errorNode) && errorNode.text === RegexConformanceCase.SYNTAX_ERROR_NAME;
     }
 
     const catchBlock = isTryStatement(scope) ? scope.catchClause?.block : undefined;

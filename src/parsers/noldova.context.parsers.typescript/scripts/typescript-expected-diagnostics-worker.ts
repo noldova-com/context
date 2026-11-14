@@ -15,6 +15,7 @@ import TypeScriptExpectedWorkerEvent from "./typescript-expected-worker-event.ts
 import TypeScriptReferenceCompiler from "./typescript-reference-compiler.ts";
 
 export default class TypeScriptExpectedDiagnosticsWorker {
+  public static readonly BATCH_PATH_MISSING: string = "The worker takes the path of its batch file.";
   private static readonly LINE_FEED: string = "\n";
   private static readonly STANDARD_OUTPUT: number = 1;
   private static readonly TEXT_ENCODING: BufferEncoding = "utf8";

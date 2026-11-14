@@ -188,6 +188,8 @@ export class ImportAttributesParserTests {
     const node = parser.parseStatement();
 
     Assert.isInstanceOf(node, TypeScriptImportDeclarationNode);
-    Assert.areEqual(expected, parser.context.source.getText(node.attributesNode!.span));
+    const attributesNode = node.attributesNode;
+    Assert.isDefined(attributesNode);
+    Assert.areEqual(expected, parser.context.source.getText(attributesNode.span));
   }
 }

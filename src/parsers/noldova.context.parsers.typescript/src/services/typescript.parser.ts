@@ -93,7 +93,13 @@ export class TypeScriptParser {
 
   private static publish(diagnostics: Diagnostic[]): readonly Diagnostic[] {
     diagnostics.sort(TypeScriptParser.compare);
-    return diagnostics.filter((diagnostic, index) => index === 0 || TypeScriptParser.compare(diagnostics[index - 1]!, diagnostic) !== 0);
+    const published: Diagnostic[] = [];
+    for (const diagnostic of diagnostics) {
+      const previous = published.at(-1);
+      if (Object.isUndefined(previous) || TypeScriptParser.compare(previous, diagnostic) !== 0)
+        published.push(diagnostic);
+    }
+    return published;
   }
 
   private static compare(first: Diagnostic, second: Diagnostic): number {

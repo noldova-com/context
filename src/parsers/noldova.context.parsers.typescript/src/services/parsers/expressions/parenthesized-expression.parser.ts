@@ -156,11 +156,11 @@ export class ParenthesizedExpressionParser {
     const parser = this.typescriptParser;
     const endTokenNode = closeParenthesisNode ?? parser.currentNode;
     let expressionNode = itemNodes[0] ?? endTokenNode.reportTypeScriptMissingExpression(parser);
-    for (let index = 0; index < commaNodes.length; index++) {
+    for (const [index, commaNode] of commaNodes.entries()) {
       const rightNode = itemNodes[index + 1] ?? endTokenNode.reportTypeScriptMissingExpression(parser);
       const expressionSpan = parser.typescriptLexer.reader.createSpan(expressionNode.span, rightNode.span);
       expressionNode = new TypeScriptBinaryExpressionNode(
-        expressionNode, commaNodes[index]!, expressionSpan, rightNode, expressionNode.leadingTrivia, rightNode.trailingTrivia);
+        expressionNode, commaNode, expressionSpan, rightNode, expressionNode.leadingTrivia, rightNode.trailingTrivia);
     }
 
     if (Object.isUndefined(closeParenthesisNode))
@@ -200,8 +200,7 @@ export class ParenthesizedExpressionParser {
     const parser = this.typescriptParser;
     const previousBoundaryRead = parser.context.hasReadListBoundary;
     const arrowFunctionNode = parser.tryParse(() => {
-      for (let index = 0; index < itemNodes.length; index++) {
-        const parameterNode = parameterNodes[index]!;
+      for (const [index, parameterNode] of parameterNodes.entries()) {
         parameterNode.readTypeScriptEvalOrArgumentsNames(parser);
         if (parameterNode !== itemNodes[index])
           parser.readNameAsBinding(parameterNode.nameNode);

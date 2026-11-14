@@ -48,8 +48,7 @@ export class RegexNamedGroupRegistryTests {
     const registrations: Map<string, Map<number, number>[]> = new Map();
     let diagnosticCount = 0;
 
-    for (let index = 0; index < paths.length; index++) {
-      const path = paths[index]!;
+    for (const [index, path] of paths.entries()) {
       const name = `name${index % 3}`;
       const previous = registrations.get(name) ?? [];
       const conflict = previous.some(t => !this.areExclusive(t, path));

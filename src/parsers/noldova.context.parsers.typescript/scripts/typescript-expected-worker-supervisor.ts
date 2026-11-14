@@ -6,10 +6,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { type ChildProcess, spawn, spawnSync } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync, type StdioNull, type StdioPipe } from "node:child_process";
 import os from "node:os";
 import readline from "node:readline";
 
+import type TypeScriptExpectedRecord from "./typescript-expected-record.ts";
 import TypeScriptExpectedWorkerEvent from "./typescript-expected-worker-event.ts";
 import TypeScriptExpectedWorkerOutcome from "./typescript-expected-worker-outcome.ts";
 
@@ -20,9 +21,7 @@ export default class TypeScriptExpectedWorkerSupervisor {
   private static readonly KILL_SIGNAL: NodeJS.Signals = "SIGKILL";
   private static readonly LINE_EVENT: string = "line";
   private static readonly MEMORY_POLL_MILLISECONDS: number = 250;
-  private static readonly STDIO_IGNORE: "ignore" = "ignore";
-  private static readonly STDIO_INHERIT: "inherit" = "inherit";
-  private static readonly STDIO_PIPE: "pipe" = "pipe";
+  private static readonly STDIO: [StdioNull, StdioPipe, StdioNull] = ["ignore", "pipe", "inherit"];
   private static readonly TEXT_ENCODING: BufferEncoding = "utf8";
   private static readonly WINDOWS_KILL_COMMAND: string = "taskkill";
   private static readonly WINDOWS_KILL_FORCE_OPTION: string = "/F";
@@ -49,7 +48,7 @@ export default class TypeScriptExpectedWorkerSupervisor {
     this.memoryBudgetBytes = memoryBudgetBytes;
   }
 
-  public runAsync(onResult: (event: TypeScriptExpectedWorkerEvent) => void): Promise<TypeScriptExpectedWorkerOutcome> {
+  public runAsync(onResult: (record: TypeScriptExpectedRecord) => void): Promise<TypeScriptExpectedWorkerOutcome> {
     return new Promise((resolve, reject) => {
       const fail = (error: Error): void => {
         this.stopTimers();
@@ -58,7 +57,7 @@ export default class TypeScriptExpectedWorkerSupervisor {
 
       const isWindows = process.platform === TypeScriptExpectedWorkerSupervisor.WINDOWS_PLATFORM;
       const child = spawn(process.execPath, [this.workerPath, this.batchPath], {
-        stdio: [TypeScriptExpectedWorkerSupervisor.STDIO_IGNORE, TypeScriptExpectedWorkerSupervisor.STDIO_PIPE, TypeScriptExpectedWorkerSupervisor.STDIO_INHERIT],
+        stdio: TypeScriptExpectedWorkerSupervisor.STDIO,
         detached: !isWindows,
       });
       this.child = child;
@@ -69,19 +68,19 @@ export default class TypeScriptExpectedWorkerSupervisor {
           this.kill(TypeScriptExpectedWorkerOutcome.MEMORY_REASON, fail);
       }, TypeScriptExpectedWorkerSupervisor.MEMORY_POLL_MILLISECONDS);
 
-      readline.createInterface({ input: child.stdout! }).on(TypeScriptExpectedWorkerSupervisor.LINE_EVENT, t => {
+      readline.createInterface({ input: child.stdout }).on(TypeScriptExpectedWorkerSupervisor.LINE_EVENT, t => {
         if (this.killReason !== undefined)
           return;
 
         const event = TypeScriptExpectedWorkerEvent.parse(t);
-        if (event.event === TypeScriptExpectedWorkerEvent.START) {
+        if (event.record === undefined) {
           this.inFlightPath = event.path;
           this.restartCaseTimer(fail);
         }
         else {
           this.inFlightPath = undefined;
           this.clearCaseTimer();
-          onResult(event);
+          onResult(event.record);
         }
       });
 

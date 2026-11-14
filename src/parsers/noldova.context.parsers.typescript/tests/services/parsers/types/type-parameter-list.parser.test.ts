@@ -206,6 +206,8 @@ export class TypeParameterListParserTests {
     const node = parser.parseStatement();
 
     Assert.isInstanceOf(node, TypeScriptFunctionDeclarationNode);
-    Assert.areEqual(expected, parser.context.source.getText(node.typeParameterListNode!.span));
+    const typeParameterListNode = node.typeParameterListNode;
+    Assert.isDefined(typeParameterListNode);
+    Assert.areEqual(expected, parser.context.source.getText(typeParameterListNode.span));
   }
 }

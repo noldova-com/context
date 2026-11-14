@@ -30,7 +30,7 @@ export class TestRunWorkerTests {
 
     Assert.areEqual("Imported hanging-fixture.test.js,Imported passing-fixture.test.js,Ready 2.3",
       messages.map(t => TestRunWorkerTests.describe(t)).join());
-    Assert.areEqual(3, messages[2]!.discoveredCount);
+    Assert.areEqual(3, messages[2]?.discoveredCount);
   }
 
   @TestMethod
@@ -39,7 +39,7 @@ export class TestRunWorkerTests {
 
     Assert.areEqual("Imported hanging-fixture.test.js,Imported passing-fixture.test.js,Ready 1.1",
       messages.map(t => TestRunWorkerTests.describe(t)).join());
-    Assert.areEqual(3, messages[2]!.discoveredCount);
+    Assert.areEqual(3, messages[2]?.discoveredCount);
   }
 
   @TestMethod
@@ -50,9 +50,9 @@ export class TestRunWorkerTests {
     Assert.areEqual("Imported hanging-fixture.test.js,Ready 1.2,Started 0.0,MethodCompleted 0.0,TimedOut 0.0",
       messages.map(t => TestRunWorkerTests.describe(t)).join());
     Assert.areEqual(100, messages[2]?.timeoutMilliseconds);
-    Assert.areEqual(TestOutcome.Failed, messages[3]!.result?.methodResult.outcome);
-    Assert.isInstanceOf(messages[3]!.result?.methodResult.failure, TestTimeoutException);
-    Assert.areEqual("", messages[4]!.filePath);
+    Assert.areEqual(TestOutcome.Failed, messages[3]?.result?.methodResult.outcome);
+    Assert.isInstanceOf(messages[3]?.result?.methodResult.failure, TestTimeoutException);
+    Assert.areEqual("", messages[4]?.filePath);
     Assert.areEqual(listeners.length, process.listenerCount("unhandledRejection"));
   }
 
@@ -65,7 +65,7 @@ export class TestRunWorkerTests {
     Assert.areEqual("Imported hanging-last-fixture.test.js,Imported passing-fixture.test.js," +
       "Ready 2.3,Started 0.0,MethodCompleted 0.0,Started 0.1,MethodCompleted 0.1,TimedOut 0.1",
       messages.map(t => TestRunWorkerTests.describe(t)).join());
-    Assert.areEqual("hanging-last-fixture.test.js", messages[7]!.filePath);
+    Assert.areEqual("hanging-last-fixture.test.js", messages[7]?.filePath);
     Assert.areEqual(listeners.length, process.listenerCount("unhandledRejection"));
   }
 
@@ -76,8 +76,8 @@ export class TestRunWorkerTests {
     Assert.areEqual("Imported hanging-fixture.test.js,Ready 1.2,Started 0.1,MethodCompleted 0.1,ClassCompleted 0",
       messages.map(t => TestRunWorkerTests.describe(t)).join());
     Assert.areEqual(4000, messages[2]?.timeoutMilliseconds);
-    Assert.areEqual(TestOutcome.Passed, messages[3]!.result?.methodResult.outcome);
-    Assert.areEqual("hanging-fixture.test.js", messages[4]!.filePath);
+    Assert.areEqual(TestOutcome.Passed, messages[3]?.result?.methodResult.outcome);
+    Assert.areEqual("hanging-fixture.test.js", messages[4]?.filePath);
   }
 
   @TestMethod
@@ -86,7 +86,7 @@ export class TestRunWorkerTests {
 
     Assert.areEqual("Imported hanging-fixture.test.js,Ready 1.2,Started 0.0,MethodCompleted 0.0,Started 0.1,MethodCompleted 0.1,ClassCompleted 0",
       messages.map(t => TestRunWorkerTests.describe(t)).join());
-    Assert.areEqual(TestOutcome.Failed, messages[3]!.result?.methodResult.outcome);
+    Assert.areEqual(TestOutcome.Failed, messages[3]?.result?.methodResult.outcome);
   }
 
   @TestMethod

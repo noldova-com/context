@@ -33,7 +33,7 @@ export class TestRunnerTests {
     const selected = await this.runner().selectAsync([], ["Alpha"]);
 
     Assert.areEqual(1, selected.length);
-    Assert.areEqual(2, selected[0]!.methods.length);
+    Assert.areEqual(2, selected[0]?.methods.length);
   }
 
   @TestMethod
@@ -44,7 +44,7 @@ export class TestRunnerTests {
     const selected = runner.select(discovered, ["Alpha"]);
 
     Assert.areEqual(1, selected.length);
-    Assert.areEqual(2, selected[0]!.methods.length);
+    Assert.areEqual(2, selected[0]?.methods.length);
     Assert.areEqual(discovered.length, runner.select(discovered).length);
   }
 

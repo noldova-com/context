@@ -227,8 +227,7 @@ export class TypeParser {
       this.typescriptParser.advance();
     }
     let typeNode = this.parsePrimaryType();
-    for (let index = operators.length - 1; index >= 0; index--) {
-      const operator = operators[index]!;
+    for (const operator of operators.toReversed()) {
       typeNode = new TypeScriptTypeOperatorNode(operator, this.typescriptParser.typescriptLexer.reader.createSpan(operator.span, typeNode.span),
         typeNode, operator.leadingTrivia, typeNode.trailingTrivia);
     }

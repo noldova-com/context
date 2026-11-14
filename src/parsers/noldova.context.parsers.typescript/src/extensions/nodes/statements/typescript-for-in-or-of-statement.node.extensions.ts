@@ -58,10 +58,11 @@ TypeScriptForInOrOfStatementNode.prototype.validateTypeScriptGrammar = function 
   if (!Object.isUndefined(initializerNode.awaitKeywordNode) && (context.isClassStaticBlock || !context.isAwaitContext))
     return;
 
-  if (initializerNode.children.length > 1) {
+  const secondDeclarationNode = initializerNode.children[1];
+  if (!Object.isUndefined(secondDeclarationNode)) {
     context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source,
       isForOf ? TypeScriptDiagnosticTemplates.TS1188 : TypeScriptDiagnosticTemplates.TS1091,
-      initializerNode.children[1]!.nameNode.getTypeScriptFirstTokenSpan());
+      secondDeclarationNode.nameNode.getTypeScriptFirstTokenSpan());
     return;
   }
 

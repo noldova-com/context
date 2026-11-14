@@ -8,6 +8,7 @@
 
 import type { Diagnostic } from "@noldova/context.diagnostics";
 import { TypeScriptParser } from "@noldova/context.parsers.typescript";
+import { Assert } from "@noldova/context.testing";
 
 export class TypeScriptDiagnosticsFixture {
   private static readonly SEPARATOR: string = "|";
@@ -41,11 +42,14 @@ export class TypeScriptDiagnosticsFixture {
   }
 
   private static position(diagnostic: Diagnostic): string {
-    return `${diagnostic.code.displayText}@${diagnostic.location!.start}:${diagnostic.location!.length}`;
+    const location = diagnostic.location;
+    Assert.isDefined(location);
+    return `${diagnostic.code.displayText}@${location.start}:${location.length}`;
   }
 
   private static text(content: string, diagnostic: Diagnostic): string {
-    const location = diagnostic.location!;
+    const location = diagnostic.location;
+    Assert.isDefined(location);
     return content.slice(location.start, location.start + location.length);
   }
 }

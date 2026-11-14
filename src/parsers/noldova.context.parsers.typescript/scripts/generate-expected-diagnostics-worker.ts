@@ -8,4 +8,8 @@
 
 import TypeScriptExpectedDiagnosticsWorker from "./typescript-expected-diagnostics-worker.ts";
 
-new TypeScriptExpectedDiagnosticsWorker().run(process.argv[2]!);
+const [batchPath] = process.argv.slice(2);
+if (batchPath === undefined)
+  throw new Error(TypeScriptExpectedDiagnosticsWorker.BATCH_PATH_MISSING);
+
+new TypeScriptExpectedDiagnosticsWorker().run(batchPath);

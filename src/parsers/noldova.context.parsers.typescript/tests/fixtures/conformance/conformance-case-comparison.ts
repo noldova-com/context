@@ -8,6 +8,7 @@
 
 import { DiagnosticAuthority } from "@noldova/context.diagnostics";
 import { TypeScriptParser } from "@noldova/context.parsers.typescript";
+import { Assert } from "@noldova/context.testing";
 
 import type { ApplicableCaseRecord } from "./applicable-case-record.js";
 import { ComparedDiagnostic } from "./compared-diagnostic.js";
@@ -37,14 +38,17 @@ export class ConformanceCaseComparison {
   }
 
   private expected(fileIndex: number): readonly ComparedDiagnostic[] {
-    if (!this.units[fileIndex]!.isSource)
+    const unit = this.units[fileIndex];
+    Assert.isDefined(unit);
+    if (!unit.isSource)
       return [];
 
     return this.record.diagnostics.publishedFor(fileIndex).filter(t => this.scope.has(t.code)).map(t => ComparedDiagnostic.fromExpected(t, this.units));
   }
 
   private reported(fileIndex: number): readonly ComparedDiagnostic[] {
-    const unit = this.units[fileIndex]!;
+    const unit = this.units[fileIndex];
+    Assert.isDefined(unit);
     if (!unit.isSource)
       return [];
 
@@ -55,25 +59,20 @@ export class ConformanceCaseComparison {
 
   private static publish(diagnostics: readonly ComparedDiagnostic[]): readonly ComparedDiagnostic[] {
     const sorted = diagnostics.toSorted(ComparedDiagnostic.compare);
-    const published: ComparedDiagnostic[] = [];
-    let index = 0;
-    while (index < sorted.length) {
-      const first = sorted[index]!;
-      let end = index + 1;
-      while (end < sorted.length && sorted[end]!.keyWithoutRelated === first.keyWithoutRelated)
-        end++;
-      if (end - index === 1)
-        published.push(first);
+    const runs: [ComparedDiagnostic, ...ComparedDiagnostic[]][] = [];
+    for (const diagnostic of sorted) {
+      const run = runs.at(-1);
+      if (run !== undefined && run[0].keyWithoutRelated === diagnostic.keyWithoutRelated)
+        run.push(diagnostic);
       else
-        published.push(first.withRelated(ConformanceCaseComparison.mergeRelated(sorted.slice(index, end))));
-      index = end;
+        runs.push([diagnostic]);
     }
 
-    return published;
+    return runs.map(t => t.length === 1 ? t[0] : t[0].withRelated(ConformanceCaseComparison.mergeRelated(t)));
   }
 
   private static mergeRelated(repeats: readonly ComparedDiagnostic[]): readonly ComparedDiagnostic[] {
     const related = repeats.flatMap(t => t.related).toSorted(ComparedDiagnostic.compare);
-    return related.filter((t, index) => index === 0 || related[index - 1]!.key !== t.key);
+    return related.filter((t, index) => index === 0 || related[index - 1]?.key !== t.key);
   }
 }

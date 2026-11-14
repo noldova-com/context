@@ -187,7 +187,7 @@ export default class TypeScriptConformanceVendor extends Script {
   }
 
   private filesOf(section: TypeScriptVendoredSection): number {
-    return section.upstreamRoots.reduce((total, t) => total + this.rootCounts.get(t)!, 0);
+    return [...this.rootCounts].filter(([t]) => section.upstreamRoots.includes(t)).reduce((total, [, count]) => total + count, 0);
   }
 
   private sectionRecord(source: string, section: TypeScriptVendoredSection): TypeScriptVendoredSectionRecord {
@@ -287,7 +287,7 @@ export default class TypeScriptConformanceVendor extends Script {
 
   private static replacedDirectories(): readonly string[] {
     const places = TypeScriptConformanceVendor.ARCHIVES.flatMap(t => [...t.sections.map(t => t.localRoot), ...t.files.map(t => t.localPath)]);
-    return [...new Set(places.map(t => t.split(path.posix.sep)[0]!))];
+    return [...new Set(places.map(t => t.slice(0, `${t}${path.posix.sep}`.indexOf(path.posix.sep))))];
   }
 
   private static licenses(localRoot: string, names: readonly string[]): readonly TypeScriptVendoredFile[] {

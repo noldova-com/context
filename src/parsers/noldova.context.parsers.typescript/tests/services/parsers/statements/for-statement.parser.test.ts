@@ -173,7 +173,10 @@ export class ForStatementParserTests {
     Assert.isTrue(node instanceof TypeScriptForInStatementNode || node instanceof TypeScriptForStatementNode);
     Assert.areEqual(0, node.span.startOffset);
     Assert.areEqual(content.length, node.span.endOffset);
-    Assert.areEqual(expectedHeader, content.slice(node.openParenthesisNode!.span.endOffset, node.closeParenthesisNode!.span.startOffset));
+    const { openParenthesisNode, closeParenthesisNode } = node;
+    Assert.isDefined(openParenthesisNode);
+    Assert.isDefined(closeParenthesisNode);
+    Assert.areEqual(expectedHeader, content.slice(openParenthesisNode.span.endOffset, closeParenthesisNode.span.startOffset));
     Assert.areEqual(expected, TypeScriptDiagnosticsFixture.project(parser.context.diagnosticCollector.diagnostics));
   }
 

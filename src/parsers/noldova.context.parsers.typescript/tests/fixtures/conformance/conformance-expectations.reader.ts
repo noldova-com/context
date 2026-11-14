@@ -94,8 +94,8 @@ export class ConformanceExpectationsReader {
     const units = ConformanceCaseSplitter.read(this.casePath(record));
     Assert.areEqual(record.files.length, units.length, `${record.path}: the runner split a different number of units than the reference compiled.`);
     for (const [index, file] of record.files.entries()) {
-      Assert.areEqual(file.name, units[index]!.name, `${record.path}: unit ${index} is named differently than the reference named it.`);
-      Assert.areEqual(file.sha256, units[index]!.sha256, `${record.path}: unit "${file.name}" differs from what the reference compiled.`);
+      Assert.areEqual(file.name, units[index]?.name, `${record.path}: unit ${index} is named differently than the reference named it.`);
+      Assert.areEqual(file.sha256, units[index]?.sha256, `${record.path}: unit "${file.name}" differs from what the reference compiled.`);
     }
 
     return units;

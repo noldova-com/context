@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { Assert } from "@noldova/context.testing";
+
 import type { ConformanceCaseVerdict } from "./conformance-case-verdict.js";
 import { ExpectedPattern } from "./expected-pattern.js";
 import type { JsonObject } from "./json-object.js";
@@ -32,13 +34,20 @@ export class KnownFailure {
 
   public isRecordedAs(verdict: ConformanceCaseVerdict): boolean {
     return KnownFailure.keys(this.refused) === KnownFailure.keys(verdict.refused)
-      && KnownFailure.keys(this.accepted.map(group => group[0]!)) === KnownFailure.keys(verdict.accepted.map(group => group[0]!));
+      && KnownFailure.keys(this.accepted.map(group => KnownFailure.first(group)))
+        === KnownFailure.keys(verdict.accepted.map(group => KnownFailure.first(group)));
   }
 
   public contains(failure: KnownFailure): boolean {
     const refused = new Set(this.refused.map(t => t.start));
-    const accepted = new Set(this.accepted.map(group => group[0]!.start));
-    return failure.refused.every(t => refused.has(t.start)) && failure.accepted.every(group => accepted.has(group[0]!.start));
+    const accepted = new Set(this.accepted.map(group => KnownFailure.first(group).start));
+    return failure.refused.every(t => refused.has(t.start)) && failure.accepted.every(group => accepted.has(KnownFailure.first(group).start));
+  }
+
+  private static first(group: readonly ExpectedPattern[]): ExpectedPattern {
+    const [first] = group;
+    Assert.isDefined(first);
+    return first;
   }
 
   private static keys(patterns: readonly ExpectedPattern[]): string {

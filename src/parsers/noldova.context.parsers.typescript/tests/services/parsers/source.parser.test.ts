@@ -38,10 +38,7 @@ export class SourceParserTests {
     const parser = new TypeScriptSyntaxParserProbe("const before = 1; await /pattern/; const after = 2; export {};");
     const result = parser.parse();
     Assert.areEqual(4, result.rootNode.children.length);
-    Assert.isTrue(parser.parsedStatementNodes.includes(result.rootNode.children[0]!));
-    Assert.isFalse(parser.parsedStatementNodes.includes(result.rootNode.children[1]!));
-    Assert.isTrue(parser.parsedStatementNodes.includes(result.rootNode.children[2]!));
-    Assert.isTrue(parser.parsedStatementNodes.includes(result.rootNode.children[3]!));
+    Assert.areEqual("true,false,true,true", result.rootNode.children.map(t => parser.parsedStatementNodes.includes(t)).join());
     Assert.areEqual(0, result.diagnostics.length);
   }
 

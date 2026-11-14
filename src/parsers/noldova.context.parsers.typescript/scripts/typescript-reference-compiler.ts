@@ -39,10 +39,11 @@ export default class TypeScriptReferenceCompiler {
   }
 
   public evaluate(conformanceCase: TypeScriptConformanceCase): TypeScriptExpectedApplicableRecord {
-    const unitPaths = conformanceCase.units.map(t => `${TypeScriptReferenceCompiler.CASE_ROOT}${TypeScriptReferenceCompiler.SEPARATOR}${t.name}`);
+    const unitPaths = conformanceCase.units.map(t => TypeScriptReferenceCompiler.unitPath(t.name));
     const identity = new TypeScriptReferenceIdentity(TypeScriptReferenceCompiler.CONFIG_PATH, this.libraryDirectory, unitPaths);
 
-    conformanceCase.units.forEach((t, index) => { this.fileSystem.write(unitPaths[index]!, t.content); });
+    for (const unit of conformanceCase.units)
+      this.fileSystem.write(TypeScriptReferenceCompiler.unitPath(unit.name), unit.content);
     this.fileSystem.write(TypeScriptReferenceCompiler.CONFIG_PATH, this.createConfig(conformanceCase));
 
     const api = new API({ fs: this.fileSystem });
@@ -96,6 +97,10 @@ export default class TypeScriptReferenceCompiler {
     const suggestion = record(unitFileNames.flatMap(t => program.getSuggestionDiagnostics(t)));
 
     return new TypeScriptExpectedDiagnosticSections(config, syntactic, programDiagnostics, global, semantic, suggestion);
+  }
+
+  private static unitPath(name: string): string {
+    return `${TypeScriptReferenceCompiler.CASE_ROOT}${TypeScriptReferenceCompiler.SEPARATOR}${name}`;
   }
 
   private static resolveLibraryDirectory(): string {

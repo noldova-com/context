@@ -11,6 +11,8 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
+import { Assert } from "@noldova/context.testing";
+
 import { ConformanceCaseUnit } from "./conformance-case-unit.js";
 
 export class ConformanceCaseSplitter {
@@ -66,13 +68,16 @@ export class ConformanceCaseSplitter {
         continue;
       }
 
-      if (directive[1]!.toLowerCase() !== ConformanceCaseSplitter.FILENAME_DIRECTIVE)
+      const [, directiveName, directiveValue] = directive;
+      Assert.isDefined(directiveName);
+      Assert.isDefined(directiveValue);
+      if (directiveName.toLowerCase() !== ConformanceCaseSplitter.FILENAME_DIRECTIVE)
         continue;
 
       if (unitName !== undefined)
         flush();
 
-      unitName = ConformanceCaseSplitter.normalizeUnitName(directive[2]!.trim());
+      unitName = ConformanceCaseSplitter.normalizeUnitName(directiveValue.trim());
       unitLines = [];
     }
 

@@ -47,10 +47,10 @@ export default class TypeScriptExpectedCheckpoint {
   }
 
   public get retries(): readonly TypeScriptExpectedRetry[] {
-    return [...this.attempts.keys()]
-      .filter(t => this.results.has(t))
-      .sort()
-      .map(t => new TypeScriptExpectedRetry(t, this.attempts.get(t)!));
+    return [...this.attempts]
+      .filter(([t]) => this.results.has(t))
+      .sort(([first], [second]) => first < second ? -1 : first > second ? 1 : 0)
+      .map(([t, attempts]) => new TypeScriptExpectedRetry(t, attempts));
   }
 
   public static open(directory: string, identity: string): TypeScriptExpectedCheckpoint {
