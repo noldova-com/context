@@ -25,6 +25,7 @@ import { TypeScriptThisKeywordNode } from "../../../models/nodes/keywords/typesc
 import { TypeScriptEqualsNode } from "../../../models/nodes/operators/typescript-equals.node.js";
 import { TypeScriptQuestionNode } from "../../../models/nodes/operators/typescript-question.node.js";
 import type { TypeScriptTypeParameterListNode } from "../../../models/nodes/types/typescript-type-parameter-list.node.js";
+import { TypeScriptParameterListRead } from "../../../models/typescript-parameter-list-read.js";
 import { Resources } from "../../../resources.js";
 import type { TypeScriptSyntaxParser } from "../../typescript-syntax.parser.js";
 import { BindingNameParser } from "../names/binding-name.parser.js";
@@ -58,7 +59,7 @@ export class ParameterListParser {
 
     const parameterNodes: TypeScriptParameterNode[] = [];
     const commaNodes: TypeScriptCommaNode[] = [];
-    let endNode = this.parseParameters(parsedOpenParenthesisNode, parameterNodes, commaNodes, isParameterNameRequired, enclosingAwaitFlags,
+    let endNode = this.tryParseParameters(parsedOpenParenthesisNode, parameterNodes, commaNodes, isParameterNameRequired, enclosingAwaitFlags,
       holdsParameterProperties);
     if (Object.isUndefined(endNode))
       return undefined;
@@ -83,9 +84,29 @@ export class ParameterListParser {
     return resultNode;
   }
 
-  public parseParameters(openNode: Node, parameterNodes: TypeScriptParameterNode[], commaNodes: TypeScriptCommaNode[],
-    isParameterNameRequired: boolean = false, enclosingAwaitFlags: TypeScriptContextFlags = this.typescriptParser.context.awaitFlags,
+  public parseParameters(openNode: Node, parameterNodes: TypeScriptParameterNode[], commaNodes: TypeScriptCommaNode[]): Node {
+    return this.readParameters(openNode, parameterNodes, commaNodes, () => true, this.typescriptParser.context.awaitFlags, false).endNode;
+  }
+
+  public tryParseParameters(openNode: Node, parameterNodes: TypeScriptParameterNode[], commaNodes: TypeScriptCommaNode[],
+    isParameterNameRequired: boolean, enclosingAwaitFlags: TypeScriptContextFlags = this.typescriptParser.context.awaitFlags,
     holdsParameterProperties: boolean = false): Node | undefined {
+    const read = this.readParameters(openNode, parameterNodes, commaNodes,
+      () => !isParameterNameRequired || this.startsNamedParameter(enclosingAwaitFlags), enclosingAwaitFlags, holdsParameterProperties);
+    return read.isComplete ? read.endNode : undefined;
+  }
+
+  private startsNamedParameter(enclosingAwaitFlags: TypeScriptContextFlags): boolean {
+    const typescriptParser = this.typescriptParser;
+    return typescriptParser.lookAhead(() => {
+      this.parseModifiers(enclosingAwaitFlags);
+      typescriptParser.tryConsume(TypeScriptDotDotDotNode);
+      return typescriptParser.currentNode.canStartTypeScriptBindingName() || typescriptParser.currentNode instanceof TypeScriptThisKeywordNode;
+    });
+  }
+
+  private readParameters(openNode: Node, parameterNodes: TypeScriptParameterNode[], commaNodes: TypeScriptCommaNode[], canParse: () => boolean,
+    enclosingAwaitFlags: TypeScriptContextFlags, holdsParameterProperties: boolean): TypeScriptParameterListRead {
     const typescriptParser = this.typescriptParser;
     let endNode = openNode;
     const outerListScope = typescriptParser.context.enterList(TypeScriptListKind.Parameters);
@@ -100,12 +121,8 @@ export class ParameterListParser {
           typescriptParser.advance();
           continue;
         }
-        if (isParameterNameRequired && !typescriptParser.lookAhead(() => {
-          this.parseModifiers(enclosingAwaitFlags);
-          typescriptParser.tryConsume(TypeScriptDotDotDotNode);
-          return typescriptParser.currentNode.canStartTypeScriptBindingName() || typescriptParser.currentNode instanceof TypeScriptThisKeywordNode;
-        }))
-          return undefined;
+        if (!canParse())
+          return new TypeScriptParameterListRead(endNode, false);
         const parameterNode = this.parseParameter(undefined, enclosingAwaitFlags, holdsParameterProperties);
         parameterNodes.push(parameterNode);
         endNode = parameterNode;
@@ -124,7 +141,7 @@ export class ParameterListParser {
           typescriptParser.advance();
         }
       }
-      return endNode;
+      return new TypeScriptParameterListRead(endNode, true);
     }
     finally {
       typescriptParser.context.leaveList(outerListScope);

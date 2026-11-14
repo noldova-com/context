@@ -45,12 +45,12 @@ export class ForStatementParser {
 
     const initializerNode = this.parseHeaderInitializer();
     const node = typescriptParser.currentNode;
-    if (node instanceof TypeScriptOfKeywordNode)
-      return this.parseForOf(forKeywordNode, awaitKeywordNode, openParenthesisNode, initializerNode!, node);
+    if (!Object.isUndefined(initializerNode) && node instanceof TypeScriptOfKeywordNode)
+      return this.parseForOf(forKeywordNode, awaitKeywordNode, openParenthesisNode, initializerNode, node);
     if (!Object.isUndefined(awaitKeywordNode))
       typescriptParser.reportExpected(Resources.of);
-    if (node instanceof TypeScriptInKeywordNode)
-      return this.parseForIn(forKeywordNode, openParenthesisNode, initializerNode!, node);
+    if (!Object.isUndefined(initializerNode) && node instanceof TypeScriptInKeywordNode)
+      return this.parseForIn(forKeywordNode, openParenthesisNode, initializerNode, node);
     return this.parseFor(forKeywordNode, openParenthesisNode, initializerNode);
   }
 

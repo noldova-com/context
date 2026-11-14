@@ -59,7 +59,7 @@ export class IndexSignatureParser {
     typescriptParser.advance();
     const parameterNodes: TypeScriptParameterNode[] = [];
     const commaNodes: TypeScriptCommaNode[] = [];
-    let listEndNode = this.parameterListParser.parseParameters(openBracketNode, parameterNodes, commaNodes)!;
+    let listEndNode = this.parameterListParser.parseParameters(openBracketNode, parameterNodes, commaNodes);
 
     const closeBracketNode = typescriptParser.tryConsume(TypeScriptCloseBracketNode);
     if (Object.isUndefined(closeBracketNode))

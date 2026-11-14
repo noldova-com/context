@@ -28,7 +28,7 @@ TypeScriptAtNode.prototype.parseTypeScriptStatement = function (this: TypeScript
 };
 
 TypeScriptAtNode.prototype.parseTypeScriptPrimaryExpression = function (this: TypeScriptAtNode, parser: TypeScriptSyntaxParser): Node {
-  return parser.parseDecoratedClassExpression();
+  return parser.parseDecoratedClassExpression(this);
 };
 
 TypeScriptAtNode.prototype.canStartTypeScriptParameter = function (this: TypeScriptAtNode, _parser: TypeScriptSyntaxParser): boolean {

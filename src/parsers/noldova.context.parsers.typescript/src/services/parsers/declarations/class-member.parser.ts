@@ -68,6 +68,7 @@ export class ClassMemberParser {
 
   private parseMember(startNode: Node, modifierNodes: readonly Node[]): Node {
     const typescriptParser = this.typescriptParser;
+    const lastModifierNode = modifierNodes.at(-1);
     const node = typescriptParser.currentNode;
     if (node.startsTypeScriptClassStaticBlock(typescriptParser)) {
       typescriptParser.advance();
@@ -75,8 +76,8 @@ export class ClassMemberParser {
     }
 
     if (node instanceof TypeScriptSemicolonNode) {
-      if (modifierNodes.length > 0)
-        return this.parseNamelessProperty(startNode, modifierNodes);
+      if (!Object.isUndefined(lastModifierNode))
+        return this.parseNamelessProperty(startNode, modifierNodes, lastModifierNode);
       typescriptParser.advance();
       const span = typescriptParser.typescriptLexer.reader.createSpan(
         startNode.span,
@@ -98,9 +99,9 @@ export class ClassMemberParser {
     if (node instanceof TypeScriptOpenBracketNode && this.indexSignatureParser.isStart)
       return this.indexSignatureParser.parse(startNode, modifierNodes, node);
 
-    if (modifierNodes.length > 0 && !(node instanceof TypeScriptAsteriskNode) && !(node instanceof TypeScriptOpenBracketNode)
+    if (!Object.isUndefined(lastModifierNode) && !(node instanceof TypeScriptAsteriskNode) && !(node instanceof TypeScriptOpenBracketNode)
       && !node.canStartTypeScriptPropertyName())
-      return this.parseNamelessProperty(startNode, modifierNodes);
+      return this.parseNamelessProperty(startNode, modifierNodes, lastModifierNode);
 
     const asteriskNode = typescriptParser.tryConsume(TypeScriptAsteriskNode);
     const nameNode = this.propertyNameParser.parse();
@@ -125,10 +126,10 @@ export class ClassMemberParser {
       exclamationNode);
   }
 
-  private parseNamelessProperty(startNode: Node, modifierNodes: readonly Node[]): Node {
+  private parseNamelessProperty(startNode: Node, modifierNodes: readonly Node[], lastModifierNode: Node): Node {
     const typescriptParser = this.typescriptParser;
     typescriptParser.context.diagnosticCollector.addTypeScriptParseDiagnostic(TypeScriptDiagnosticTemplates.TS1146,
-      typescriptParser.typescriptLexer.reader.createSpan(modifierNodes.at(-1)!.span.endOffset, 0));
+      typescriptParser.typescriptLexer.reader.createSpan(lastModifierNode.span.endOffset, 0));
     return this.propertyDeclarationParser.parse(startNode, modifierNodes,
       new TypeScriptMissingIdentifierNode(typescriptParser.currentNode.getTypeScriptMissingNodeSpan()));
   }

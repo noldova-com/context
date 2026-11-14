@@ -9,6 +9,7 @@
 import type { Node } from "@noldova/context.parsers";
 
 import { TypeScriptImportClauseNode } from "../../../models/nodes/declarations/typescript-import-clause.node.js";
+import type { TypeScriptNamedImportsNode } from "../../../models/nodes/declarations/typescript-named-imports.node.js";
 import { TypeScriptNamespaceImportNode } from "../../../models/nodes/declarations/typescript-namespace-import.node.js";
 import { TypeScriptCommaNode } from "../../../models/nodes/delimiters/typescript-comma.node.js";
 import { TypeScriptMissingIdentifierNode } from "../../../models/nodes/identifiers/typescript-missing-identifier.node.js";
@@ -31,14 +32,24 @@ export class ImportClauseParser {
   }
 
   public parse(defaultNameNode?: Node): TypeScriptImportClauseNode {
-    const parser = this.typescriptParser;
-    const startNode = defaultNameNode ?? parser.currentNode;
-    const commaNode = Object.isUndefined(defaultNameNode) ? undefined : parser.tryConsume(TypeScriptCommaNode);
-    const namedBindingsNode = Object.isUndefined(defaultNameNode) || !Object.isUndefined(commaNode)
-      ? parser.currentNode instanceof TypeScriptAsteriskNode ? this.parseNamespace() : this.namedBindingsParser.parseImports()
-      : undefined;
-    const endNode = namedBindingsNode ?? defaultNameNode!;
-    const span = parser.typescriptLexer.reader.createSpan(startNode.span, endNode.span);
+    if (Object.isUndefined(defaultNameNode)) {
+      const startNode = this.typescriptParser.currentNode;
+      const namedBindingsNode = this.parseNamedBindings();
+      return this.create(startNode, undefined, undefined, namedBindingsNode, namedBindingsNode);
+    }
+
+    const commaNode = this.typescriptParser.tryConsume(TypeScriptCommaNode);
+    const namedBindingsNode = Object.isUndefined(commaNode) ? undefined : this.parseNamedBindings();
+    return this.create(defaultNameNode, defaultNameNode, commaNode, namedBindingsNode, namedBindingsNode ?? defaultNameNode);
+  }
+
+  private parseNamedBindings(): TypeScriptNamedImportsNode | TypeScriptNamespaceImportNode {
+    return this.typescriptParser.currentNode instanceof TypeScriptAsteriskNode ? this.parseNamespace() : this.namedBindingsParser.parseImports();
+  }
+
+  private create(startNode: Node, defaultNameNode: Node | undefined, commaNode: TypeScriptCommaNode | undefined,
+    namedBindingsNode: TypeScriptNamedImportsNode | TypeScriptNamespaceImportNode | undefined, endNode: Node): TypeScriptImportClauseNode {
+    const span = this.typescriptParser.typescriptLexer.reader.createSpan(startNode.span, endNode.span);
     return new TypeScriptImportClauseNode(span, defaultNameNode, commaNode, namedBindingsNode, startNode.leadingTrivia, endNode.trailingTrivia);
   }
 

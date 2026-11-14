@@ -33,6 +33,7 @@ import { TypeScriptEqualsNode } from "../../../models/nodes/operators/typescript
 import { TypeScriptLessThanNode } from "../../../models/nodes/operators/typescript-less-than.node.js";
 import { TypeScriptQuestionNode } from "../../../models/nodes/operators/typescript-question.node.js";
 import type { TypeScriptTypeParameterListNode } from "../../../models/nodes/types/typescript-type-parameter-list.node.js";
+import { TypeScriptArrowFunctionParts } from "../../../models/typescript-arrow-function-parts.js";
 import { Resources } from "../../../resources.js";
 import type { TypeScriptSyntaxParser } from "../../typescript-syntax.parser.js";
 import { ParameterListParser } from "../declarations/parameter-list.parser.js";
@@ -87,8 +88,15 @@ export class ArrowFunctionParser {
       parameterAwaitCount, false, hasHeadDiagnostics);
   }
 
-  public parseWithParameter(nameNode: Node): TypeScriptArrowFunctionNode {
-    return this.parseArrow(nameNode, undefined, undefined, this.createParameter(nameNode), undefined)!;
+  public parseWithParameter(nameNode: Node, arrowNode: TypeScriptArrowNode): TypeScriptArrowFunctionNode {
+    const parameterNode = this.createParameter(nameNode);
+    return this.inArrowScope(undefined, (previousFlags, writtenAwaitCount) => {
+      this.reportLineBreakBeforeArrow();
+      this.typescriptParser.advance();
+      const bodyNode = this.parseBody(undefined, arrowNode, previousFlags);
+      return this.create(new TypeScriptArrowFunctionParts(nameNode, undefined, undefined, parameterNode, undefined, undefined, undefined,
+        arrowNode, bodyNode), writtenAwaitCount);
+    });
   }
 
   private parse(isAmbiguityAllowed: boolean = false): TypeScriptArrowFunctionNode | undefined {
@@ -150,23 +158,18 @@ export class ArrowFunctionParser {
     parameterAwaitCount?: number,
     isAmbiguityAllowed: boolean = false,
     hasHeadDiagnostics: boolean = false): TypeScriptArrowFunctionNode | undefined {
-    const context = this.typescriptParser.context;
-    context.enterRecursion(this.typescriptParser.currentNode.span);
-    const previousFlags = context.contextFlags;
-    const previousFunctionScope = context.isFunctionScope;
-    const previousClassStaticBlock = context.isClassStaticBlock;
-    const writtenAwaitCount = parameterAwaitCount ?? context.records.writtenAwaits.length;
-    try {
+    return this.inArrowScope(parameterAwaitCount, (previousFlags, writtenAwaitCount) => {
       const typescriptParser = this.typescriptParser;
+      const context = typescriptParser.context;
       const colonNode = typescriptParser.tryConsume(TypeScriptColonNode);
-      const returnTypeNode = Object.isUndefined(colonNode) ? undefined : this.typescriptParser.parseReturnType();
+      const returnTypeNode = Object.isUndefined(colonNode) ? undefined : typescriptParser.parseReturnType();
       if (!isAmbiguityAllowed && returnTypeNode?.hasTypeScriptArrowFunctionBlockingParseError() === true)
         return undefined;
       if (!Object.isUndefined(parameterListNode))
         returnTypeNode?.validateTypeScriptPredicateParameter(context, parameterListNode.children);
 
-      if (!hasHeadDiagnostics && typescriptParser.currentNode instanceof TypeScriptArrowNode && typescriptParser.hasPrecedingLineBreak())
-        context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source, TypeScriptDiagnosticTemplates.TS1200, typescriptParser.currentNode.span);
+      if (!hasHeadDiagnostics)
+        this.reportLineBreakBeforeArrow();
       const arrowNode = typescriptParser.tryConsume(TypeScriptArrowNode);
       if (Object.isUndefined(arrowNode)) {
         if (!isAmbiguityAllowed && !(typescriptParser.currentNode instanceof TypeScriptOpenBraceNode))
@@ -174,47 +177,24 @@ export class ArrowFunctionParser {
         typescriptParser.reportExpected(Resources.arrow);
       }
 
-      if (asyncKeywordNode?.hasTypeScriptKeywordEscape())
-        context.diagnosticCollector.addTypeScriptParseDiagnostic(TypeScriptDiagnosticTemplates.TS1260, asyncKeywordNode.span);
-
-      const functionFlags = Object.isUndefined(asyncKeywordNode) ? TypeScriptContextFlags.None : TypeScriptContextFlags.Await;
-      context.contextFlags = functionFlags
-        | (previousFlags & (TypeScriptContextFlags.ConditionalTrueBranch | TypeScriptContextFlags.DisallowIn));
-      context.isFunctionScope = true;
-      context.isClassStaticBlock = false;
-      const bodyStartNode = typescriptParser.currentNode;
-      let bodyNode: Node;
-      if (bodyStartNode instanceof TypeScriptOpenBraceNode)
-        bodyNode = this.blockParser.parseFunctionBody(bodyStartNode, functionFlags, context.isNewTargetScope);
-      else if (!Object.isUndefined(arrowNode) && !(bodyStartNode instanceof TypeScriptSemicolonNode)
-        && bodyStartNode.canStartTypeScriptStatement(typescriptParser) && !bodyStartNode.canStartTypeScriptExpression(typescriptParser))
-        bodyNode = this.blockParser.parseFunctionBody(undefined, functionFlags, context.isNewTargetScope);
-      else if (!Object.isUndefined(arrowNode))
-        bodyNode = typescriptParser.parseAssignmentExpression();
-      else if (typescriptParser.currentNode.isTypeScriptBindingIdentifier())
-        bodyNode = typescriptParser.consumeName();
-      else
-        bodyNode = new TypeScriptMissingIdentifierNode(typescriptParser.currentNode.getTypeScriptMissingNodeSpan());
+      const bodyNode = this.parseBody(asyncKeywordNode, arrowNode, previousFlags);
       if (!isAmbiguityAllowed && !Object.isUndefined(colonNode) && (previousFlags & TypeScriptContextFlags.ConditionalTrueBranch) !== 0
         && !(typescriptParser.currentNode instanceof TypeScriptColonNode))
         return undefined;
-      const span = typescriptParser.typescriptLexer.reader.createSpan(startNode.span, bodyNode.span);
-      const resultNode = new TypeScriptArrowFunctionNode(
-        span,
-        arrowNode,
-        bodyNode,
-        Object.isUndefined(asyncKeywordNode) ? [] : [asyncKeywordNode],
-        typeParameterListNode,
-        parameterNode,
-        parameterListNode,
-        colonNode,
-        returnTypeNode,
-        startNode.leadingTrivia,
-        bodyNode.trailingTrivia);
+      return this.create(new TypeScriptArrowFunctionParts(startNode, asyncKeywordNode, typeParameterListNode, parameterNode, parameterListNode,
+        colonNode, returnTypeNode, arrowNode, bodyNode), writtenAwaitCount);
+    });
+  }
 
-      parameterListNode?.readTypeScriptHolder(context, resultNode);
-      typescriptParser.reportWrittenAwaits(writtenAwaitCount, bodyNode, resultNode, false, !Object.isUndefined(asyncKeywordNode));
-      return resultNode;
+  private inArrowScope<TResult>(parameterAwaitCount: number | undefined, parse: (previousFlags: TypeScriptContextFlags, writtenAwaitCount: number) => TResult): TResult {
+    const context = this.typescriptParser.context;
+    context.enterRecursion(this.typescriptParser.currentNode.span);
+    const previousFlags = context.contextFlags;
+    const previousFunctionScope = context.isFunctionScope;
+    const previousClassStaticBlock = context.isClassStaticBlock;
+    const writtenAwaitCount = parameterAwaitCount ?? context.records.writtenAwaits.length;
+    try {
+      return parse(previousFlags, writtenAwaitCount);
     }
     finally {
       context.contextFlags = previousFlags;
@@ -222,6 +202,64 @@ export class ArrowFunctionParser {
       context.isClassStaticBlock = previousClassStaticBlock;
       context.leaveRecursion();
     }
+  }
+
+  private reportLineBreakBeforeArrow(): void {
+    const typescriptParser = this.typescriptParser;
+    const context = typescriptParser.context;
+    if (typescriptParser.currentNode instanceof TypeScriptArrowNode && typescriptParser.hasPrecedingLineBreak())
+      context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source, TypeScriptDiagnosticTemplates.TS1200, typescriptParser.currentNode.span);
+  }
+
+  private parseBody(asyncKeywordNode: TypeScriptAsyncKeywordNode | undefined, arrowNode: TypeScriptArrowNode | undefined,
+    previousFlags: TypeScriptContextFlags): Node {
+    const typescriptParser = this.typescriptParser;
+    const context = typescriptParser.context;
+    if (asyncKeywordNode?.hasTypeScriptKeywordEscape())
+      context.diagnosticCollector.addTypeScriptParseDiagnostic(TypeScriptDiagnosticTemplates.TS1260, asyncKeywordNode.span);
+
+    const functionFlags = Object.isUndefined(asyncKeywordNode) ? TypeScriptContextFlags.None : TypeScriptContextFlags.Await;
+    context.contextFlags = functionFlags
+      | (previousFlags & (TypeScriptContextFlags.ConditionalTrueBranch | TypeScriptContextFlags.DisallowIn));
+    context.isFunctionScope = true;
+    context.isClassStaticBlock = false;
+    const bodyStartNode = typescriptParser.currentNode;
+    let bodyNode: Node;
+    if (bodyStartNode instanceof TypeScriptOpenBraceNode)
+      bodyNode = this.blockParser.parseFunctionBody(bodyStartNode, functionFlags, context.isNewTargetScope);
+    else if (!Object.isUndefined(arrowNode) && !(bodyStartNode instanceof TypeScriptSemicolonNode)
+      && bodyStartNode.canStartTypeScriptStatement(typescriptParser) && !bodyStartNode.canStartTypeScriptExpression(typescriptParser))
+      bodyNode = this.blockParser.parseFunctionBody(undefined, functionFlags, context.isNewTargetScope);
+    else if (!Object.isUndefined(arrowNode))
+      bodyNode = typescriptParser.parseAssignmentExpression();
+    else if (typescriptParser.currentNode.isTypeScriptBindingIdentifier())
+      bodyNode = typescriptParser.consumeName();
+    else
+      bodyNode = new TypeScriptMissingIdentifierNode(typescriptParser.currentNode.getTypeScriptMissingNodeSpan());
+    return bodyNode;
+  }
+
+  private create(parts: TypeScriptArrowFunctionParts, writtenAwaitCount: number): TypeScriptArrowFunctionNode {
+    const typescriptParser = this.typescriptParser;
+    const context = typescriptParser.context;
+    const { startNode, asyncKeywordNode, parameterListNode, bodyNode } = parts;
+    const span = typescriptParser.typescriptLexer.reader.createSpan(startNode.span, bodyNode.span);
+    const resultNode = new TypeScriptArrowFunctionNode(
+      span,
+      parts.arrowNode,
+      bodyNode,
+      Object.isUndefined(asyncKeywordNode) ? [] : [asyncKeywordNode],
+      parts.typeParameterListNode,
+      parts.parameterNode,
+      parameterListNode,
+      parts.colonNode,
+      parts.returnTypeNode,
+      startNode.leadingTrivia,
+      bodyNode.trailingTrivia);
+
+    parameterListNode?.readTypeScriptHolder(context, resultNode);
+    typescriptParser.reportWrittenAwaits(writtenAwaitCount, bodyNode, resultNode, false, !Object.isUndefined(asyncKeywordNode));
+    return resultNode;
   }
 
   private createParameter(nameNode: Node): TypeScriptParameterNode {
