@@ -6,6 +6,25 @@ Each version's section is written by the pull request that changes the version, 
 Every package moves to each version together, as [VERSIONING-AND-COMPATIBILITY.md](documents/VERSIONING-AND-COMPATIBILITY.md) says.
 Versions before 0.0.6 are described in their version pull requests.
 
+## 0.0.8
+
+CONTEXT's test runner takes its hang limit from the suite, writes each test's time to a file, and judges test files' times for a timing check kept apart from the suite.
+
+- `@noldova/context.testing`:
+  - a command-line run takes its limit from `CONTEXT_TEST_TIMEOUT_MILLISECONDS`, 30 seconds when it's unset, and fails before a test starts on any value but a positive integer within the timer limit less the main thread's grace (#105);
+  - with `CONTEXT_TEST_RESULTS_FILE` set, the run writes each test's identity, outcome and duration there as JSON once its tests end (#105);
+  - a timed-out test's message gives its limit, "The test did not settle within its limit of 30000 milliseconds." (#105);
+  - new classes for a timing check (#105):
+    - `TestTimeRecord` reads and writes that file and formats the slowest tests;
+    - `TestTimingCheck` judges test files by the median of their times over several runs, against a budget or a time the suite lists, plus a margin, and reads that list from a README;
+    - `TestFileTiming` is one file's result, over its limit or listed but within the budget;
+  - discovery throws a `TestingException` for a member a class lists without a property descriptor, and a test worker refuses to start without a parent port (#98).
+- `@noldova/context.data.sql.postgresql`: the connect and cancel limits run on the client's own `ClientTimers` instead of the global `setTimeout` (#105). Its twelve exceptions take their name from the base `Exception`, and each name is unchanged (#93).
+- `@noldova/context.data`: `DataException` takes its name from the base `Exception`, and its declaration no longer lists `name`; the name is unchanged (#93).
+- `@noldova/context.parsers` and `@noldova/context.parsers.typescript`: the parsers prove the values they asserted non-null, through their types and by splitting flag-keyed methods in two, with no change to what they parse or report (#97, #98, #99, #101).
+- `@noldova/context.text`: its README names the Unicode data its identifier tables come from, with the file's SHA-256 (#95).
+- No other package's source changes.
+
 ## 0.0.7
 
 CONTEXT gets helpers for reading JSON of any shape, and its PostgreSQL provider loads without creating the process's standard streams.
