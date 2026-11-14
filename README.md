@@ -143,6 +143,13 @@ Test files slower than the timing check's budget:
 
 | File | Time | Why |
 |---|---|---|
+| `noldova.context.parsers.typescript/conformance/conformance-cases.test.js` | 14000 ms | It runs every vendored TypeScript conformance case. |
+| `noldova.context.parsers.typescript/services/typescript-syntax.parser.test.js` | 6900 ms | Its long-chain tests parse inputs large enough to show the parser's work stays linear. |
+| `noldova.context.testing/services/execution/test-run-entry-point.test.js` | 5000 ms | Each of its tests starts a whole run in a child process. |
+| `noldova.context.data.sql.postgresql/models/client/postgresql-pool.server.test.js` | 4000 ms | It runs queries against a real PostgreSQL server and waits out its real timeouts. |
+| `noldova.context.parsers.typescript/services/parsers/declarations/parameter-list.parser.test.js` | 3500 ms | Its long-chain tests parse signature initializers large enough to show the work stays linear. |
+
+Each time is the file's slowest median over three runs on a Linux, a Windows and a macOS test machine, rounded up to 100 ms.
 
 | Check | What it verifies |
 |---|---|
