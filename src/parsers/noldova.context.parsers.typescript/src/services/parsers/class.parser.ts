@@ -6,13 +6,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { Node } from "@noldova/context.parsers";
+import type { Node, SourceSpan } from "@noldova/context.parsers";
 
 import { TypeScriptContextFlags } from "../../enums/typescript-context-flags.js";
 import { TypeScriptModifierTarget } from "../../enums/typescript-modifier-target.js";
 import { TypeScriptTypeParameterAnnotations } from "../../enums/typescript-type-parameter-annotations.js";
 import { TypeScriptDiagnosticTemplates } from "../../models/diagnostics/typescript-diagnostic-templates.js";
+import type { TypeScriptClassBodyNode } from "../../models/nodes/declarations/typescript-class-body.node.js";
 import { TypeScriptClassDeclarationNode } from "../../models/nodes/declarations/typescript-class-declaration.node.js";
+import type { TypeScriptHeritageClauseNode } from "../../models/nodes/declarations/typescript-heritage-clause.node.js";
 import { TypeScriptMissingDeclarationNode } from "../../models/nodes/declarations/typescript-missing-declaration.node.js";
 import { TypeScriptOpenBraceNode } from "../../models/nodes/delimiters/typescript-open-brace.node.js";
 import { TypeScriptClassExpressionNode } from "../../models/nodes/expressions/typescript-class-expression.node.js";
@@ -21,6 +23,7 @@ import { TypeScriptClassKeywordNode } from "../../models/nodes/keywords/typescri
 import { TypeScriptDeclareKeywordNode } from "../../models/nodes/keywords/typescript-declare-keyword.node.js";
 import { TypeScriptExportKeywordNode } from "../../models/nodes/keywords/typescript-export-keyword.node.js";
 import { TypeScriptImplementsKeywordNode } from "../../models/nodes/keywords/typescript-implements-keyword.node.js";
+import type { TypeScriptTypeParameterListNode } from "../../models/nodes/types/typescript-type-parameter-list.node.js";
 import type { TypeScriptClassNode } from "../../models/nodes/typescript-class.node.js";
 import type { TypeScriptSyntaxParser } from "../typescript-syntax.parser.js";
 import { ClassBodyParser } from "./declarations/class-body.parser.js";
@@ -44,11 +47,11 @@ export class ClassParser {
   }
 
   public parseDeclaration(classKeywordNode: TypeScriptClassKeywordNode, modifierNodes: readonly Node[] = []): TypeScriptClassDeclarationNode {
-    return this.parse(classKeywordNode, true, modifierNodes);
+    return this.parse(classKeywordNode, modifierNodes, TypeScriptClassDeclarationNode);
   }
 
   public parseExpression(classKeywordNode: TypeScriptClassKeywordNode): TypeScriptClassExpressionNode {
-    return this.parse(classKeywordNode, false, []);
+    return this.parse(classKeywordNode, [], TypeScriptClassExpressionNode);
   }
 
   public parseDecoratedExpression(): Node {
@@ -57,7 +60,7 @@ export class ClassParser {
     const modifierNodes = this.modifierParser.parseDeclaration();
     const classKeywordNode = parser.currentNode;
     if (classKeywordNode instanceof TypeScriptClassKeywordNode) {
-      const expressionNode = this.parse(classKeywordNode, false, modifierNodes);
+      const expressionNode = this.parse(classKeywordNode, modifierNodes, TypeScriptClassExpressionNode);
       this.modifierParser.validate(modifierNodes, TypeScriptModifierTarget.ModuleElement, expressionNode);
       return expressionNode;
     }
@@ -68,9 +71,10 @@ export class ClassParser {
       startNode.leadingTrivia, endNode.trailingTrivia);
   }
 
-  private parse(classKeywordNode: TypeScriptClassKeywordNode, isDeclaration: true, modifierNodes: readonly Node[]): TypeScriptClassDeclarationNode;
-  private parse(classKeywordNode: TypeScriptClassKeywordNode, isDeclaration: false, modifierNodes: readonly Node[]): TypeScriptClassExpressionNode;
-  private parse(classKeywordNode: TypeScriptClassKeywordNode, isDeclaration: boolean, modifierNodes: readonly Node[]): TypeScriptClassNode {
+  private parse<TNode extends TypeScriptClassNode>(classKeywordNode: TypeScriptClassKeywordNode, modifierNodes: readonly Node[],
+    nodeType: new (classKeywordNode: TypeScriptClassKeywordNode, heritageClauseNodes: readonly TypeScriptHeritageClauseNode[], span: SourceSpan,
+      bodyNode: TypeScriptClassBodyNode, nameNode: Node | undefined, typeParameterListNode: TypeScriptTypeParameterListNode | undefined,
+      modifierNodes: readonly Node[], leadingTrivia: Node | undefined, trailingTrivia: Node | undefined) => TNode): TNode {
     const parser = this.typescriptParser;
     const context = parser.context;
     const startNode = modifierNodes[0] ?? classKeywordNode;
@@ -96,27 +100,11 @@ export class ClassParser {
         context.records.awaitNameCount = previousAwaitNameCount;
 
       const span = parser.typescriptLexer.reader.createSpan(startNode.span, bodyNode.span);
-      if (isDeclaration) {
-        const declarationNode = new TypeScriptClassDeclarationNode(
-          classKeywordNode,
-          heritageClauseNodes,
-          span,
-          bodyNode,
-          nameNode,
-          typeParameterListNode,
-          modifierNodes,
-          startNode.leadingTrivia,
-          bodyNode.trailingTrivia);
-
-        declarationNode.validateTypeScriptGrammar(context);
-        return declarationNode;
-      }
-
-      const expressionNode = new TypeScriptClassExpressionNode(
+      const classNode = new nodeType(
         classKeywordNode, heritageClauseNodes, span, bodyNode, nameNode, typeParameterListNode, modifierNodes, startNode.leadingTrivia, bodyNode.trailingTrivia);
 
-      expressionNode.validateTypeScriptGrammar(context);
-      return expressionNode;
+      classNode.validateTypeScriptGrammar(context);
+      return classNode;
     }
     finally {
       context.contextFlags = previousFlags;

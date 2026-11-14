@@ -6,12 +6,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { CompositeNode, Node } from "@noldova/context.parsers";
+import type { Node, SourceSpan } from "@noldova/context.parsers";
 
 import { TypeScriptListKind } from "../../../enums/typescript-list-kind.js";
 import { TypeScriptDiagnosticTemplates } from "../../../models/diagnostics/typescript-diagnostic-templates.js";
-import type { TypeScriptExportSpecifierNode } from "../../../models/nodes/declarations/typescript-export-specifier.node.js";
-import type { TypeScriptImportSpecifierNode } from "../../../models/nodes/declarations/typescript-import-specifier.node.js";
+import type { TypeScriptImportExportSpecifierNode } from "../../../models/nodes/declarations/typescript-import-export-specifier.node.js";
 import { TypeScriptNamedExportsNode } from "../../../models/nodes/declarations/typescript-named-exports.node.js";
 import { TypeScriptNamedImportsNode } from "../../../models/nodes/declarations/typescript-named-imports.node.js";
 import { TypeScriptCloseBraceNode } from "../../../models/nodes/delimiters/typescript-close-brace.node.js";
@@ -31,20 +30,20 @@ export class NamedBindingsParser {
   }
 
   public parseImports(): TypeScriptNamedImportsNode {
-    return this.parse(true);
+    return this.parse(() => this.specifierParser.parseImport(), TypeScriptNamedImportsNode);
   }
 
   public parseExports(): TypeScriptNamedExportsNode {
-    return this.parse(false);
+    return this.parse(() => this.specifierParser.parseExport(), TypeScriptNamedExportsNode);
   }
 
-  private parse(isImport: true): TypeScriptNamedImportsNode;
-  private parse(isImport: false): TypeScriptNamedExportsNode;
-  private parse(isImport: boolean): CompositeNode {
+  private parse<TMember extends TypeScriptImportExportSpecifierNode, TNode>(parseMember: () => TMember,
+    nodeType: new (memberNodes: readonly TMember[], commaNodes: readonly TypeScriptCommaNode[], span: SourceSpan, openBraceNode?: TypeScriptOpenBraceNode,
+      closeBraceNode?: TypeScriptCloseBraceNode, leadingTrivia?: Node, trailingTrivia?: Node) => TNode): TNode {
     const parser = this.typescriptParser;
     const startNode = parser.currentNode;
     const openBraceNode = parser.tryConsume(TypeScriptOpenBraceNode);
-    const memberNodes: (TypeScriptImportSpecifierNode | TypeScriptExportSpecifierNode)[] = [];
+    const memberNodes: TMember[] = [];
     const commaNodes: TypeScriptCommaNode[] = [];
     let endNode: Node | undefined = openBraceNode;
     if (Object.isUndefined(openBraceNode))
@@ -61,7 +60,7 @@ export class NamedBindingsParser {
             parser.advance();
             continue;
           }
-          const memberNode = isImport ? this.specifierParser.parseImport() : this.specifierParser.parseExport();
+          const memberNode = parseMember();
           memberNodes.push(memberNode);
           endNode = memberNode;
           const commaNode = parser.tryConsume(TypeScriptCommaNode);
@@ -84,8 +83,6 @@ export class NamedBindingsParser {
     const span = Object.isUndefined(endNode)
       ? startNode.getTypeScriptMissingNodeSpan()
       : parser.typescriptLexer.reader.createSpan(startNode.span, endNode.span);
-    return isImport
-      ? new TypeScriptNamedImportsNode(memberNodes, commaNodes, span, openBraceNode, closeBraceNode, openBraceNode?.leadingTrivia, endNode?.trailingTrivia)
-      : new TypeScriptNamedExportsNode(memberNodes, commaNodes, span, openBraceNode, closeBraceNode, openBraceNode?.leadingTrivia, endNode?.trailingTrivia);
+    return new nodeType(memberNodes, commaNodes, span, openBraceNode, closeBraceNode, openBraceNode?.leadingTrivia, endNode?.trailingTrivia);
   }
 }

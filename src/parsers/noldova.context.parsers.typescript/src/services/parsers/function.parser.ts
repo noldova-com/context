@@ -21,6 +21,7 @@ import { TypeScriptDefaultKeywordNode } from "../../models/nodes/keywords/typesc
 import { TypeScriptFunctionKeywordNode } from "../../models/nodes/keywords/typescript-function-keyword.node.js";
 import { TypeScriptAsteriskNode } from "../../models/nodes/operators/typescript-asterisk.node.js";
 import type { TypeScriptFunctionNode } from "../../models/nodes/typescript-function.node.js";
+import { TypeScriptFunctionParts } from "../../models/typescript-function-parts.js";
 import type { TypeScriptSyntaxParser } from "../typescript-syntax.parser.js";
 import { ParameterListParser } from "./declarations/parameter-list.parser.js";
 import { IdentifierNameParser } from "./names/identifier-name.parser.js";
@@ -43,17 +44,20 @@ export class FunctionParser {
   }
 
   public parseDeclaration(modifierNodes: readonly Node[] = []): TypeScriptFunctionDeclarationNode {
-    return this.parse(true, modifierNodes);
+    return this.parse(true, modifierNodes, parts => new TypeScriptFunctionDeclarationNode(parts.functionKeywordNode, parts.span,
+      parts.parameterListNode, parts.modifierNodes, parts.asteriskNode, parts.nameNode, parts.typeParameterListNode, parts.colonNode,
+      parts.returnTypeNode, parts.bodyNode, parts.semicolonNode, parts.leadingTrivia, parts.trailingTrivia));
   }
 
   public parseExpression(): TypeScriptFunctionExpressionNode {
     const asyncKeywordNode = this.typescriptParser.tryConsume(TypeScriptAsyncKeywordNode);
-    return this.parse(false, Object.isUndefined(asyncKeywordNode) ? [] : [asyncKeywordNode]);
+    return this.parse(false, Object.isUndefined(asyncKeywordNode) ? [] : [asyncKeywordNode], parts => new TypeScriptFunctionExpressionNode(
+      parts.functionKeywordNode, parts.span, parts.parameterListNode, parts.modifierNodes, parts.asteriskNode, parts.nameNode,
+      parts.typeParameterListNode, parts.colonNode, parts.returnTypeNode, parts.bodyNode, parts.leadingTrivia, parts.trailingTrivia));
   }
 
-  private parse(isDeclaration: true, modifierNodes: readonly Node[]): TypeScriptFunctionDeclarationNode;
-  private parse(isDeclaration: false, modifierNodes: readonly Node[]): TypeScriptFunctionExpressionNode;
-  private parse(isDeclaration: boolean, modifierNodes: readonly Node[]): TypeScriptFunctionNode {
+  private parse<TNode extends TypeScriptFunctionNode>(isDeclaration: boolean, modifierNodes: readonly Node[],
+    create: (parts: TypeScriptFunctionParts) => TNode): TNode {
     const parser = this.typescriptParser;
     const startNode = modifierNodes[0] ?? parser.currentNode;
     const functionKeywordNode = parser.requireCurrentNode(TypeScriptFunctionKeywordNode);
@@ -95,13 +99,8 @@ export class FunctionParser {
     const endNode = bodyNode ?? semicolonNode ?? returnTypeNode ?? colonNode ?? parameterListNode;
     const span = parser.typescriptLexer.reader.createSpan(startNode.span, endNode.span);
 
-    const resultNode = isDeclaration
-      ? new TypeScriptFunctionDeclarationNode(
-        functionKeywordNode, span, parameterListNode, modifierNodes, asteriskNode, nameNode, typeParameterListNode,
-        colonNode, returnTypeNode, bodyNode, semicolonNode, startNode.leadingTrivia, endNode.trailingTrivia)
-      : new TypeScriptFunctionExpressionNode(
-        functionKeywordNode, span, parameterListNode, modifierNodes, asteriskNode, nameNode, typeParameterListNode,
-        colonNode, returnTypeNode, bodyNode, startNode.leadingTrivia, endNode.trailingTrivia);
+    const resultNode = create(new TypeScriptFunctionParts(functionKeywordNode, span, parameterListNode, modifierNodes, asteriskNode, nameNode,
+      typeParameterListNode, colonNode, returnTypeNode, bodyNode, semicolonNode, startNode.leadingTrivia, endNode.trailingTrivia));
 
     parameterListNode.readTypeScriptHolder(parser.context, resultNode);
     parser.reportWrittenAwaits(writtenAwaitCount, bodyNode, resultNode, false,
