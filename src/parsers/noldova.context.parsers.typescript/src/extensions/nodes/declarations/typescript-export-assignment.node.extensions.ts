@@ -44,8 +44,10 @@ TypeScriptExportAssignmentNode.prototype.getTypeScriptAllowedModifiers = functio
 
 TypeScriptExportAssignmentNode.prototype.reportTypeScriptGrammarAfterModifiers = function (this: TypeScriptExportAssignmentNode,
   context: TypeScriptParserContext, hasModifierDiagnostics: boolean): void {
-  if (hasModifierDiagnostics || context.isNestedStatement || context.isSubstatement || context.isNamespaceBody || this.modifierNodes.length === 0)
+  const [firstModifierNode] = this.modifierNodes;
+  if (hasModifierDiagnostics || context.isNestedStatement || context.isSubstatement || context.isNamespaceBody || Object.isUndefined(firstModifierNode))
     return;
 
-  context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source, TypeScriptDiagnosticTemplates.TS1120, this.modifierNodes[0]!.getTypeScriptFirstTokenSpan());
+  context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source, TypeScriptDiagnosticTemplates.TS1120,
+    firstModifierNode.getTypeScriptFirstTokenSpan());
 };

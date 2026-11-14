@@ -74,8 +74,7 @@ export class TypeScriptParserContext extends ParserContext {
 
   public readJumpTarget(labelNode: Node | undefined, isContinue: boolean): DiagnosticTemplate | undefined {
     const text = labelNode?.getTypeScriptDiagnosticText();
-    for (let index = this.jumpTargets.length - 1; index >= 0; index--) {
-      const target = this.jumpTargets[index]!;
+    for (const target of this.jumpTargets.toReversed()) {
       if (Object.isUndefined(text)) {
         if (Object.isUndefined(target.labelNode) && (target.isIteration || !isContinue))
           return undefined;
@@ -148,8 +147,7 @@ export class TypeScriptParserContext extends ParserContext {
     for (const offsets of this.sharedRejectedArrowOffsets.values())
       offsets.clear();
     const scopes = [this.rootListScope];
-    while (scopes.length > 0) {
-      const scope = scopes.pop()!;
+    for (let scope = scopes.pop(); !Object.isUndefined(scope); scope = scopes.pop()) {
       for (const offsets of scope.rejectedArrowOffsetsByContext.values())
         offsets.clear();
       for (const nested of scope.nestedScopes.values())

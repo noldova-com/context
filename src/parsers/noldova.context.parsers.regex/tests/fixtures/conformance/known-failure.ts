@@ -32,13 +32,13 @@ export class KnownFailure {
 
   public isRecordedAs(verdict: ConformanceCaseVerdict): boolean {
     return KnownFailure.keys(this.refused) === KnownFailure.keys(verdict.refused)
-      && KnownFailure.keys(this.accepted.map(group => group[0]!)) === KnownFailure.keys(verdict.accepted.map(group => group[0]!));
+      && KnownFailure.keys(this.accepted.flatMap(group => group.slice(0, 1))) === KnownFailure.keys(verdict.accepted.flatMap(group => group.slice(0, 1)));
   }
 
   public contains(failure: KnownFailure): boolean {
     const refused = new Set(this.refused.map(t => t.start));
-    const accepted = new Set(this.accepted.map(group => group[0]!.start));
-    return failure.refused.every(t => refused.has(t.start)) && failure.accepted.every(group => accepted.has(group[0]!.start));
+    const accepted = new Set(this.accepted.flatMap(group => group.slice(0, 1)).map(t => t.start));
+    return failure.refused.every(t => refused.has(t.start)) && failure.accepted.flatMap(group => group.slice(0, 1)).every(t => accepted.has(t.start));
   }
 
   private static keys(patterns: readonly ExpectedPattern[]): string {

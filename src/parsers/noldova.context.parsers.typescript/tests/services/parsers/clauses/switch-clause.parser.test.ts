@@ -161,6 +161,8 @@ export class SwitchClauseParserTests {
     const node = parser.parseStatement();
 
     Assert.isInstanceOf(node, api.TypeScriptSwitchStatementNode);
-    Assert.areEqual(expected, parser.context.source.getText(node.caseBlockNode.children[0]!.span));
+    const clauseNode = node.caseBlockNode.children[0];
+    Assert.isDefined(clauseNode);
+    Assert.areEqual(expected, parser.context.source.getText(clauseNode.span));
   }
 }

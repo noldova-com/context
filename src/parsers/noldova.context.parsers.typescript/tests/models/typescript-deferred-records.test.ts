@@ -119,8 +119,8 @@ export class TypeScriptDeferredRecordsTests {
 
     Assert.areEqual(1, records.reservedBindingNames.length);
     Assert.areEqual(nameNode, records.reservedBindingNames[0]?.nameNode);
-    Assert.isTrue(records.reservedBindingNames[0]!.isAwaitContext);
-    Assert.isFalse(records.reservedBindingNames[0]!.isSourceTopLevel);
+    Assert.areEqual(true, records.reservedBindingNames[0]?.isAwaitContext);
+    Assert.areEqual(false, records.reservedBindingNames[0]?.isSourceTopLevel);
   }
 
   @TestMethod

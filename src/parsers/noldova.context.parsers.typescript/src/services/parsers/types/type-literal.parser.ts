@@ -93,8 +93,10 @@ export class TypeLiteralParser {
     const semicolonNode = typescriptParser.parseStatementTerminator();
     const memberNodes: Node[] = [];
     const listEndNode = this.typeMemberParser.parseList(memberNodes);
-    if (memberNodes.length > 0)
-      typescriptParser.context.records.uncheckedSpans.push(typescriptParser.typescriptLexer.reader.createSpan(memberNodes[0]!.span, memberNodes.at(-1)!.span));
+    const [firstMemberNode] = memberNodes;
+    const lastMemberNode = memberNodes.at(-1);
+    if (!Object.isUndefined(firstMemberNode) && !Object.isUndefined(lastMemberNode))
+      typescriptParser.context.records.uncheckedSpans.push(typescriptParser.typescriptLexer.reader.createSpan(firstMemberNode.span, lastMemberNode.span));
 
     const closeBraceNode = typescriptParser.tryConsume(TypeScriptCloseBraceNode);
     if (Object.isUndefined(closeBraceNode))

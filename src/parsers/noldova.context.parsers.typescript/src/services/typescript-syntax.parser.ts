@@ -327,8 +327,7 @@ export class TypeScriptSyntaxParser extends Parser<TypeScriptNode, TypeScriptPar
       return;
     }
 
-    for (let index = writtenAwaitCount; index < context.records.writtenAwaits.length; index++) {
-      const writtenAwait = context.records.writtenAwaits[index]!;
+    for (const writtenAwait of context.records.writtenAwaits.slice(writtenAwaitCount)) {
       const template = writtenAwait.isForAwait ? TypeScriptDiagnosticTemplates.TS1103 : TypeScriptDiagnosticTemplates.TS1308;
       if (isConstructor || isAsync)
         context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source, template, writtenAwait.keywordNode.span);

@@ -57,7 +57,10 @@ export default class TypeScriptConformanceCase {
   }
 
   public get rootUnits(): readonly TypeScriptConformanceUnit[] {
-    const lastUnit = this.units.at(-1)!;
+    const lastUnit = this.units.at(-1);
+    if (lastUnit === undefined)
+      return this.units;
+
     const isExplicit = this.noImplicitReferences || lastUnit.content.includes(TypeScriptConformanceCase.REQUIRE_CALL)
       || TypeScriptConformanceCase.REFERENCE_PATTERN.test(lastUnit.content);
 
@@ -123,8 +126,12 @@ export default class TypeScriptConformanceCase {
         continue;
       }
 
-      const name = directive[1]!.toLowerCase();
-      const value = directive[2]!.trim();
+      const [, directiveName, directiveValue] = directive;
+      if (directiveName === undefined || directiveValue === undefined)
+        throw new Error(TypeScriptConformanceCase.directiveUnreadable(casePath, line));
+
+      const name = directiveName.toLowerCase();
+      const value = directiveValue.trim();
       if (name === TypeScriptConformanceCase.FILENAME_DIRECTIVE) {
         if (unitName === undefined)
           hasDiscardedPreamble = unitLines.some(t => t.trim().length !== 0);
@@ -143,6 +150,10 @@ export default class TypeScriptConformanceCase {
     flush();
 
     return new TypeScriptConformanceCase(casePath, sha256, units, libraries, hasDiscardedPreamble, hasRepeatedUnitName, noImplicitReferences);
+  }
+
+  private static directiveUnreadable(casePath: string, line: string): string {
+    return `${casePath}: the directive "${line}" has no name or value.`;
   }
 
   private static normalizeUnitName(value: string): string {
