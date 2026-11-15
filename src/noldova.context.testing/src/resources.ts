@@ -96,7 +96,9 @@ export class Resources {
   public static readonly terminalYellow: string = "\u001b[33m";
   public static readonly terminalReset: string = "\u001b[0m";
   public static readonly terminalClearLine: string = "\r\u001b[2K";
-  public static readonly progressFrames: readonly string[] = ["Running tests.", "Running tests..", "Running tests..."];
+  public static readonly progressText: string = "Running tests";
+  public static readonly progressDot: string = ".";
+  public static readonly progressMaximumDots: number = 3;
   public static readonly progressIntervalMilliseconds: number = 300;
   public static readonly centisecondsPerSecond: number = 100;
   public static readonly durationDecimalPlaces: number = 2;
