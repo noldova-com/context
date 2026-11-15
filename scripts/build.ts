@@ -22,7 +22,6 @@ import Script from "./script.ts";
 
 export class Build extends Script {
   private static readonly BUILD_SCRIPT_PATH: string = "scripts/build.ts";
-  private static readonly BUILD_DEPENDENCIES_FIELD: "dependencies" = "dependencies";
   private static readonly CLEAN_INSTALL_ARGUMENTS: readonly string[] = ["ci", "--ignore-scripts"];
   private static readonly GIT_HEAD_ARGUMENTS: readonly string[] = ["rev-parse", "--verify", "HEAD^{commit}"];
   private static readonly GIT_HEAD_FIELD: string = "gitHead";
@@ -35,9 +34,11 @@ export class Build extends Script {
   private static readonly LIST_COPIES_SEPARATOR: string = "\t";
   private static readonly MANIFEST_INDENTATION: number = 2;
   private static readonly NODE_MODULES_DIRECTORY_NAME: string = "node_modules";
+  private static readonly NEXT_MINOR_PLACEHOLDER: string = "__NEXT_MINOR__";
   private static readonly NO_PACKAGES: string = "No packages to build.";
   private static readonly NOTICES_FILE_NAME: string = "THIRD-PARTY-NOTICES.txt";
   private static readonly PACKAGE_MANIFEST_FILE_NAME: string = "package.json";
+  private static readonly PEER_DEPENDENCIES_FIELD: "peerDependencies" = "peerDependencies";
   private static readonly VERSION_PLACEHOLDER: string = "__VERSION__";
 
   public override async runAsync(): Promise<void> {
@@ -79,7 +80,7 @@ export class Build extends Script {
       return Config.PACKAGES_INFO.map(t => t.packageName);
 
     const manifest: unknown = JSON.parse(await this.readFileAsync(`${Build.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Build.PACKAGE_MANIFEST_FILE_NAME}`));
-    const dependencies: unknown = typeof manifest === "object" && manifest !== null && Build.BUILD_DEPENDENCIES_FIELD in manifest ? manifest[Build.BUILD_DEPENDENCIES_FIELD] : undefined;
+    const dependencies: unknown = typeof manifest === "object" && manifest !== null && Build.PEER_DEPENDENCIES_FIELD in manifest ? manifest[Build.PEER_DEPENDENCIES_FIELD] : undefined;
     return typeof dependencies === "object" && dependencies !== null ? Object.keys(dependencies) : [];
   }
 
@@ -145,7 +146,7 @@ export class Build extends Script {
       throw new CommandFailedException(Build.packageManifestMissing(packageFilePath));
 
     const content = await this.readFileAsync(packageFilePath);
-    const parsed: unknown = JSON.parse(content.replaceAll(Build.VERSION_PLACEHOLDER, Config.VERSION));
+    const parsed: unknown = JSON.parse(content.replaceAll(Build.VERSION_PLACEHOLDER, Config.VERSION).replaceAll(Build.NEXT_MINOR_PLACEHOLDER, Config.NEXT_MINOR));
     const manifest = { ...(typeof parsed === "object" ? parsed : null), [Build.GIT_HEAD_FIELD]: commit };
     await this.writeFileAsync(`${Config.BUILD_FOLDER}/${packageInfo.name}/${Build.PACKAGE_MANIFEST_FILE_NAME}`, `${JSON.stringify(manifest, null, Build.MANIFEST_INDENTATION)}\n`);
   }

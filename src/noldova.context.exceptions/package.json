@@ -18,7 +18,7 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "dependencies": {
-    "@noldova/context.core": "__VERSION__"
+  "peerDependencies": {
+    "@noldova/context.core": ">=__VERSION__ <__NEXT_MINOR__"
   }
 }
