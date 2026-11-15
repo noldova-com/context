@@ -24,7 +24,9 @@ export class ConformanceCasesTests {
 
   @TestMethod
   public matchesTest262UnlessKnownToFail(casePath: string): void {
-    const verdict = ConformanceCaseVerdict.of(ConformanceExpectationsReader.load().applicableRecords.get(casePath)!);
+    const record = ConformanceExpectationsReader.load().applicableRecords.get(casePath);
+    Assert.isDefined(record, casePath);
+    const verdict = ConformanceCaseVerdict.of(record);
 
     const failure = KnownFailuresLedger.load().failing.get(casePath);
     if (Object.isUndefined(failure))

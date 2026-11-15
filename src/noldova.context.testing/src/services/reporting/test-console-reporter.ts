@@ -76,13 +76,13 @@ export class TestConsoleReporter implements ITestProgressListener {
   }
 
   private advanceProgress(): void {
-    this.progressFrame = (this.progressFrame + 1) % Resources.progressFrames.length;
+    this.progressFrame = (this.progressFrame + 1) % Resources.progressMaximumDots;
     this.drawProgress();
     this.scheduleProgress();
   }
 
   private drawProgress(): void {
-    this.write(`${Resources.terminalClearLine}${Resources.progressFrames[this.progressFrame]!}`);
+    this.write(`${Resources.terminalClearLine}${Resources.progressText}${Resources.progressDot.repeat(this.progressFrame + 1)}`);
   }
 
   private writeLines(lines: readonly string[]): void {

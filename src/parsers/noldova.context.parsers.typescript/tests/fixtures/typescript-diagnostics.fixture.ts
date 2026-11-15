@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { Diagnostic } from "@noldova/context.diagnostics";
+import type { Diagnostic, DiagnosticRelatedInformation } from "@noldova/context.diagnostics";
 import { TypeScriptParser } from "@noldova/context.parsers.typescript";
 import { Assert } from "@noldova/context.testing";
 
@@ -33,7 +33,7 @@ export class TypeScriptDiagnosticsFixture {
 
   public static projectWithRelated(diagnostics: readonly Diagnostic[]): string {
     return diagnostics.map(t => TypeScriptDiagnosticsFixture.position(t)
-      + t.relatedInformation.map(related => `{${related.message.text}@${related.location!.start}}`).join(String.empty))
+      + t.relatedInformation.map(related => TypeScriptDiagnosticsFixture.related(related)).join(String.empty))
       .join(TypeScriptDiagnosticsFixture.SEPARATOR);
   }
 
@@ -51,5 +51,11 @@ export class TypeScriptDiagnosticsFixture {
     const location = diagnostic.location;
     Assert.isDefined(location);
     return content.slice(location.start, location.start + location.length);
+  }
+
+  private static related(related: DiagnosticRelatedInformation): string {
+    const location = related.location;
+    Assert.isDefined(location);
+    return `{${related.message.text}@${location.start}}`;
   }
 }

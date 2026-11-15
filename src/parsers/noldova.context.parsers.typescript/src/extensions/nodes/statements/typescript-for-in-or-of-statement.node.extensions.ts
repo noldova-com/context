@@ -42,7 +42,8 @@ TypeScriptForInOrOfStatementNode.prototype.validateTypeScriptGrammar = function 
     return;
 
   const isUsing = initializerNode.keywordNode instanceof TypeScriptUsingKeywordNode;
-  if (initializerNode.children.length === 0 || !Object.isUndefined(initializerNode.getTypeScriptTrailingComma()))
+  const [declarationNode, secondDeclarationNode] = initializerNode.children;
+  if (Object.isUndefined(declarationNode) || !Object.isUndefined(initializerNode.getTypeScriptTrailingComma()))
     return;
   if (isUsing && !isForOf) {
     const template = Object.isUndefined(initializerNode.awaitKeywordNode)
@@ -58,7 +59,6 @@ TypeScriptForInOrOfStatementNode.prototype.validateTypeScriptGrammar = function 
   if (!Object.isUndefined(initializerNode.awaitKeywordNode) && (context.isClassStaticBlock || !context.isAwaitContext))
     return;
 
-  const secondDeclarationNode = initializerNode.children[1];
   if (!Object.isUndefined(secondDeclarationNode)) {
     context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source,
       isForOf ? TypeScriptDiagnosticTemplates.TS1188 : TypeScriptDiagnosticTemplates.TS1091,
@@ -66,7 +66,6 @@ TypeScriptForInOrOfStatementNode.prototype.validateTypeScriptGrammar = function 
     return;
   }
 
-  const declarationNode = initializerNode.children[0]!;
   if (!Object.isUndefined(declarationNode.initializerNode))
     context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source,
       isForOf ? TypeScriptDiagnosticTemplates.TS1190 : TypeScriptDiagnosticTemplates.TS1189, declarationNode.nameNode.span);

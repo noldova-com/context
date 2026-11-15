@@ -9023,7 +9023,8 @@ export declare class TypeScriptTypeLiteralNode extends CompositeNode {
  * const operand = new TypeScriptIdentifierNode("Value", new SourceSpan(1, 5));
  * const operator = new TypeScriptQuestionNode(new SourceSpan(0, 1));
  * const type = new TypeScriptTypeOperatorNode(operator, new SourceSpan(0, 6), operand);
- * type.operatorNode.span.startOffset < type.typeNode!.span.startOffset; // prefix
+ * type.typeNode === operand; // true
+ * type.operatorNode.span.startOffset < operand.span.startOffset; // prefix
  * ```
  */
 export declare class TypeScriptTypeOperatorNode extends Node {
