@@ -19,7 +19,6 @@ export default class Config {
   private static readonly VERSION_PATTERN: RegExp = /^(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?:0|[1-9]\d*)$/u;
 
   public static readonly VERSION: string = Config.readVersion();
-  /** The first version a sibling's peer range leaves out: the next minor version, since every package moves to each version together. */
   public static readonly NEXT_MINOR: string = Config.nextMinor(Config.VERSION);
   public static readonly BUILD_FOLDER: string = "_build/node";
   public static readonly COVERAGE_FOLDER: string = "_build/coverage";
