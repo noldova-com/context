@@ -17,6 +17,8 @@ import { promisify } from "node:util";
 
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
+import { PackedArchives } from "../fixtures/packed-archives.fixture.js";
+
 // The tests that install packed packages into an app with npm: exceptions sharing one core in its peer range, npm refusing a core outside
 // it, and core refusing to load beside a second copy npm installs. Exceptions' tests hold them since its package needs core installed too.
 @TestClass
@@ -72,9 +74,9 @@ export class PackedInstallTests {
         bundleDependencies: [PackedInstallTests.CORE_NAME]
       }));
       await writeFile(join(dependent, "index.js"), `import "${PackedInstallTests.CORE_NAME}";\n`);
-      const [dependentArchive, coreArchive] = await PackedInstallTests.packAsync(directory, dependent, PackedInstallTests.CORE_FOLDER);
+      const archives = await PackedInstallTests.packAsync(directory, dependent, PackedInstallTests.CORE_FOLDER);
 
-      const app = await PackedInstallTests.createAppAsync(directory, { [PackedInstallTests.CORE_NAME]: `file:../${coreArchive}`, dependent: `file:../${dependentArchive}` });
+      const app = await PackedInstallTests.createAppAsync(directory, { [PackedInstallTests.CORE_NAME]: `file:../${archives.second}`, dependent: `file:../${archives.first}` });
       await PackedInstallTests.runNpmAsync(PackedInstallTests.INSTALL_VALUES, app, directory);
       const scriptPath = join(app, "main.js");
       await writeFile(scriptPath,
@@ -113,11 +115,11 @@ export class PackedInstallTests {
     await cp(PackedInstallTests.CORE_FOLDER, core, { recursive: true });
     const coreManifest = join(core, "package.json");
     await writeFile(coreManifest, (await readFile(coreManifest, "utf8")).replace(PackedInstallTests.VERSION_FIELD, `"version": "${coreVersion}"`));
-    const [coreArchive, exceptionsArchive] = await PackedInstallTests.packAsync(directory, core, PackedInstallTests.EXCEPTIONS_FOLDER);
+    const archives = await PackedInstallTests.packAsync(directory, core, PackedInstallTests.EXCEPTIONS_FOLDER);
 
     return PackedInstallTests.createAppAsync(directory, {
-      [PackedInstallTests.CORE_NAME]: `file:../${coreArchive}`,
-      [PackedInstallTests.EXCEPTIONS_NAME]: `file:../${exceptionsArchive}`
+      [PackedInstallTests.CORE_NAME]: `file:../${archives.first}`,
+      [PackedInstallTests.EXCEPTIONS_NAME]: `file:../${archives.second}`
     });
   }
 
@@ -130,14 +132,14 @@ export class PackedInstallTests {
   }
 
   // Packs the two package folders into the directory in one npm call and returns their archives' names, in the same order.
-  private static async packAsync(directory: string, first: string, second: string): Promise<[string, string]> {
+  private static async packAsync(directory: string, first: string, second: string): Promise<PackedArchives> {
     const packed = await PackedInstallTests.runNpmAsync(["pack", "--silent", "--pack-destination", directory, first, second], directory, directory);
     const [firstArchive, secondArchive, ...others] = packed.trim().split(/\s+/u);
     Assert.isDefined(firstArchive, packed);
     Assert.isDefined(secondArchive, packed);
     Assert.areEqual(0, others.length, packed);
 
-    return [firstArchive, secondArchive];
+    return new PackedArchives(firstArchive, secondArchive);
   }
 
   private static async withDirectoryAsync(action: (directory: string) => Promise<void>): Promise<void> {
