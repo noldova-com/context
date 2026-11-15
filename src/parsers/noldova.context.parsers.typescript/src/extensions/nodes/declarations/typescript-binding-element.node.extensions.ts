@@ -36,8 +36,8 @@ TypeScriptBindingElementNode.prototype.hasTypeScriptBindingName = function (this
 };
 
 TypeScriptBindingElementNode.prototype.reportTypeScriptRestInitializer = function (this: TypeScriptBindingElementNode, context: TypeScriptParserContext): void {
-  if (!Object.isUndefined(this.dotDotDotNode) && Object.isUndefined(this.propertyNameNode) && !Object.isUndefined(this.initializerNode))
-    context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source, TypeScriptDiagnosticTemplates.TS1186, this.equalsNode!.span);
+  if (!Object.isUndefined(this.dotDotDotNode) && Object.isUndefined(this.propertyNameNode) && !Object.isUndefined(this.equalsNode))
+    context.diagnosticCollector.addTypeScriptGrammarDiagnostic(context.source, TypeScriptDiagnosticTemplates.TS1186, this.equalsNode.span);
 };
 
 TypeScriptBindingElementNode.prototype.isTypeScriptRestElement = function (this: TypeScriptBindingElementNode): boolean {

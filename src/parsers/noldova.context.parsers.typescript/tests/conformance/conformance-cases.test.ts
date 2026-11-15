@@ -28,7 +28,8 @@ export class ConformanceCasesTests {
   @TestMethod
   public matchesTheReferenceUnlessKnownToFail(casePath: string): void {
     const expectations = ConformanceExpectationsReader.load();
-    const record = expectations.applicableRecords.get(casePath)!;
+    const record = expectations.applicableRecords.get(casePath);
+    Assert.isDefined(record, casePath);
     const verdict = new ConformanceCaseComparison(record, expectations.readUnits(record), ParserDiagnosticScope.load()).run();
 
     const failure = KnownFailuresLedger.load().failing.get(casePath);
