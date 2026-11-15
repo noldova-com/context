@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { CoreCopy } from "../intrinsics/core-copy.js";
 import { nameof } from "../intrinsics/nameof.js";
 import { Resources } from "../resources.js";
 
@@ -80,6 +81,7 @@ function isUndefined(value: unknown): value is undefined {
   return value === undefined;
 }
 
+CoreCopy.claim();
 Object.defineProperties(Object, {
   isFunction: { value: isFunction, writable: false, enumerable: false, configurable: false },
   isString: { value: isString, writable: false, enumerable: false, configurable: false },
