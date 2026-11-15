@@ -34,7 +34,8 @@ export class TestFileTimingTests {
     const unlisted = new TestFileTiming("Sample/a.test.js", 900, 1200, 1200, false);
 
     Assert.areEqual("true,false,false", [stale.isStale, slower.isStale, unlisted.isStale].join());
-    Assert.areEqual("Stale: Sample/fast.test.js, median 1200 ms, within the 1200 ms an unlisted file may take; drop it from the list.", stale.format());
+    Assert.areEqual("Stale: Sample/fast.test.js, median 1200 ms, within the 1200 ms an unlisted file may take on this machine; "
+      + "the list drops it once it is stale on every machine the list was measured on.", stale.format());
     Assert.areEqual("Within: Sample/slow.test.js, median 1201 ms, limit 3000 ms.", slower.format());
     Assert.areEqual("Within: Sample/a.test.js, median 900 ms, limit 1200 ms.", unlisted.format());
   }
