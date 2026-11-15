@@ -242,7 +242,7 @@ export class Resources {
   }
 
   public static fileTimingStale(file: string, median: string, budgetLimitMilliseconds: number): string {
-    return `Stale: ${file}, median ${median}, within the ${Math.round(budgetLimitMilliseconds)} ms an unlisted file may take; drop it from the list.`;
+    return `Stale: ${file}, median ${median}, within the ${Math.round(budgetLimitMilliseconds)} ms an unlisted file may take on this machine; the list drops it once it is stale on every machine the list was measured on.`;
   }
 
   public static fileTimingWithin(file: string, median: string, limitMilliseconds: number): string {

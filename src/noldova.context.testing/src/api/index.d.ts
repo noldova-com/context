@@ -842,7 +842,8 @@ export declare class TestFileTiming {
   public readonly isOver: boolean;
 
   /**
-   * True when the suite lists the file but its median is within the time an unlisted file may take, so the list should drop it.
+   * True when the suite lists the file but its median on this machine is within the time an unlisted file may take. A list measured on
+   * several machines drops the file only once it is stale on every one of them.
    */
   public readonly isStale: boolean;
 
