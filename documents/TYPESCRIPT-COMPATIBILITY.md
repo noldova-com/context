@@ -59,7 +59,7 @@ A necessary change is made in this document and applied to all packages.
 Projects that emit declarations also use `isolatedDeclarations: true`.
 Options such as `erasableSyntaxOnly` are not strictness settings and are adopted only through a separate language and emit decision.
 
-`target: ES2025` with `lib: ["ES2025", "ESNext.Disposable"]` is an emission and host-library decision for the exact Node pin: ES2025 supplies the decorator lowering Node 24.21.0 requires, and the additional library enables typed `using`, `await using`, and disposal APIs.
+`target: ES2025` with `lib: ["ES2025", "ESNext.Disposable"]` is an emission and host-library decision for the exact Node pin: ES2025 supplies the decorator lowering Node 26.13.1 requires, and the additional library enables typed `using`, `await using`, and disposal APIs.
 TypeScript emits cleanup machinery that uses disposal APIs supplied by the pinned Node host.
 Library declarations supply types, not implementations; a target or library change requires renewed checking, build and test verification, and execution witnesses for newly used host features.
 This profile configures the external compiler for repository code; it exposes no option in the CONTEXT compiler.

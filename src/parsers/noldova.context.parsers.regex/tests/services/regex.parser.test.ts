@@ -61,7 +61,7 @@ export class RegexParserTests {
 
   @TestMethod
   public comparesAsciiClassStringsWithThePinnedBootstrapHost(): void {
-    Assert.areEqual("24.21.0", process.versions.node);
+    Assert.areEqual("26.13.1", process.versions.node);
     Assert.areEqual("17.0", process.versions["unicode"]);
 
     for (let codePoint = 0x20; codePoint <= 0x7e; codePoint++) {
