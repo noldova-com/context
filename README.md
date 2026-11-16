@@ -79,7 +79,7 @@ Each name opens the package's folder and its own README; each badge opens it on 
 
 ## Build and test
 
-The toolchain is Node.js 24.21.0 with npm 11.19.0, as `package.json` pins them.
+The toolchain is Node.js 26.13.1 with npm 11.20.0, as `package.json` pins them.
 
 ```bash
 npm run build
@@ -162,7 +162,7 @@ A file stays listed while its slowest machine needs it, so the timing check may 
 | Check / Linked issue | `.github/workflows/require-linked-issue.yml`, the "PR" workflow: the PR description has a standalone `Issue: #N`, `Issue #N` or closing reference, such as `Closes #N`, that names an issue in this repository. |
 | Check / Runner / Versions | The shared check's own call of the shared settings, which name the runner "Check / Linked issue" uses. |
 | Build and test / Versions / Versions | The organization's shared settings, `.github`'s `versions.yml`, name the Node.js and npm versions and the runner for each target that "Build and test" uses. |
-| Build and test / Linux x64, Linux arm64, Windows x64, Windows arm64, macOS x64, macOS arm64 | One job per target of `.github`'s shared `build-and-test.yml`, each on the GitHub-hosted runner the shared settings name for it: `npm run build` installs the locked third-party packages with `npm ci --ignore-scripts`, then builds, packs and installs every package; the toolchain is the Node.js and npm versions the shared settings name, Node.js 24.21.0 with npm 11.19.0 today; `.gitattributes` holds `* text=auto eol=lf`, and every tracked text file outside the vendored inputs, which their own `.gitattributes` marks `-text`, uses LF line endings and ends with exactly one newline; `npm test` runs the whole suite, and the build and the tests leave every tracked file unchanged; on Linux x64, a second build of the commit, in another folder, packs byte-identical archives; and the archives pass the release's own check at the version `version.json` holds. |
+| Build and test / Linux x64, Linux arm64, Windows x64, Windows arm64, macOS x64, macOS arm64 | One job per target of `.github`'s shared `build-and-test.yml`, each on the GitHub-hosted runner the shared settings name for it: `npm run build` installs the locked third-party packages with `npm ci --ignore-scripts`, then builds, packs and installs every package; the toolchain is the Node.js and npm versions the shared settings name, Node.js 26.13.1 with npm 11.20.0 today; `.gitattributes` holds `* text=auto eol=lf`, and every tracked text file outside the vendored inputs, which their own `.gitattributes` marks `-text`, uses LF line endings and ends with exactly one newline; `npm test` runs the whole suite, and the build and the tests leave every tracked file unchanged; on Linux x64, a second build of the commit, in another folder, packs byte-identical archives; and the archives pass the release's own check at the version `version.json` holds. |
 | Build and test / All targets | All six targets' jobs passed, and the shared settings named the versions and a runner for each target; it reports even when a job before it failed or was skipped, so `main` can require it. |
 
 
