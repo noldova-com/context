@@ -9,6 +9,7 @@
 import { ReadOnlyStringSpan } from "@noldova/context.text";
 
 import { InvalidSpanException } from "../exceptions/invalid-span.exception.js";
+import { ParserException } from "../exceptions/parser.exception.js";
 import { SourceSpan } from "../models/sources/source-span.js";
 import type { Source } from "../models/sources/source.js";
 import { Resources } from "../resources.js";
@@ -56,7 +57,11 @@ export class SourceReader {
     if (this.offset + Resources.utf16CodeUnitLength >= this.endOffset)
       return this.source.content.charCodeAt(this.offset);
 
-    return this.source.content.codePointAt(this.offset)!;
+    const codePoint = this.source.content.codePointAt(this.offset);
+    if (Object.isUndefined(codePoint))
+      throw new ParserException(Resources.sourceReaderCodePointMissing);
+
+    return codePoint;
   }
 
   public readCodeUnit(): string {
