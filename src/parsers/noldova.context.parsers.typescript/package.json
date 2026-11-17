@@ -19,6 +19,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "peerDependencies": {
+    "@noldova/context.collections": ">=__VERSION__ <__NEXT_MINOR__",
     "@noldova/context.core": ">=__VERSION__ <__NEXT_MINOR__",
     "@noldova/context.diagnostics": ">=__VERSION__ <__NEXT_MINOR__",
     "@noldova/context.parsers": ">=__VERSION__ <__NEXT_MINOR__",

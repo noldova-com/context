@@ -173,7 +173,11 @@ export class FileCoverageAnalyzer {
     if (Object.isUndefined(sourceMap))
       return generatedLine;
 
-    const generatedColumn = offset - lineStartOffsets[lineIndex]!;
+    const lineStartOffset = lineStartOffsets[lineIndex];
+    if (Object.isUndefined(lineStartOffset))
+      throw new TestingException(Resources.coverageOffsetBeforeFirstLine);
+
+    const generatedColumn = offset - lineStartOffset;
     const position = sourceMap.mapToSource(generatedLine, generatedColumn);
 
     return Object.isUndefined(position) ? generatedLine : position.line;
