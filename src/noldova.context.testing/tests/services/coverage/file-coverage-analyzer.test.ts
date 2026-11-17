@@ -12,6 +12,9 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { Assert, CoverageAnalyzer, CoverageProject, TestClass, TestData, TestingException, TestMethod } from "@noldova/context.testing";
+import { CoverageRange } from "@noldova/context.testing/models/coverage/coverage-range.js";
+import { FunctionCoverage } from "@noldova/context.testing/models/coverage/function-coverage.js";
+import { FileCoverageAnalyzer } from "@noldova/context.testing/services/coverage/file-coverage-analyzer.js";
 
 @TestClass
 export class FileCoverageAnalyzerTests {
@@ -237,6 +240,27 @@ export class FileCoverageAnalyzerTests {
       Assert.areEqual(2, coverage.uncoveredLength);
       Assert.areEqual("1-2", coverage.uncoveredLineRanges[0]?.displayText);
       Assert.areEqual(0, coverage.blockCount);
+    }
+    finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  }
+
+  @TestMethod
+  public async refusesToMapABlockOffsetBeforeTheFirstLineAsync(): Promise<void> {
+    const directory = await mkdtemp(join(tmpdir(), "context-coverage-before-first-line-"));
+    try {
+      const filePath = join(directory, "sample.js");
+      const fileText = "run();";
+      await writeFile(filePath, fileText);
+      await writeFile(`${filePath}.map`, '{"version":3,"sources":["sample.ts"],"mappings":"AAAA"}');
+      const functionCoverage = new FunctionCoverage([new CoverageRange(0, fileText.length, 1), new CoverageRange(-1, fileText.length, 1)]);
+
+      const failure = await Assert.throwsAsync(() => new FileCoverageAnalyzer(new CoverageProject("Sample", directory, directory)).analyzeAsync(
+        filePath,
+        [[functionCoverage]]), TestingException);
+
+      Assert.areEqual("A coverage offset lies before the generated file's first line.", failure.message);
     }
     finally {
       await rm(directory, { recursive: true, force: true });
