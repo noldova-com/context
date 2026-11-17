@@ -247,13 +247,16 @@ export class FileCoverageAnalyzerTests {
   }
 
   @TestMethod
-  public async refusesToMapABlockOffsetBeforeTheFirstLineAsync(): Promise<void> {
+  @TestData(true)
+  @TestData(false)
+  public async refusesToMapABlockOffsetBeforeTheFirstLineAsync(hasSourceMap: boolean): Promise<void> {
     const directory = await mkdtemp(join(tmpdir(), "context-coverage-before-first-line-"));
     try {
       const filePath = join(directory, "sample.js");
       const fileText = "run();";
       await writeFile(filePath, fileText);
-      await writeFile(`${filePath}.map`, '{"version":3,"sources":["sample.ts"],"mappings":"AAAA"}');
+      if (hasSourceMap)
+        await writeFile(`${filePath}.map`, '{"version":3,"sources":["sample.ts"],"mappings":"AAAA"}');
       const functionCoverage = new FunctionCoverage([new CoverageRange(0, fileText.length, 1), new CoverageRange(-1, fileText.length, 1)]);
 
       const failure = await Assert.throwsAsync(() => new FileCoverageAnalyzer(new CoverageProject("Sample", directory, directory)).analyzeAsync(
