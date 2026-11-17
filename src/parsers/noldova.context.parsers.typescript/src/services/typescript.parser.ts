@@ -19,6 +19,7 @@ import { TypeScriptParserContext } from "../models/typescript-parser-context.js"
 import { TypeScriptRegionSet } from "../models/typescript-region-set.js";
 import { Resources } from "../resources.js";
 import { TypeScriptLexer } from "./lexers/typescript.lexer.js";
+import { TypeScriptDiagnosticLocator } from "./typescript-diagnostic-locator.js";
 import { TypeScriptSyntaxParser } from "./typescript-syntax.parser.js";
 
 export class TypeScriptParser {
@@ -63,7 +64,7 @@ export class TypeScriptParser {
     if (regions.isEmpty)
       return diagnostics.map(t => t.diagnostic);
 
-    return diagnostics.filter(t => t instanceof TypeScriptBinderDiagnostic || !regions.contains(t.location!.start)).map(t => t.diagnostic);
+    return diagnostics.filter(t => t instanceof TypeScriptBinderDiagnostic || !regions.contains(TypeScriptDiagnosticLocator.locate(t).start)).map(t => t.diagnostic);
   }
 
   private withoutDirected(diagnostics: Diagnostic[]): Diagnostic[] {
@@ -74,7 +75,7 @@ export class TypeScriptParser {
     const lineMap = new SourceLineMap(this.syntaxParser.context.source, new EcmaScriptLineTerminator());
     const directiveLines = new Set(directiveOffsets.map(t => lineMap.getPosition(t).lineIndex));
     return diagnostics.filter(t => {
-      for (let line = lineMap.getPosition(t.location!.start).lineIndex - 1; line >= 0; line--) {
+      for (let line = lineMap.getPosition(TypeScriptDiagnosticLocator.locate(t).start).lineIndex - 1; line >= 0; line--) {
         if (directiveLines.has(line))
           return false;
         if (!TypeScriptParser.isCommentOrBlankLine(lineMap.getLineText(line)))
@@ -105,7 +106,9 @@ export class TypeScriptParser {
   private static compare(first: Diagnostic, second: Diagnostic): number {
     const firstText = first.message.text;
     const secondText = second.message.text;
-    return first.location!.start - second.location!.start || first.location!.length - second.location!.length
+    const firstLocation = TypeScriptDiagnosticLocator.locate(first);
+    const secondLocation = TypeScriptDiagnosticLocator.locate(second);
+    return firstLocation.start - secondLocation.start || firstLocation.length - secondLocation.length
       || first.code.value - second.code.value || (firstText < secondText ? -1 : firstText > secondText ? 1 : 0);
   }
 }

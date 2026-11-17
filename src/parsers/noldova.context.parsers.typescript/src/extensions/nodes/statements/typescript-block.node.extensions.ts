@@ -17,7 +17,7 @@ declare module "../../../models/nodes/statements/typescript-block.node.js" {
 }
 
 TypeScriptBlockNode.prototype.getTypeScriptFirstTokenSpan = function (this: TypeScriptBlockNode): SourceSpan {
-  return this.openBraceNode!.span;
+  return this.openBraceNode?.span ?? this.span;
 };
 
 TypeScriptBlockNode.prototype.isTypeScriptPresent = function (this: TypeScriptBlockNode): boolean {

@@ -20,4 +20,19 @@ export class RegexNamedCapturingGroupParserTests {
     Assert.isInstanceOf(node, RegexNamedCapturingGroupNode);
     Assert.areEqual("name", node.groupName);
   }
+
+  @TestMethod
+  public refusesAnEmptyGroupName(): void {
+    const result = RegexParserFixture.parse("(?<>a)", "u");
+
+    Assert.areEqual("CTX1023", result.diagnostics.map(t => t.code.displayText).join("|"));
+  }
+
+  @TestMethod
+  public readsAnEscapedCodePointOfAGroupName(): void {
+    const node = RegexParserFixture.parseFirstAlternative("(?<\u{1d4d1}ame>a)", "u").children[0];
+
+    Assert.isInstanceOf(node, RegexNamedCapturingGroupNode);
+    Assert.areEqual("𝓑ame", node.groupName);
+  }
 }

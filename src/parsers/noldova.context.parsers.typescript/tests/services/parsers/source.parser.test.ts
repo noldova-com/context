@@ -14,6 +14,8 @@ import {
   TypeScriptParser,
   TypeScriptSourceKind
 } from "@noldova/context.parsers.typescript";
+import { TypeScriptParserException } from "@noldova/context.parsers.typescript/exceptions/typescript-parser.exception.js";
+import { TypeScriptDiagnosticTemplates } from "@noldova/context.parsers.typescript/models/diagnostics/typescript-diagnostic-templates.js";
 import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
 import { FailingSourceReader } from "../../fixtures/failing-source.reader.js";
@@ -40,6 +42,16 @@ export class SourceParserTests {
     Assert.areEqual(4, result.rootNode.children.length);
     Assert.areEqual("true,false,true,true", result.rootNode.children.map(t => parser.parsedStatementNodes.includes(t)).join());
     Assert.areEqual(0, result.diagnostics.length);
+  }
+
+  @TestMethod
+  public refusesToReparseAroundAnUnlocatedDiagnostic(): void {
+    const parser = new TypeScriptSyntaxParserProbe("await /pattern/; export {};");
+    parser.context.diagnosticCollector.add(TypeScriptDiagnosticTemplates.TS1005.create(undefined, [";"]));
+
+    const failure = Assert.throws(() => parser.parse(), TypeScriptParserException);
+
+    Assert.areEqual("A parse diagnostic has no location.", failure.message);
   }
 
   @TestMethod
