@@ -21,7 +21,6 @@ export class Resources {
   public static readonly parserAlreadyUsed: string = "The parser session has already been used.";
   public static readonly parserInputRemains: string = "The parser cannot publish a result while input remains unconsumed.";
   public static readonly parserLexerCollectorInvalid: string = "The lexer must report to the parser context's diagnostic collector.";
-  public static readonly sourceReaderCodePointMissing: string = "The source reader found no code point inside its bounds.";
   public static readonly utf16CodeUnitLength: number = 1;
   public static readonly utf16SurrogatePairLength: number = 2;
 

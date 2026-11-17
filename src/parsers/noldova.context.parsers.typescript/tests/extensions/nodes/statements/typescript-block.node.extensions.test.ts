@@ -30,4 +30,14 @@ export class TypeScriptBlockNodeExtensionsTests {
 
     Assert.areEqual(expected, node.bodyNode.isTypeScriptPresent());
   }
+
+  @TestMethod
+  public startsAMissingBlockAtItsOwnSpan(): void {
+    const node = TypeScriptParser.parse("function f() 5").rootNode.children[0];
+    Assert.isInstanceOf(node, TypeScriptFunctionDeclarationNode);
+    Assert.isDefined(node.bodyNode);
+
+    Assert.isUndefined(node.bodyNode.openBraceNode);
+    Assert.areEqual(node.bodyNode.span, node.bodyNode.getTypeScriptFirstTokenSpan());
+  }
 }

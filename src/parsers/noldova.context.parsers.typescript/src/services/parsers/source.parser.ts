@@ -6,13 +6,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { Diagnostic, DiagnosticLocation } from "@noldova/context.diagnostics";
 import { type Node, SourceSpan } from "@noldova/context.parsers";
 
 import { TypeScriptContextFlags } from "../../enums/typescript-context-flags.js";
 import { TypeScriptListKind } from "../../enums/typescript-list-kind.js";
 import { TypeScriptNameReservation } from "../../enums/typescript-name-reservation.js";
-import { TypeScriptParserException } from "../../exceptions/typescript-parser.exception.js";
 import { TypeScriptRecursionLimitException } from "../../exceptions/typescript-recursion-limit.exception.js";
 import { TypeScriptDiagnosticTemplates } from "../../models/diagnostics/typescript-diagnostic-templates.js";
 import { TypeScriptParserDiagnosticTemplates } from "../../models/diagnostics/typescript-parser-diagnostic-templates.js";
@@ -23,6 +21,7 @@ import { TypeScriptRegionSet } from "../../models/typescript-region-set.js";
 import { TypeScriptReparsedRegion } from "../../models/typescript-reparsed-region.js";
 import { Resources } from "../../resources.js";
 import { TypeScriptLexer } from "../lexers/typescript.lexer.js";
+import { TypeScriptDiagnosticLocator } from "../typescript-diagnostic-locator.js";
 import { TypeScriptSyntaxParser } from "../typescript-syntax.parser.js";
 import { SourceDirectiveParser } from "./trivia/source-directive.parser.js";
 
@@ -77,7 +76,7 @@ export class SourceParser {
     const replacedDiagnosticRegions = new TypeScriptRegionSet(replacedDiagnosticSpans);
     context.diagnosticCollector.truncate(0);
     for (const diagnostic of originalDiagnostics)
-      if (!replacedDiagnosticRegions.contains(SourceParser.locationOf(diagnostic).start))
+      if (!replacedDiagnosticRegions.contains(TypeScriptDiagnosticLocator.locate(diagnostic).start))
         context.diagnosticCollector.add(diagnostic);
     for (const region of regions)
       for (const diagnostic of region.diagnostics)
@@ -269,12 +268,5 @@ export class SourceParser {
     const reader = parser.typescriptLexer.reader;
     const span = reader.createSpan(startNode.span.startOffset, parser.currentNode.span.endOffset - startNode.span.startOffset);
     statements.push(new TypeScriptUnknownNode(reader.source.getText(span), span, startNode.leadingTrivia));
-  }
-
-  private static locationOf(diagnostic: Diagnostic): DiagnosticLocation {
-    if (Object.isUndefined(diagnostic.location))
-      throw new TypeScriptParserException(Resources.parseDiagnosticUnlocated);
-
-    return diagnostic.location;
   }
 }
