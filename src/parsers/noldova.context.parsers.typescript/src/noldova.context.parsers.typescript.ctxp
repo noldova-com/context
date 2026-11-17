@@ -7,6 +7,7 @@
   "dependencies": {
     "projects": [],
     "packages": [
+      "noldova.context.collections",
       "noldova.context.core",
       "noldova.context.diagnostics",
       "noldova.context.parsers",

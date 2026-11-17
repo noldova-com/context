@@ -195,3 +195,31 @@ declare module "@noldova/context.testing/services/execution/test-run-supervisor.
     public runAsync(): Promise<TestRunResult>;
   }
 }
+
+declare module "@noldova/context.testing/models/coverage/coverage-range.js" {
+  export class CoverageRange {
+    public readonly startOffset: number;
+    public readonly endOffset: number;
+    public readonly count: number;
+    public constructor(startOffset: number, endOffset: number, count: number);
+  }
+}
+
+declare module "@noldova/context.testing/models/coverage/function-coverage.js" {
+  import type { CoverageRange } from "@noldova/context.testing/models/coverage/coverage-range.js";
+
+  export class FunctionCoverage {
+    public readonly ranges: readonly CoverageRange[];
+    public constructor(ranges: readonly CoverageRange[]);
+  }
+}
+
+declare module "@noldova/context.testing/services/coverage/file-coverage-analyzer.js" {
+  import type { CoverageProject } from "@noldova/context.testing";
+  import type { FunctionCoverage } from "@noldova/context.testing/models/coverage/function-coverage.js";
+
+  export class FileCoverageAnalyzer {
+    public constructor(project: CoverageProject);
+    public analyzeAsync(filePath: string, scriptEntries: readonly (readonly FunctionCoverage[])[]): Promise<unknown>;
+  }
+}
