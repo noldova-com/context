@@ -97,6 +97,7 @@ export class Test extends SuiteScript {
       if (!(error instanceof CommandFailedException))
         throw error;
 
+      await this.writeLogAsync(error.message);
       process.exitCode = 1;
     }
 
