@@ -6,16 +6,19 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { BinarySearchService } from "@noldova/context.collections";
 import type { SourceSpan } from "@noldova/context.parsers";
 
 export class TypeScriptRegionSet {
   private readonly regions: SourceSpan[] = [];
+  private readonly startOffsets: number[] = [];
 
   public constructor(spans: readonly SourceSpan[]) {
     let endOffset = Number.NEGATIVE_INFINITY;
     for (const span of [...spans].sort((first, second) => first.startOffset - second.startOffset))
       if (span.startOffset >= endOffset) {
         this.regions.push(span);
+        this.startOffsets.push(span.startOffset);
         endOffset = span.endOffset;
       }
   }
@@ -25,16 +28,7 @@ export class TypeScriptRegionSet {
   }
 
   public contains(offset: number): boolean {
-    let low = 0;
-    let high = this.regions.length - 1;
-    while (low <= high) {
-      const middle = (low + high) >> 1;
-      if (this.regions[middle]!.startOffset <= offset)
-        low = middle + 1;
-      else
-        high = middle - 1;
-    }
-
-    return high >= 0 && offset < this.regions[high]!.endOffset;
+    const region = this.regions[BinarySearchService.floorIndex(this.startOffsets, offset)];
+    return !Object.isUndefined(region) && offset < region.endOffset;
   }
 }

@@ -169,11 +169,15 @@ export class FileCoverageAnalyzer {
 
   private toSourceLine(offset: number, lineStartOffsets: readonly number[], sourceMap: SourceMap | undefined): number {
     const lineIndex = BinarySearchService.floorIndex(lineStartOffsets, offset);
+    const lineStartOffset = lineStartOffsets[lineIndex];
+    if (Object.isUndefined(lineStartOffset))
+      throw new TestingException(Resources.coverageOffsetBeforeFirstLine);
+
     const generatedLine = lineIndex + 1;
     if (Object.isUndefined(sourceMap))
       return generatedLine;
 
-    const generatedColumn = offset - lineStartOffsets[lineIndex]!;
+    const generatedColumn = offset - lineStartOffset;
     const position = sourceMap.mapToSource(generatedLine, generatedColumn);
 
     return Object.isUndefined(position) ? generatedLine : position.line;

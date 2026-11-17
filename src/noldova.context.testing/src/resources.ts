@@ -41,6 +41,7 @@ export class Resources {
   public static readonly temporaryRemovalRetries: number = 5;
   public static readonly minimumWorkerCount: number = 2;
   public static readonly testWorkerDataInvalid: string = "The test worker exchanged data that is not a test worker message.";
+  public static readonly coverageOffsetBeforeFirstLine: string = "A coverage offset lies before the generated file's first line.";
   public static readonly testWorkerParentPortMissing: string = "The test worker runs only in a worker thread, which has a parent port.";
   public static readonly secondUnit: string = "s";
   public static readonly minuteUnit: string = "min";
