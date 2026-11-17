@@ -21,6 +21,7 @@ import { TypeScriptRegionSet } from "../../models/typescript-region-set.js";
 import { TypeScriptReparsedRegion } from "../../models/typescript-reparsed-region.js";
 import { Resources } from "../../resources.js";
 import { TypeScriptLexer } from "../lexers/typescript.lexer.js";
+import { TypeScriptDiagnosticLocator } from "../typescript-diagnostic-locator.js";
 import { TypeScriptSyntaxParser } from "../typescript-syntax.parser.js";
 import { SourceDirectiveParser } from "./trivia/source-directive.parser.js";
 
@@ -75,7 +76,7 @@ export class SourceParser {
     const replacedDiagnosticRegions = new TypeScriptRegionSet(replacedDiagnosticSpans);
     context.diagnosticCollector.truncate(0);
     for (const diagnostic of originalDiagnostics)
-      if (!replacedDiagnosticRegions.contains(diagnostic.location!.start))
+      if (!replacedDiagnosticRegions.contains(TypeScriptDiagnosticLocator.locate(diagnostic).start))
         context.diagnosticCollector.add(diagnostic);
     for (const region of regions)
       for (const diagnostic of region.diagnostics)

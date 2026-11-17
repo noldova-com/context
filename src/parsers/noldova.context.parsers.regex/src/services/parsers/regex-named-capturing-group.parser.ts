@@ -42,8 +42,8 @@ export class RegexNamedCapturingGroupParser {
         const value = node instanceof RegexUnicodeEscapeNode
           ? String.fromCodePoint(node.codePoint)
           : this.regexParser.context.source.getText(node.span);
-        const codePoint = value.codePointAt(0)!;
-        if (!this.groupNameValidator.isValidCodePoint(codePoint, groupNameBuilder.length === 0))
+        const codePoint = node instanceof RegexUnicodeEscapeNode ? node.codePoint : value.codePointAt(0);
+        if (Object.isUndefined(codePoint) || !this.groupNameValidator.isValidCodePoint(codePoint, groupNameBuilder.length === 0))
           isValidName = false;
         groupNameBuilder.append(value);
 

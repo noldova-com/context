@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "@noldova/context.core";
 import { ReadOnlyStringSpan } from "@noldova/context.text";
 
 import { InvalidSpanException } from "../exceptions/invalid-span.exception.js";
@@ -50,13 +51,11 @@ export class SourceReader {
   }
 
   public peekCodePoint(): number {
-    if (this.isAtEnd)
+    const codePoint = this.isAtEnd ? undefined : this.source.content.codePointAt(this.offset);
+    if (Object.isUndefined(codePoint))
       return Resources.endOfInputCodePoint;
 
-    if (this.offset + Resources.utf16CodeUnitLength >= this.endOffset)
-      return this.source.content.charCodeAt(this.offset);
-
-    return this.source.content.codePointAt(this.offset)!;
+    return this.offset + Resources.utf16CodeUnitLength >= this.endOffset ? this.source.content.charCodeAt(this.offset) : codePoint;
   }
 
   public readCodeUnit(): string {

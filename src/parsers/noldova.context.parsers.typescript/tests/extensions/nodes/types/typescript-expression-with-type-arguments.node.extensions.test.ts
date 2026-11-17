@@ -8,18 +8,46 @@
 
 import {
   TypeScriptBinaryExpressionNode,
+  TypeScriptClassDeclarationNode,
   TypeScriptExpressionWithTypeArgumentsNode,
   TypeScriptIdentifierNode,
   TypeScriptNewExpressionNode,
+  TypeScriptParser,
   TypeScriptPropertyAccessExpressionNode
 } from "@noldova/context.parsers.typescript";
-import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
+import { TypeScriptParserException } from "@noldova/context.parsers.typescript/exceptions/typescript-parser.exception.js";
+import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
 import { TypeScriptDiagnosticsFixture } from "../../../fixtures/typescript-diagnostics.fixture.js";
 import { TypeScriptParserFixture } from "../../../fixtures/typescript-parser.fixture.js";
 
 @TestClass
 export class TypeScriptExpressionWithTypeArgumentsNodeExtensionsTests {
+  private static heritageTypeOf(content: string): TypeScriptExpressionWithTypeArgumentsNode {
+    const classNode = TypeScriptParser.parse(content).rootNode.children.at(-1);
+    Assert.isInstanceOf(classNode, TypeScriptClassDeclarationNode);
+    const typeNode = classNode.heritageClauseNodes[0]?.children[0];
+    Assert.isInstanceOf(typeNode, TypeScriptExpressionWithTypeArgumentsNode);
+    return typeNode;
+  }
+
+  @TestData("declare class B {} class C extends B {}")
+  @TestData("declare const B: { D: new () => object }; class C extends B.D {}")
+  @TestMethod
+  public wrapsAHeritageTypeWithoutTypeArgumentsThatNoPropertyAccessReports(content: string): void {
+    const typeNode = TypeScriptExpressionWithTypeArgumentsNodeExtensionsTests.heritageTypeOf(content);
+
+    Assert.isUndefined(typeNode.typeArgumentListNode);
+    Assert.areEqual("", TypeScriptDiagnosticsFixture.project(TypeScriptParser.parse(content).diagnostics));
+  }
+
+  @TestMethod
+  public refusesToReportAnInstantiationAccessWithoutTypeArguments(): void {
+    const typeNode = TypeScriptExpressionWithTypeArgumentsNodeExtensionsTests.heritageTypeOf("declare class B {} class C extends B {}");
+
+    Assert.throws(() => typeNode.reportTypeScriptInstantiationAccess(TypeScriptParserFixture.create("")), TypeScriptParserException);
+  }
+
   @TestMethod
   public recognizesAnInstantiationAsALeftHandSideExpression(): void {
     const parser = TypeScriptParserFixture.create("factory<Value>");

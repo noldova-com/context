@@ -8,8 +8,10 @@
 
 import type { Node } from "@noldova/context.parsers";
 
+import { TypeScriptParserException } from "../../../exceptions/typescript-parser.exception.js";
 import { TypeScriptDiagnosticTemplates } from "../../../models/diagnostics/typescript-diagnostic-templates.js";
 import { TypeScriptExpressionWithTypeArgumentsNode } from "../../../models/nodes/types/typescript-expression-with-type-arguments.node.js";
+import { Resources } from "../../../resources.js";
 import type { TypeScriptSyntaxParser } from "../../../services/typescript-syntax.parser.js";
 
 TypeScriptExpressionWithTypeArgumentsNode.prototype.isTypeScriptLeftHandSideExpression = function (this: TypeScriptExpressionWithTypeArgumentsNode): boolean {
@@ -34,5 +36,8 @@ TypeScriptExpressionWithTypeArgumentsNode.prototype.keepsTypeScriptDecoratorCall
 };
 
 TypeScriptExpressionWithTypeArgumentsNode.prototype.reportTypeScriptInstantiationAccess = function (this: TypeScriptExpressionWithTypeArgumentsNode, parser: TypeScriptSyntaxParser): void {
-  parser.context.diagnosticCollector.addTypeScriptParseDiagnostic(TypeScriptDiagnosticTemplates.TS1477, this.typeArgumentListNode!.span);
+  if (Object.isUndefined(this.typeArgumentListNode))
+    throw new TypeScriptParserException(Resources.instantiationAccessWithoutTypeArguments);
+
+  parser.context.diagnosticCollector.addTypeScriptParseDiagnostic(TypeScriptDiagnosticTemplates.TS1477, this.typeArgumentListNode.span);
 };
