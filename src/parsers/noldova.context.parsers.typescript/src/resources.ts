@@ -163,6 +163,7 @@ export class Resources {
   public static readonly package: string = "package";
   public static readonly parserRecursionLimitExceeded: string = "The TypeScript parser recursion limit was reached.";
   public static readonly instantiationAccessWithoutTypeArguments: string = "An instantiation access was reported for an expression without type arguments.";
+  public static readonly parseDiagnosticUnlocated: string = "A parse diagnostic has no location.";
   public static readonly path: string = "path";
   public static readonly percent: string = "%";
   public static readonly percentEquals: string = "%=";
