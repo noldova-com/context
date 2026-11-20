@@ -379,6 +379,44 @@ export class TestDiscoveryTests {
   }
 
   @TestMethod
+  public async ordersTestFilesByTheirSlashSeparatedPathOnEverySystemAsync(): Promise<void> {
+    const rootDirectory = await mkdtemp(join(tmpdir(), "context-discovery-"));
+    try {
+      await mkdir(join(rootDirectory, "models"));
+      await TestDiscoveryTests.writeValidFixtureAsync(join(rootDirectory, "models", "x.test.js"));
+      await TestDiscoveryTests.writeValidFixtureAsync(join(rootDirectory, "models2.test.js"));
+      await TestDiscoveryTests.writeValidFixtureAsync(join(rootDirectory, "modelsX.test.js"));
+
+      const discovered = await new TestDiscovery().discoverAsync([new TestProject("Sample", rootDirectory)]);
+
+      Assert.areEqual("models/x.test.js,models2.test.js,modelsX.test.js", discovered.map(t => t.filePath).join(","));
+    }
+    finally {
+      await rm(rootDirectory, { recursive: true, force: true });
+    }
+  }
+
+  @TestMethod
+  public async ordersProjectsSharingAPackageNameByTheirSlashSeparatedRootAsync(): Promise<void> {
+    const rootDirectory = await mkdtemp(join(tmpdir(), "context-discovery-"));
+    try {
+      const nested = join(rootDirectory, "pkg", "a");
+      const sibling = join(rootDirectory, "pkg2");
+      await mkdir(nested, { recursive: true });
+      await mkdir(sibling);
+      await TestDiscoveryTests.writeValidFixtureAsync(join(nested, "first.test.js"));
+      await TestDiscoveryTests.writeValidFixtureAsync(join(sibling, "second.test.js"));
+
+      const discovered = await new TestDiscovery().discoverAsync([new TestProject("Sample", sibling), new TestProject("Sample", nested)]);
+
+      Assert.areEqual("first.test.js,second.test.js", discovered.map(t => t.filePath).join(","));
+    }
+    finally {
+      await rm(rootDirectory, { recursive: true, force: true });
+    }
+  }
+
+  @TestMethod
   public async ordersProjectsSharingAPackageNameByRootAsync(): Promise<void> {
     const rootDirectory = await mkdtemp(join(tmpdir(), "context-discovery-"));
     try {
