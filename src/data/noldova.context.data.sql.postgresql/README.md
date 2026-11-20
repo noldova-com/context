@@ -59,6 +59,13 @@ Not supported yet: the `PG*` environment variables, the password file, the
 operating system's user name as the default user, several hosts and
 `target_session_attrs`, Unix-domain sockets, and direct SSL negotiation.
 
+## Authentication
+
+The client answers cleartext, MD5 and SCRAM-SHA-256 password requests, and
+SCRAM-SHA-256-PLUS when it can bind the channel. SCRAM refuses a server's
+iteration count above 1,000,000, and derives the key off the event loop, so a
+connection's timeouts keep running while it does.
+
 ## Cancel
 
 A query the client has not sent yet fails at once with
@@ -101,6 +108,8 @@ from it:
   `useValueRows` in place of the query's own options.
 - The TLS options are the connection string's `sslmode` and certificate
   files, as above, in place of a Node `tls` options object.
+- SCRAM bounds the server's iteration count and derives the key
+  asynchronously, as Authentication above says.
 - `build.js`, `subscribe.js`, `large.js`, `cf.js` and `diagnostics.js` are
   left out, and so are the environment variables and the password file.
 - The provider's own parts are new: the location parser, which checks a

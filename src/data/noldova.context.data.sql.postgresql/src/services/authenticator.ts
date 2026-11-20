@@ -9,7 +9,7 @@
 // This file uses Node APIs and will change when we replace Node.
 
 import { Buffer } from "node:buffer";
-import { createHash, createHmac, pbkdf2Sync, randomBytes } from "node:crypto";
+import { createHash, createHmac, randomBytes, webcrypto } from "node:crypto";
 
 import "@noldova/context.core";
 import { DataException } from "@noldova/context.data";
@@ -30,6 +30,8 @@ export class Authenticator {
   private static readonly scramPlus: string = "SCRAM-SHA-256-PLUS";
   private static readonly salted: Map<string, Buffer> = new Map();
   private static readonly saltedLimit: number = 64;
+  private static readonly deriving: Map<string, Promise<Buffer>> = new Map();
+  private static readonly iterationLimit: number = 1_000_000;
 
   private readonly user: string;
   private readonly password: string;
@@ -55,7 +57,7 @@ export class Authenticator {
     return this.authenticated;
   }
 
-  public respond(type: number, body: Buffer): Buffer | null {
+  public async respondAsync(type: number, body: Buffer): Promise<Buffer | null> {
     if ((type === Authenticator.cleartext || type === Authenticator.md5) && this.binding === ChannelBinding.Require)
       throw new DataException(Resources.channelBindingPasswordRequested);
 
@@ -70,7 +72,7 @@ export class Authenticator {
       case Authenticator.saslStart:
         return this.start(body);
       case Authenticator.saslContinue:
-        return this.proceed(body);
+        return this.proceedAsync(body);
       case Authenticator.saslFinal:
         return this.finish(body);
       default:
@@ -94,7 +96,7 @@ export class Authenticator {
     return this.frontend.createSasl(plus ? Authenticator.scramPlus : Authenticator.scram, this.header + Resources.scramUser + this.nonce);
   }
 
-  private proceed(body: Buffer): Buffer {
+  private async proceedAsync(body: Buffer): Promise<Buffer> {
     const fields = new Map(body.toString("utf8").split(",").map(t => [t.slice(0, 1), t.slice(2)] as const));
     const serverNonce = fields.get("r") ?? "";
     const salt = fields.get("s") ?? "";
@@ -104,8 +106,10 @@ export class Authenticator {
     const count = Number(iterations);
     if (salt.length === 0 || !/^[0-9]+$/u.test(iterations) || !Number.isSafeInteger(count) || count < 1)
       throw new DataException(Resources.saslFirstMessageInvalid);
+    if (count > Authenticator.iterationLimit)
+      throw new DataException(Resources.formatSaslIterationsAboveLimit(count, Authenticator.iterationLimit));
 
-    const saltedPassword = Authenticator.saltPassword(this.password, salt, count);
+    const saltedPassword = await Authenticator.saltPasswordAsync(this.password, salt, count);
     const clientKey = Authenticator.computeHmac(saltedPassword, Resources.clientKey);
     const channel = (Object.isNull(this.bound) ? Buffer.from(this.header) : Buffer.concat([Buffer.from(this.header), this.bound])).toString("base64");
     const message = `n=*,r=${this.nonce},r=${serverNonce},s=${salt},i=${iterations},c=${channel},r=${serverNonce}`;
@@ -133,19 +137,34 @@ export class Authenticator {
     return null;
   }
 
-  private static saltPassword(password: string, salt: string, iterations: number): Buffer {
+  private static async saltPasswordAsync(password: string, salt: string, iterations: number): Promise<Buffer> {
     const key = Authenticator.computeSha256(Buffer.from(password + "\0" + salt + "\0" + iterations.toString())).toString("base64");
     const known = Authenticator.salted.get(key);
     if (!Object.isUndefined(known))
       return known;
 
+    const running = Authenticator.deriving.get(key);
+    if (!Object.isUndefined(running))
+      return running;
+
+    const derivation = Authenticator.derivePasswordAsync(key, password, salt, iterations);
+    const forget = (): void => {
+      Authenticator.deriving.delete(key);
+    };
+    Authenticator.deriving.set(key, derivation);
+    void derivation.then(forget, forget);
+    return derivation;
+  }
+
+  private static async derivePasswordAsync(key: string, password: string, salt: string, iterations: number): Promise<Buffer> {
+    const passwordKey = await webcrypto.subtle.importKey("raw", Buffer.from(password, "utf8"), "PBKDF2", false, ["deriveBits"]);
+    const salted = Buffer.from(await webcrypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: Buffer.from(salt, "base64"), iterations }, passwordKey, 256));
     if (Authenticator.salted.size >= Authenticator.saltedLimit) {
       const oldest = Authenticator.salted.keys().next();
       if (oldest.done !== true)
         Authenticator.salted.delete(oldest.value);
     }
 
-    const salted = pbkdf2Sync(password, Buffer.from(salt, "base64"), iterations, 32, "sha256");
     Authenticator.salted.set(key, salted);
     return salted;
   }

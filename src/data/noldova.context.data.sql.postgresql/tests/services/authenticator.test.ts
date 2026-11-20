@@ -9,12 +9,12 @@
 // This file uses Node APIs and will change when we replace Node.
 
 import { Buffer } from "node:buffer";
-import { createHash, createHmac, pbkdf2Sync } from "node:crypto";
+import { createHash, createHmac, pbkdf2Sync, randomUUID } from "node:crypto";
 
 import { DataException } from "@noldova/context.data";
 import { Authenticator } from "@noldova/context.data.sql.postgresql/services/authenticator.js";
 import { Frontend } from "@noldova/context.data.sql.postgresql/services/protocol/frontend.js";
-import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
+import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
 import { Der } from "../fixtures/der.fixture.js";
 
@@ -27,74 +27,74 @@ export class AuthenticatorTests {
   private static readonly certificate: Buffer = Der.certificate(Der.algorithm("2a8648ce3d040302"));
 
   @TestMethod
-  public signsInWithScramAndVerifiesTheServer(): void {
+  public async signsInWithScramAndVerifiesTheServer(): Promise<void> {
     const authenticator = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend());
 
-    const first = AuthenticatorTests.saslInitial(AuthenticatorTests.respond(authenticator, 10, "SCRAM-SHA-256\0\0"));
+    const first = AuthenticatorTests.saslInitial(await AuthenticatorTests.respondAsync(authenticator, 10, "SCRAM-SHA-256\0\0"));
     Assert.isTrue(first.startsWith("n,,n=*,r="));
     const clientNonce = first.slice("n,,n=*,r=".length);
     const serverFirst = `r=${clientNonce}server,s=${AuthenticatorTests.salt},i=${AuthenticatorTests.iterations}`;
-    const final = AuthenticatorTests.saslResponse(AuthenticatorTests.respond(authenticator, 11, serverFirst));
+    const final = AuthenticatorTests.saslResponse(await AuthenticatorTests.respondAsync(authenticator, 11, serverFirst));
     const [expectedProof, serverSignature] = AuthenticatorTests.expected(`n=*,r=${clientNonce},${serverFirst},c=biws,r=${clientNonce}server`);
 
     Assert.areEqual(`c=biws,r=${clientNonce}server,p=${expectedProof}`, final);
-    Assert.isNull(authenticator.respond(12, Buffer.from(`v=${serverSignature}`)));
+    Assert.isNull(await authenticator.respondAsync(12, Buffer.from(`v=${serverSignature}`)));
     Assert.isFalse(authenticator.isAuthenticated);
-    Assert.isNull(authenticator.respond(0, Buffer.alloc(0)));
+    Assert.isNull(await authenticator.respondAsync(0, Buffer.alloc(0)));
     Assert.isTrue(authenticator.isAuthenticated);
   }
 
   @TestMethod
-  public refusesAServerThatDoesNotProveThePassword(): void {
+  public async refusesAServerThatDoesNotProveThePassword(): Promise<void> {
     const wrongSignature = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend());
-    const nonce = AuthenticatorTests.saslInitial(AuthenticatorTests.respond(wrongSignature, 10, "SCRAM-SHA-256\0\0")).slice("n,,n=*,r=".length);
-    AuthenticatorTests.respond(wrongSignature, 11, `r=${nonce}x,s=${AuthenticatorTests.salt},i=${AuthenticatorTests.iterations}`);
-    Assert.throws(() => wrongSignature.respond(12, Buffer.from("v=AAAA")), DataException);
+    const nonce = AuthenticatorTests.saslInitial(await AuthenticatorTests.respondAsync(wrongSignature, 10, "SCRAM-SHA-256\0\0")).slice("n,,n=*,r=".length);
+    await AuthenticatorTests.respondAsync(wrongSignature, 11, `r=${nonce}x,s=${AuthenticatorTests.salt},i=${AuthenticatorTests.iterations}`);
+    await Assert.throwsAsync(() => wrongSignature.respondAsync(12, Buffer.from("v=AAAA")), DataException);
 
     const skipped = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend());
-    AuthenticatorTests.respond(skipped, 10, "SCRAM-SHA-256\0\0");
-    Assert.throws(() => skipped.respond(0, Buffer.alloc(0)), DataException);
+    await AuthenticatorTests.respondAsync(skipped, 10, "SCRAM-SHA-256\0\0");
+    await Assert.throwsAsync(() => skipped.respondAsync(0, Buffer.alloc(0)), DataException);
 
     const foreignNonce = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend());
-    AuthenticatorTests.respond(foreignNonce, 10, "SCRAM-SHA-256\0\0");
-    Assert.throws(() => foreignNonce.respond(11, Buffer.from(`r=other,s=${AuthenticatorTests.salt},i=1`)), DataException);
+    await AuthenticatorTests.respondAsync(foreignNonce, 10, "SCRAM-SHA-256\0\0");
+    await Assert.throwsAsync(() => foreignNonce.respondAsync(11, Buffer.from(`r=other,s=${AuthenticatorTests.salt},i=1`)), DataException);
   }
 
   @TestMethod
-  public answersPasswordRequestsUnlessChannelBindingIsRequired(): void {
+  public async answersPasswordRequestsUnlessChannelBindingIsRequired(): Promise<void> {
     const plain = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend());
-    const cleartext = AuthenticatorTests.respond(plain, 3, "");
-    const md5 = AuthenticatorTests.respond(plain, 5, Buffer.from("01020304", "hex"));
+    const cleartext = await AuthenticatorTests.respondAsync(plain, 3, "");
+    const md5 = await AuthenticatorTests.respondAsync(plain, 5, Buffer.from("01020304", "hex"));
     const inner = createHash("md5").update(AuthenticatorTests.password + "app").digest("hex");
     const outer = createHash("md5").update(Buffer.concat([Buffer.from(inner), Buffer.from("01020304", "hex")])).digest("hex");
 
     Assert.areEqual(AuthenticatorTests.password + "\0", cleartext.toString("utf8", 5));
     Assert.areEqual("md5" + outer + "\0", md5.toString("utf8", 5));
-    Assert.isNull(plain.respond(0, Buffer.alloc(0)));
+    Assert.isNull(await plain.respondAsync(0, Buffer.alloc(0)));
     Assert.isTrue(plain.isAuthenticated);
 
     const bound = new Authenticator("app", AuthenticatorTests.password, "require", null, new Frontend());
-    Assert.throws(() => bound.respond(3, Buffer.alloc(0)), DataException);
-    Assert.throws(() => bound.respond(5, Buffer.alloc(4)), DataException);
-    Assert.throws(() => bound.respond(10, Buffer.from("SCRAM-SHA-256\0SCRAM-SHA-256-PLUS\0\0")), DataException);
+    await Assert.throwsAsync(() => bound.respondAsync(3, Buffer.alloc(0)), DataException);
+    await Assert.throwsAsync(() => bound.respondAsync(5, Buffer.alloc(4)), DataException);
+    await Assert.throwsAsync(() => bound.respondAsync(10, Buffer.from("SCRAM-SHA-256\0SCRAM-SHA-256-PLUS\0\0")), DataException);
   }
 
   @TestMethod
-  public refusesUnsupportedMechanismsAndTypes(): void {
+  public async refusesUnsupportedMechanismsAndTypes(): Promise<void> {
     const authenticator = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend());
 
-    Assert.throws(() => authenticator.respond(10, Buffer.from("SCRAM-SHA-1\0\0")), DataException);
-    Assert.throws(() => authenticator.respond(7, Buffer.alloc(0)), DataException);
+    await Assert.throwsAsync(() => authenticator.respondAsync(10, Buffer.from("SCRAM-SHA-1\0\0")), DataException);
+    await Assert.throwsAsync(() => authenticator.respondAsync(7, Buffer.alloc(0)), DataException);
   }
 
   @TestMethod
-  public bindsTheChannelToTheServerCertificate(): void {
+  public async bindsTheChannelToTheServerCertificate(): Promise<void> {
     const hash = createHash("sha256").update(AuthenticatorTests.certificate).digest();
     const expected = Buffer.concat([Buffer.from("p=tls-server-end-point,,"), hash]).toString("hex");
 
     for (const binding of ["prefer", "require"]) {
       const authenticator = new Authenticator("app", AuthenticatorTests.password, binding, AuthenticatorTests.certificate, new Frontend());
-      const [mechanism, channel] = AuthenticatorTests.signIn(authenticator, AuthenticatorTests.both);
+      const [mechanism, channel] = await AuthenticatorTests.signInAsync(authenticator, AuthenticatorTests.both);
 
       Assert.areEqual("SCRAM-SHA-256-PLUS", mechanism);
       Assert.areEqual(expected, channel.toString("hex"));
@@ -102,23 +102,23 @@ export class AuthenticatorTests {
   }
 
   @TestMethod
-  public saysTheChannelCouldBeBoundWhenTheServerOffersNoBinding(): void {
+  public async saysTheChannelCouldBeBoundWhenTheServerOffersNoBinding(): Promise<void> {
     const authenticator = new Authenticator("app", AuthenticatorTests.password, "prefer", AuthenticatorTests.certificate, new Frontend());
 
-    const [mechanism, channel] = AuthenticatorTests.signIn(authenticator, "SCRAM-SHA-256\0\0");
+    const [mechanism, channel] = await AuthenticatorTests.signInAsync(authenticator, "SCRAM-SHA-256\0\0");
 
     Assert.areEqual("SCRAM-SHA-256", mechanism);
     Assert.areEqual("y,,", channel.toString("utf8"));
   }
 
   @TestMethod
-  public leavesTheChannelUnboundWhenDisabledOrTheCertificateIsUnknown(): void {
+  public async leavesTheChannelUnboundWhenDisabledOrTheCertificateIsUnknown(): Promise<void> {
     const disabled = new Authenticator("app", AuthenticatorTests.password, "disable", AuthenticatorTests.certificate, new Frontend());
     const unknown = new Authenticator(
       "app", AuthenticatorTests.password, "prefer", Der.certificate(Der.algorithm("2a0304")), new Frontend());
 
-    const [disabledMechanism, disabledChannel] = AuthenticatorTests.signIn(disabled, AuthenticatorTests.both);
-    const [unknownMechanism, unknownChannel] = AuthenticatorTests.signIn(unknown, AuthenticatorTests.both);
+    const [disabledMechanism, disabledChannel] = await AuthenticatorTests.signInAsync(disabled, AuthenticatorTests.both);
+    const [unknownMechanism, unknownChannel] = await AuthenticatorTests.signInAsync(unknown, AuthenticatorTests.both);
 
     Assert.areEqual("SCRAM-SHA-256", disabledMechanism);
     Assert.areEqual("n,,", disabledChannel.toString("utf8"));
@@ -127,69 +127,135 @@ export class AuthenticatorTests {
   }
 
   @TestMethod
-  public refusesASignInWithoutBindingWhenBindingIsRequired(): void {
+  public async refusesASignInWithoutBindingWhenBindingIsRequired(): Promise<void> {
     const authenticator = new Authenticator("app", AuthenticatorTests.password, "require", AuthenticatorTests.certificate, new Frontend());
 
-    Assert.throws(() => authenticator.respond(0, Buffer.alloc(0)), DataException);
+    await Assert.throwsAsync(() => authenticator.respondAsync(0, Buffer.alloc(0)), DataException);
     Assert.isFalse(authenticator.isAuthenticated);
   }
 
   @TestMethod
-  public refusesAServerFirstMessageWithoutItsFields(): void {
+  public async refusesAServerFirstMessageWithoutItsFields(): Promise<void> {
     const noNonce = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend());
-    AuthenticatorTests.respond(noNonce, 10, "SCRAM-SHA-256\0\0");
+    await AuthenticatorTests.respondAsync(noNonce, 10, "SCRAM-SHA-256\0\0");
     const noSalt = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend());
-    const nonce = AuthenticatorTests.saslInitial(AuthenticatorTests.respond(noSalt, 10, "SCRAM-SHA-256\0\0")).slice("n,,n=*,r=".length);
+    const nonce = AuthenticatorTests.saslInitial(await AuthenticatorTests.respondAsync(noSalt, 10, "SCRAM-SHA-256\0\0")).slice("n,,n=*,r=".length);
 
-    Assert.throws(() => noNonce.respond(11, Buffer.from(`s=${AuthenticatorTests.salt},i=1`)), DataException);
-    Assert.throws(() => noSalt.respond(11, Buffer.from(`r=${nonce}server`)), DataException);
+    await Assert.throwsAsync(() => noNonce.respondAsync(11, Buffer.from(`s=${AuthenticatorTests.salt},i=1`)), DataException);
+    await Assert.throwsAsync(() => noSalt.respondAsync(11, Buffer.from(`r=${nonce}server`)), DataException);
   }
 
   @TestMethod
-  public refusesAServerFirstMessageWithoutAPositiveIterationCount(): void {
+  public async refusesAServerFirstMessageWithoutAPositiveIterationCount(): Promise<void> {
     for (const fields of ["", ",i=", ",i=0", ",i=-1", ",i=1.5", ",i=x", ",i=99999999999999999999"]) {
       const authenticator = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend());
-      const nonce = AuthenticatorTests.saslInitial(AuthenticatorTests.respond(authenticator, 10, "SCRAM-SHA-256  ")).slice("n,,n=*,r=".length);
+      const nonce = AuthenticatorTests.saslInitial(await AuthenticatorTests.respondAsync(authenticator, 10, "SCRAM-SHA-256\0\0")).slice("n,,n=*,r=".length);
 
-      const failure = Assert.throws(() => authenticator.respond(11, Buffer.from(`r=${nonce}server,s=${AuthenticatorTests.salt}${fields}`)), DataException);
+      const failure = await Assert.throwsAsync(
+        () => authenticator.respondAsync(11, Buffer.from(`r=${nonce}server,s=${AuthenticatorTests.salt}${fields}`)), DataException);
 
       Assert.areEqual("The server's SCRAM message has no salt or no positive iteration count.", failure.message);
     }
   }
 
   @TestMethod
-  public keepsSigningInCorrectlyPastTheSaltedPasswordCache(): void {
+  @TestData(1_000_001)
+  @TestData(2_000_000_000)
+  public async refusesAnIterationCountAboveTheLimit(iterations: number): Promise<void> {
+    const authenticator = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend());
+    const nonce = AuthenticatorTests.saslInitial(await AuthenticatorTests.respondAsync(authenticator, 10, "SCRAM-SHA-256\0\0")).slice("n,,n=*,r=".length);
+
+    const failure = await Assert.throwsAsync(
+      () => authenticator.respondAsync(11, Buffer.from(`r=${nonce}server,s=${AuthenticatorTests.salt},i=${iterations.toString()}`)), DataException);
+
+    Assert.areEqual(`The server's SCRAM iteration count ${iterations.toString()} is above the limit of 1000000.`, failure.message);
+    Assert.isFalse(authenticator.isAuthenticated);
+  }
+
+  @TestMethod
+  public async derivesTheKeyWithoutHoldingTheEventLoop(): Promise<void> {
+    const authenticator = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend());
+    const nonce = AuthenticatorTests.saslInitial(await AuthenticatorTests.respondAsync(authenticator, 10, "SCRAM-SHA-256\0\0")).slice("n,,n=*,r=".length);
+    const salt = Buffer.from("salt-for-the-event-loop").toString("base64");
+
+    const reply = authenticator.respondAsync(11, Buffer.from(`r=${nonce}server,s=${salt},i=200000`));
+    const first = await Promise.race([reply, new Promise<string>(resolve => setImmediate(() => resolve("event loop turned")))]);
+
+    Assert.areEqual("event loop turned", first);
+    Assert.isNotNull(await reply);
+  }
+
+  @TestMethod
+  public async keepsSigningInCorrectlyPastTheSaltedPasswordCache(): Promise<void> {
     const salts = Array.from({ length: 70 }, (_value, index) => Buffer.from(`cache-salt-${index.toString()}`).toString("base64"));
 
     for (const salt of [...salts, salts[0] ?? ""]) {
       const authenticator = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend());
-      const [mechanism] = AuthenticatorTests.signIn(authenticator, "SCRAM-SHA-256\0\0", salt, 1);
+      const [mechanism] = await AuthenticatorTests.signInAsync(authenticator, "SCRAM-SHA-256\0\0", salt, 1);
 
       Assert.areEqual("SCRAM-SHA-256", mechanism);
     }
   }
 
-  private static signIn(
+  @TestMethod
+  public async sharesADerivationStillRunningWithAnotherConnection(): Promise<void> {
+    const salt = Buffer.from(`shared-${randomUUID()}`).toString("base64");
+    const authenticators = [1, 2].map(() => new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend()));
+    const nonces = await Promise.all(authenticators.map(async t =>
+      AuthenticatorTests.saslInitial(await AuthenticatorTests.respondAsync(t, 10, "SCRAM-SHA-256\0\0")).slice("n,,n=*,r=".length)));
+    const runningBefore = Authenticator.deriving.size;
+
+    const replies = authenticators.map((t, index) => t.respondAsync(11, Buffer.from(`r=${nonces[index] ?? ""}server,s=${salt},i=50000`)));
+    const runningWhileBothWait = Authenticator.deriving.size;
+    const finals = await Promise.all(replies);
+
+    Assert.areEqual(runningBefore + 1, runningWhileBothWait);
+    Assert.areEqual(runningBefore, Authenticator.deriving.size);
+    for (const [index, final] of finals.entries()) {
+      const nonce = nonces[index] ?? "";
+      const serverFirst = `r=${nonce}server,s=${salt},i=50000`;
+      const [expectedProof] = AuthenticatorTests.expected(`n=*,r=${nonce},${serverFirst},c=biws,r=${nonce}server`, salt, 50_000);
+      Assert.areEqual(`c=biws,r=${nonce}server,p=${expectedProof}`, final?.toString("utf8", 5));
+    }
+  }
+
+  @TestMethod
+  public async matchesTheExchangeOfRfc7677(): Promise<void> {
+    const serverNonce = "rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0";
+    const salt = "W22ZaJ0SNY7soEsUEjb6gQ==";
+    const authMessage = `n=user,r=rOprNGfwEbeRWgbNEkqO,r=${serverNonce},s=${salt},i=4096,c=biws,r=${serverNonce}`;
+
+    const salted = await Authenticator.saltPasswordAsync("pencil", salt, 4096);
+    const clientKey = Authenticator.computeHmac(salted, "Client Key");
+    const proof = Authenticator.computeXor(clientKey, Authenticator.computeHmac(Authenticator.computeSha256(clientKey), authMessage)).toString("base64");
+    const serverSignature = Authenticator.computeHmac(Authenticator.computeHmac(salted, "Server Key"), authMessage).toString("base64");
+
+    Assert.areEqual("dHzbZapWIk4jUhN+Ute9ytag9zjfMHgsqmmiz7AndVQ=", proof);
+    Assert.areEqual("6rriTRBi23WpRR/wtup+mMhUZUn/dB5nLTJRsjl95G4=", serverSignature);
+    Assert.areEqual(`${proof},${serverSignature}`, AuthenticatorTests.expected(authMessage, salt, 4096).join());
+  }
+
+  private static async signInAsync(
     authenticator: Authenticator, offered: string, salt: string = AuthenticatorTests.salt,
-    iterations: number = AuthenticatorTests.iterations): readonly [string, Buffer] {
-    const initial = AuthenticatorTests.respond(authenticator, 10, offered);
+    iterations: number = AuthenticatorTests.iterations): Promise<readonly [string, Buffer]> {
+    const initial = await AuthenticatorTests.respondAsync(authenticator, 10, offered);
     const mechanism = initial.toString("utf8", 5, initial.indexOf(0, 5));
     const first = AuthenticatorTests.saslInitial(initial);
     const clientNonce = first.slice(first.indexOf("n=*,r=") + "n=*,r=".length);
     const serverFirst = `r=${clientNonce}server,s=${salt},i=${iterations.toString()}`;
-    const final = AuthenticatorTests.saslResponse(AuthenticatorTests.respond(authenticator, 11, serverFirst));
+    const final = AuthenticatorTests.saslResponse(await AuthenticatorTests.respondAsync(authenticator, 11, serverFirst));
     const channel = final.slice(2, final.indexOf(","));
     const [proof, signature] = AuthenticatorTests.expected(`n=*,r=${clientNonce},${serverFirst},c=${channel},r=${clientNonce}server`, salt, iterations);
 
     Assert.areEqual(`c=${channel},r=${clientNonce}server,p=${proof}`, final);
-    Assert.isNull(authenticator.respond(12, Buffer.from(`v=${signature}`)));
-    Assert.isNull(authenticator.respond(0, Buffer.alloc(0)));
+    Assert.isNull(await authenticator.respondAsync(12, Buffer.from(`v=${signature}`)));
+    Assert.isNull(await authenticator.respondAsync(0, Buffer.alloc(0)));
     Assert.isTrue(authenticator.isAuthenticated);
     return [mechanism, Buffer.from(channel, "base64")];
   }
 
-  private static respond(authenticator: Authenticator, type: number, body: string | Buffer): Buffer {
-    const reply = authenticator.respond(type, typeof body === "string" ? Buffer.from(body) : body);
+  private static async respondAsync(authenticator: Authenticator, type: number, body: string | Buffer): Promise<Buffer> {
+    const reply = await authenticator.respondAsync(type, typeof body === "string" ? Buffer.from(body) : body);
     Assert.isNotNull(reply);
     return reply;
   }
