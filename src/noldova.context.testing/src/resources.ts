@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { ProcessListing } from "./models/execution/process-listing.js";
+
 export class Resources {
   public static readonly sourceMapBase64Alphabet: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   public static readonly testClassSuffix: string = "Tests";
@@ -30,19 +32,33 @@ export class Resources {
   public static readonly unprintableValue: string = "<unprintable value>";
   public static readonly unhandledRejectionEvent: "unhandledRejection" = "unhandledRejection";
   public static readonly messageEvent: string = "message";
+  public static readonly closeEvent: string = "close";
   public static readonly errorEvent: string = "error";
+  public static readonly lineEvent: string = "line";
   public static readonly exitEvent: string = "exit";
   public static readonly killSignal: "SIGKILL" = "SIGKILL";
+  public static readonly listerReadyLine: string = "ready";
+  public static readonly listerEndLine: string = "end";
+  public static readonly warmListingMilliseconds: number = 5000;
   public static readonly windowsProcessListingScript: string = "$ErrorActionPreference = 'Stop'; " +
     "$all = Get-CimInstance -Query 'SELECT ProcessId, ParentProcessId, CreationDate, Name FROM Win32_Process'; $created = @{}; " +
     "foreach ($item in $all) { $created[$item.ProcessId] = $item.CreationDate }; " +
     "foreach ($item in $all) { $parentCreated = $created[$item.ParentProcessId]; " +
     "if ($item.Name -ne 'conhost.exe' -and $null -ne $parentCreated -and $null -ne $item.CreationDate -and $parentCreated -lt $item.CreationDate) " +
     "{ '{0} {1}' -f $item.ProcessId, $item.ParentProcessId } }";
-  public static readonly processListings: ReadonlyMap<string, { readonly file: string; readonly arguments: readonly string[] }> = new Map([
-    ["linux", { file: "ps", arguments: ["-A", "-o", "pid=,ppid="] }],
-    ["darwin", { file: "ps", arguments: ["-A", "-o", "pid=,ppid="] }],
-    ["win32", { file: "powershell.exe", arguments: ["-NoProfile", "-NonInteractive", "-Command", Resources.windowsProcessListingScript] }],
+  public static readonly windowsWarmListingScript: string = "$ErrorActionPreference = 'Stop'; " +
+    "$null = Get-CimInstance -Query 'SELECT ProcessId FROM Win32_Process WHERE ProcessId = 0'; " +
+    `[Console]::Out.WriteLine('${Resources.listerReadyLine}'); [Console]::Out.Flush(); ` +
+    "while ($null -ne [Console]::In.ReadLine()) { " +
+    `& { ${Resources.windowsProcessListingScript} } | ForEach-Object { [Console]::Out.WriteLine($_) }; ` +
+    `[Console]::Out.WriteLine('${Resources.listerEndLine}'); [Console]::Out.Flush() }`;
+  public static readonly unixWarmListingScript: string =
+    `echo ${Resources.listerReadyLine}; while read -r line; do ps -A -o pid=,ppid=; echo ${Resources.listerEndLine}; done`;
+  public static readonly processListings: ReadonlyMap<string, ProcessListing> = new Map([
+    ["linux", new ProcessListing("ps", ["-A", "-o", "pid=,ppid="], "sh", ["-c", Resources.unixWarmListingScript])],
+    ["darwin", new ProcessListing("ps", ["-A", "-o", "pid=,ppid="], "sh", ["-c", Resources.unixWarmListingScript])],
+    ["win32", new ProcessListing("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", Resources.windowsProcessListingScript],
+      "powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", Resources.windowsWarmListingScript])],
   ]);
   public static readonly testRunWorkerFileName: string = "./test-run-worker-entry-point.js";
   public static readonly testWorkerGraceMilliseconds: number = 250;

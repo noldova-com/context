@@ -33,6 +33,7 @@ export class TestRunEntryPoint {
     const skipPassingDetails = !Object.isUndefined(process.env[Resources.skipTestDetailsVariable]);
     const reporter = new TestConsoleReporter(t => process.stdout.write(t), process.stdout.isTTY === true, skipPassingDetails);
     const temporaryDirectory = await this.isolateTemporaryFilesAsync();
+    const processTree = new ProcessTree(process.platform);
     let supervisor: TestRunSupervisor | undefined;
 
     try {
@@ -50,6 +51,7 @@ export class TestRunEntryPoint {
 
       const timeoutMilliseconds = TestRunSupervisor.readTimeoutMilliseconds(process.env[Resources.timeoutVariable]);
       supervisor = new TestRunSupervisor(timeoutMilliseconds, testProjects, filters, reporter, TestRunSupervisor.readCoverageDirectory());
+      supervisor.whenWorkerLeftBehind(() => processTree.warm());
       reporter.start();
       const result = await supervisor.runAsync();
       const totals = new TestRunTotals(result.passed, result.failed, result.skipped, supervisor.elapsedMilliseconds);
@@ -67,17 +69,18 @@ export class TestRunEntryPoint {
       process.exitCode = 1;
     }
 
-    const isAbandonedWorkEnded = await this.endAbandonedWorkAsync(supervisor);
+    const isAbandonedWorkEnded = await this.endAbandonedWorkAsync(supervisor, processTree);
     try {
       await this.removeTemporaryFilesAsync(temporaryDirectory);
     }
     finally {
+      await processTree.closeAsync();
       if (!isAbandonedWorkEnded)
         await this.endOwnProcessAsync();
     }
   }
 
-  private async endAbandonedWorkAsync(supervisor: TestRunSupervisor | undefined): Promise<boolean> {
+  private async endAbandonedWorkAsync(supervisor: TestRunSupervisor | undefined, processTree: ProcessTree): Promise<boolean> {
     if (Object.isUndefined(supervisor))
       return true;
 
@@ -88,7 +91,7 @@ export class TestRunEntryPoint {
     process.exitCode = 1;
     console.error(unendedWorkersMessage);
     try {
-      const processIds = await new ProcessTree(process.platform).listDescendantsAsync(process.pid);
+      const processIds = await processTree.listDescendantsAsync(process.pid);
       console.error(Resources.abandonedProcessesEnded(ProcessTree.end(processIds)));
       return await supervisor.waitForUnendedWorkersAsync();
     }

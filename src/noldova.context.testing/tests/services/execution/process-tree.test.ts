@@ -9,8 +9,11 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { once } from "node:events";
 
-import { Assert, TestClass, TestingException, TestMethod } from "@noldova/context.testing";
+import { Assert, TestClass, TestingException, TestMethod, Timeout } from "@noldova/context.testing";
+import { ProcessListing } from "@noldova/context.testing/models/execution/process-listing.js";
 import { ProcessTree } from "@noldova/context.testing/services/execution/process-tree.js";
+
+import { FakeClock } from "../../fixtures/execution/fake-clock.fixture.js";
 
 @TestClass
 export class ProcessTreeTests {
@@ -19,12 +22,21 @@ export class ProcessTreeTests {
     "[...process.execArgv, String(depth - 1), String(root)], { stdio: \"inherit\" }); " +
     "else setInterval(() => { try { process.kill(root, 0); } catch { process.exit(); } }, 100);";
   private static readonly SLEEP_SCRIPT: string = "setTimeout(() => undefined, 30_000);";
+  private static readonly COLD_SCRIPT: string = "console.log(\"21 5\");";
+  private static readonly ANSWERING_SCRIPT: string = "console.log(\"ready\"); require(\"node:readline\").createInterface({ input: process.stdin })" +
+    ".on(\"line\", () => console.log(\"11 5\\n12 11\\nend\"));";
+  private static readonly SILENT_SCRIPT: string = "process.stdin.resume();";
+  private static readonly ENDING_SCRIPT: string = "console.log(\"ready\"); process.stdin.once(\"data\", () => process.exit(1));";
+  private static readonly MUTE_SCRIPT: string = "console.log(\"ready\"); process.stdin.resume();";
+  private static readonly TREE: ProcessTree = ProcessTreeTests.startWarmTree();
 
+  @Timeout(60_000)
   @TestMethod
   public async listsTheDescendantsOfAProcessLeavesFirstAsync(): Promise<void> {
+    Assert.isTrue(await ProcessTreeTests.TREE.warming);
     const [root, processIds] = await ProcessTreeTests.startChainAsync();
     try {
-      const descendants = await new ProcessTree(process.platform).listDescendantsAsync(root.pid ?? -1);
+      const descendants = await ProcessTreeTests.TREE.listDescendantsAsync(root.pid ?? -1);
 
       Assert.areEqual(`${processIds[2]},${processIds[1]}`, descendants.join());
     }
@@ -33,13 +45,15 @@ export class ProcessTreeTests {
     }
   }
 
+  @Timeout(60_000)
   @TestMethod
   public async endsTheDescendantsAProcessWaitsOnSoItReturnsAsync(): Promise<void> {
+    Assert.isTrue(await ProcessTreeTests.TREE.warming);
     const [root, processIds] = await ProcessTreeTests.startChainAsync();
     try {
       const closed = once(root, "close");
 
-      ProcessTree.end(await new ProcessTree(process.platform).listDescendantsAsync(root.pid ?? -1));
+      ProcessTree.end(await ProcessTreeTests.TREE.listDescendantsAsync(root.pid ?? -1));
       const [exitCode] = await closed;
 
       Assert.areEqual(0, exitCode);
@@ -63,9 +77,93 @@ export class ProcessTreeTests {
   }
 
   @TestMethod
-  public rejectsAPlatformItCannotList(): void {
-    const error = Assert.throws(() => new ProcessTree("aix"), TestingException);
+  public async listsWithItsWarmListerOnceItIsReadyAsync(): Promise<void> {
+    const tree = new ProcessTree("fake", ProcessTreeTests.fakeListings(ProcessTreeTests.ANSWERING_SCRIPT));
+    try {
+      tree.warm();
+      tree.warm();
 
+      Assert.isTrue(await tree.warming);
+      Assert.areEqual("12,11", (await tree.listDescendantsAsync(5)).join());
+      Assert.areEqual("12,11", (await tree.listDescendantsAsync(5)).join());
+    }
+    finally {
+      await tree.closeAsync();
+    }
+  }
+
+  @TestMethod
+  public async listsAloneUntilItsListerIsReadyAsync(): Promise<void> {
+    const tree = new ProcessTree("fake", ProcessTreeTests.fakeListings(ProcessTreeTests.SILENT_SCRIPT));
+    try {
+      tree.warm();
+
+      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).join());
+    }
+    finally {
+      await tree.closeAsync();
+    }
+    Assert.isFalse(await tree.warming);
+  }
+
+  @TestMethod
+  public async listsAloneOnceItsListerHasEndedAsync(): Promise<void> {
+    const tree = new ProcessTree("fake", ProcessTreeTests.fakeListings(ProcessTreeTests.ENDING_SCRIPT));
+    try {
+      tree.warm();
+      Assert.isTrue(await tree.warming);
+
+      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).join());
+      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).join());
+    }
+    finally {
+      await tree.closeAsync();
+    }
+  }
+
+  @TestMethod
+  public async listsAloneWhenItsListerDoesNotAnswerWithinItsLimitAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const tree = new ProcessTree("fake", ProcessTreeTests.fakeListings(ProcessTreeTests.MUTE_SCRIPT), clock);
+    try {
+      tree.warm();
+      Assert.isTrue(await tree.warming);
+
+      const listing = tree.listDescendantsAsync(5);
+      clock.advance(4_999);
+      clock.advance(1);
+
+      Assert.areEqual("21", (await listing).join());
+    }
+    finally {
+      await tree.closeAsync();
+    }
+  }
+
+  @TestMethod
+  public async listsAloneWhenItsListerCannotStartAsync(): Promise<void> {
+    const listings = new Map([["fake", new ProcessListing(process.execPath, ["--eval", ProcessTreeTests.COLD_SCRIPT], "missing-lister", [])]]);
+    const tree = new ProcessTree("fake", listings);
+    try {
+      tree.warm();
+
+      Assert.isFalse(await tree.warming);
+      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).join());
+    }
+    finally {
+      await tree.closeAsync();
+    }
+  }
+
+  @TestMethod
+  public async rejectsAPlatformItCannotListAsync(): Promise<void> {
+    const tree = new ProcessTree("aix");
+    tree.warm();
+
+    const error = await Assert.throwsAsync(() => tree.listDescendantsAsync(5), TestingException);
+    await tree.closeAsync();
+
+    Assert.isFalse(await tree.warming);
     Assert.areEqual("The run cannot list the processes running under it on aix.", error.message);
   }
 
@@ -87,6 +185,16 @@ export class ProcessTreeTests {
       ProcessTree.end([...processIds].reverse());
       await closed;
     }
+  }
+
+  private static startWarmTree(): ProcessTree {
+    const tree = new ProcessTree(process.platform);
+    tree.warm();
+    return tree;
+  }
+
+  private static fakeListings(warmScript: string): ReadonlyMap<string, ProcessListing> {
+    return new Map([["fake", new ProcessListing(process.execPath, ["--eval", ProcessTreeTests.COLD_SCRIPT], process.execPath, ["--eval", warmScript])]]);
   }
 
   private static startNode(arguments_: readonly string[]): ChildProcess {

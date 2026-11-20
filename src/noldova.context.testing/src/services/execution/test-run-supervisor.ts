@@ -58,6 +58,7 @@ export class TestRunSupervisor {
   private methodCount: number;
   private selectionValue: TestSelection;
   private elapsedMillisecondsValue: number;
+  private whenWorkerLeftBehindValue: (() => void) | undefined;
 
   public constructor(timeoutMilliseconds: number, testProjects: readonly TestProject[], filters: readonly string[],
     progressListener: ITestProgressListener | undefined, coverageDirectory: string | null, workerUrl: URL = new URL(Resources.testRunWorkerFileName, import.meta.url),
@@ -94,6 +95,11 @@ export class TestRunSupervisor {
     this.methodCount = 0;
     this.selectionValue = new TestSelection(filters, 0, 0);
     this.elapsedMillisecondsValue = 0;
+    this.whenWorkerLeftBehindValue = undefined;
+  }
+
+  public whenWorkerLeftBehind(callback: () => void): void {
+    this.whenWorkerLeftBehindValue = callback;
   }
 
   public get selection(): TestSelection {
@@ -193,6 +199,7 @@ export class TestRunSupervisor {
       if (!isEnded) {
         this.unendedWorkers.set(worker, ending);
         worker.unref();
+        this.whenWorkerLeftBehindValue?.();
       }
 
       return isEnded;

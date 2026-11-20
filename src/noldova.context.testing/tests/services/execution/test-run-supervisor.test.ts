@@ -410,14 +410,16 @@ export class TestRunSupervisorTests {
   public async findsALeftBehindWorkerEndedWhenItEndsWithinTheLimitAsync(): Promise<void> {
     const clock = new FakeClock();
     const release = Promise.withResolvers<void>();
+    const leftBehind: string[] = [];
     try {
-      const supervisor = await TestRunSupervisorTests.leaveAWorkerBehindAsync(clock, release.promise);
+      const supervisor = await TestRunSupervisorTests.leaveAWorkerBehindAsync(clock, release.promise, leftBehind);
 
       const waiting = supervisor.waitForUnendedWorkersAsync();
       clock.advance(4_999);
       release.resolve();
 
       Assert.isTrue(await waiting);
+      Assert.areEqual("left behind", leftBehind.join());
     }
     finally {
       release.resolve();
@@ -651,10 +653,11 @@ export class TestRunSupervisorTests {
     return readFile(join(coverageDirectory, fileNames.join()), "utf8");
   }
 
-  private static async leaveAWorkerBehindAsync(clock: FakeClock, released: Promise<void>): Promise<TestRunSupervisor> {
+  private static async leaveAWorkerBehindAsync(clock: FakeClock, released: Promise<void>, leftBehind: string[] = []): Promise<TestRunSupervisor> {
     const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), released);
     const supervisor = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
       undefined, () => worker, clock);
+    supervisor.whenWorkerLeftBehind(() => leftBehind.push("left behind"));
     const running = supervisor.runAsync();
     worker.send(TestWorkerMessage.ready(1, 1, 1));
     await worker.ending;
