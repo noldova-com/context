@@ -26,14 +26,15 @@ export class ProcessTreeTests {
     "[...process.execArgv, String(depth - 1), String(root)], { stdio: \"inherit\" }); " +
     "else setInterval(() => { try { process.kill(root, 0); } catch { process.exit(); } }, 100);";
   private static readonly SLEEP_SCRIPT: string = "setTimeout(() => undefined, 30_000);";
-  private static readonly COLD_SCRIPT: string = "console.log(\"21 5\");";
+  private static readonly COLD_SCRIPT: string = "console.log(\"21 5\\nend\");";
   private static readonly ANSWERING_SCRIPT: string = "console.log(\"ready\"); require(\"node:readline\").createInterface({ input: process.stdin })" +
     ".on(\"line\", () => console.log(\"11 5\\n12 11\\nend\"));";
   private static readonly SILENT_SCRIPT: string = "process.stdin.resume();";
   private static readonly ENDING_SCRIPT: string = "console.log(\"ready\"); process.stdin.once(\"data\", () => process.exit(1));";
   private static readonly MUTE_SCRIPT: string = "console.log(\"ready\"); process.stdin.resume();";
+  private static readonly REFUSING_SCRIPT: string = "console.log(\"Script Host access is disabled on this machine.\");";
   private static readonly HANGING_SCRIPT: string = "setInterval(() => undefined, 1_000);";
-  private static readonly SCRIPTED_LISTER: string = `if (process.argv[2] === "warm") { ${ProcessTreeTests.ANSWERING_SCRIPT} } else { console.log("21 5"); }`;
+  private static readonly SCRIPTED_LISTER: string = `if (process.argv[2] === "warm") { ${ProcessTreeTests.ANSWERING_SCRIPT} } else { console.log("21 5\\nend"); }`;
   private static readonly UNUSED_PROCESS_ID: number = 2_147_483_647;
   private static readonly TEMPORARY_DIRECTORY_VARIABLES: readonly string[] = ["TMPDIR", "TEMP", "TMP"];
 
@@ -68,6 +69,22 @@ export class ProcessTreeTests {
       await ProcessTreeTests.endChainAsync(root, processIds);
       await tree.closeAsync();
     }
+  }
+
+  @TestMethod
+  public async listsTheDescendantsOfAProcessWithoutAWarmListerAsync(): Promise<void> {
+    const tree = new ProcessTree(process.platform);
+    const [root, processIds] = await ProcessTreeTests.startChainAsync();
+    try {
+      const descendants = await tree.listDescendantsAsync(root.pid ?? -1);
+
+      Assert.areEqual(`${processIds[2]},${processIds[1]}`, descendants.join());
+    }
+    finally {
+      await ProcessTreeTests.endChainAsync(root, processIds);
+      await tree.closeAsync();
+    }
+    Assert.isFalse(await tree.warming);
   }
 
   @TestMethod
@@ -166,6 +183,18 @@ export class ProcessTreeTests {
 
     Assert.isFalse(isSettledBeforeTheLimit);
     Assert.areEqual(`The run could not list the processes running under it with ${process.execPath} within 60000 milliseconds.`, error.message);
+  }
+
+  @TestMethod
+  public async failsAListingThatEndsWithoutItsEndLineAsync(): Promise<void> {
+    const listings = new Map([["fake", new ProcessListing(process.execPath, ["--eval", ProcessTreeTests.REFUSING_SCRIPT], "missing-lister", [])]]);
+    const tree = new ProcessTree("fake", listings);
+
+    const error = await Assert.throwsAsync(() => tree.listDescendantsAsync(5), TestingException);
+    await tree.closeAsync();
+
+    Assert.areEqual(`The run could not list the processes running under it with ${process.execPath}, which ended without finishing its listing ` +
+      "and wrote: \"Script Host access is disabled on this machine.\".", error.message);
   }
 
   @TestMethod

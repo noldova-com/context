@@ -54,15 +54,16 @@ export class Resources {
     "if (entry.name !== 'conhost.exe' && parentCreated != null && entry.created != null && parentCreated < entry.created) " +
     "lines.push(entry.id + ' ' + entry.parent + newLine); } return lines.join(''); } " +
     "try { service = new ActiveXObject('WbemScripting.SWbemLocator').ConnectServer(); " +
-    "if (WScript.Arguments.length === 0) WScript.StdOut.Write(list()); " +
+    `if (WScript.Arguments.length === 0) { WScript.StdOut.Write(list()); WScript.StdOut.WriteLine('${Resources.listerEndLine}'); } ` +
     `else { list(); WScript.StdOut.WriteLine('${Resources.listerReadyLine}'); while (!WScript.StdIn.AtEndOfStream) { WScript.StdIn.ReadLine(); ` +
     `WScript.StdOut.Write(list()); WScript.StdOut.WriteLine('${Resources.listerEndLine}'); } } } ` +
     "catch (error) { WScript.StdErr.WriteLine(error.message); WScript.Quit(1); }";
+  public static readonly unixProcessListingScript: string = `ps -A -o pid=,ppid= && echo ${Resources.listerEndLine}`;
   public static readonly unixWarmListingScript: string =
     `echo ${Resources.listerReadyLine}; while read -r line; do ps -A -o pid=,ppid=; echo ${Resources.listerEndLine}; done`;
   public static readonly processListings: ReadonlyMap<string, ProcessListing> = new Map([
-    ["linux", new ProcessListing("ps", ["-A", "-o", "pid=,ppid="], "sh", ["-c", Resources.unixWarmListingScript])],
-    ["darwin", new ProcessListing("ps", ["-A", "-o", "pid=,ppid="], "sh", ["-c", Resources.unixWarmListingScript])],
+    ["linux", new ProcessListing("sh", ["-c", Resources.unixProcessListingScript], "sh", ["-c", Resources.unixWarmListingScript])],
+    ["darwin", new ProcessListing("sh", ["-c", Resources.unixProcessListingScript], "sh", ["-c", Resources.unixWarmListingScript])],
     ["win32", new ProcessListing("cscript.exe", ["//nologo", "//B", "//E:jscript", Resources.listingScriptArgument],
       "cscript.exe", ["//nologo", "//B", "//E:jscript", Resources.listingScriptArgument, "warm"], Resources.windowsProcessListingScript)],
   ]);
@@ -296,6 +297,10 @@ export class Resources {
 
   public static processListingFailed(file: string): string {
     return `The run could not list the processes running under it with ${file}.`;
+  }
+
+  public static processListingUnfinished(file: string, answer: string): string {
+    return `The run could not list the processes running under it with ${file}, which ended without finishing its listing and wrote: "${answer}".`;
   }
 
   public static processListingTimedOut(file: string, limitMilliseconds: number): string {

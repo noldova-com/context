@@ -72,6 +72,10 @@ export class TestRunEntryPoint {
     try {
       await processTree.closeAsync();
     }
+    catch (error) {
+      this.writeError(error);
+      process.exitCode = 1;
+    }
     finally {
       await this.removeTemporaryFilesAsync(temporaryDirectory);
       if (!isAbandonedWorkEnded)
@@ -95,9 +99,15 @@ export class TestRunEntryPoint {
       return await supervisor.waitForUnendedWorkersAsync();
     }
     catch (error) {
-      console.error(String(error));
+      this.writeError(error);
       return false;
     }
+  }
+
+  private writeError(error: unknown): void {
+    console.error(String(error));
+    if (error instanceof Error && !Object.isUndefined(error.cause))
+      console.error(String(error.cause));
   }
 
   private async endOwnProcessAsync(): Promise<void> {

@@ -203,10 +203,14 @@ export class ProcessTree {
     return new Promise<(readonly [number, number])[]>((resolve, reject) => {
       const lister = execFile(listing.file, arguments_, { encoding: Resources.textEncoding, windowsHide: true }, (error, output) => {
         this.clock.clearTimeout(timer);
-        if (Object.isNull(error))
-          resolve(ProcessTree.parseLinks(output.split(Resources.lineSeparator), [lister.pid, this.lister?.pid]));
-        else
+        const lines = output.split(Resources.lineSeparator).map(t => t.trim());
+        const endIndex = lines.indexOf(Resources.listerEndLine);
+        if (!Object.isNull(error))
           reject(new TestingException(Resources.processListingFailed(listing.file), new ExceptionOptions(error)));
+        else if (endIndex < 0)
+          reject(new TestingException(Resources.processListingUnfinished(listing.file, output.trim())));
+        else
+          resolve(ProcessTree.parseLinks(lines.slice(0, endIndex), [lister.pid, this.lister?.pid]));
       });
       const timer = this.clock.setTimeout(() => {
         reject(new TestingException(Resources.processListingTimedOut(listing.file, Resources.oneOffListingMilliseconds)));

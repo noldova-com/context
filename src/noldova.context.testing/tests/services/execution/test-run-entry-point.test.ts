@@ -219,6 +219,7 @@ export class TestRunEntryPointTests {
       Assert.isTrue(result.errorOutput.includes("Test workers that could not be ended within 5000 milliseconds of being stopped: 1, running " +
         "BlockingFixtureTests.waitsOnAChildProcess.\n"), result.errorOutput);
       Assert.isTrue(result.errorOutput.includes("The run could not list the processes running under it with "), result.errorOutput);
+      Assert.isTrue(result.errorOutput.includes("ENOENT"), result.errorOutput);
       Assert.isTrue(result.errorOutput.endsWith("The stopped tests' workers still have not ended, so the run ends its own process so it cannot hang.\n"),
         result.errorOutput);
     }
