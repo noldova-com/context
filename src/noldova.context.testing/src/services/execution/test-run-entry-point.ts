@@ -72,10 +72,6 @@ export class TestRunEntryPoint {
     try {
       await processTree.closeAsync();
     }
-    catch (error) {
-      this.writeError(error);
-      process.exitCode = 1;
-    }
     finally {
       await this.removeTemporaryFilesAsync(temporaryDirectory);
       if (!isAbandonedWorkEnded)
