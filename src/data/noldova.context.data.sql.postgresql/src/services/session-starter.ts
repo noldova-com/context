@@ -143,8 +143,8 @@ export class SessionStarter {
           if (type === BackendMessage.Authentication) {
             const body = Buffer.from(data.subarray(start + 9, end));
             const authType = Backend.readAuthenticationType(data, start);
-            authenticating = authenticating.then(() => {
-              const reply = authenticator.respond(authType, body);
+            authenticating = authenticating.then(async () => {
+              const reply = await authenticator.respondAsync(authType, body);
               if (!Object.isNull(reply))
                 socket.write(reply);
             });

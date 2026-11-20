@@ -1086,7 +1086,12 @@ declare module "@noldova/context.data.sql.postgresql/services/authenticator.js" 
   export class Authenticator {
     public constructor(user: string, password: string, binding: string, certificate: Buffer | null, frontend: Frontend);
     public get isAuthenticated(): boolean;
-    public respond(type: number, body: Buffer): Buffer | null;
+    public static readonly deriving: ReadonlyMap<string, Promise<Buffer>>;
+    public respondAsync(type: number, body: Buffer): Promise<Buffer | null>;
+    public static saltPasswordAsync(password: string, salt: string, iterations: number): Promise<Buffer>;
+    public static computeHmac(key: Buffer, text: string): Buffer;
+    public static computeSha256(data: Buffer): Buffer;
+    public static computeXor(left: Buffer, right: Buffer): Buffer;
   }
 }
 

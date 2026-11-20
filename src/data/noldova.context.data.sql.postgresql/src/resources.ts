@@ -272,6 +272,10 @@ export class Resources {
     return `No connection became free within the queue timeout (${seconds} seconds).`;
   }
 
+  public static formatSaslIterationsAboveLimit(count: number, limit: number): string {
+    return `The server's SCRAM iteration count ${count} is above the limit of ${limit}.`;
+  }
+
   public static formatSslFileUnreadable(option: string, path: string): string {
     return `The ${option} file '${path}' could not be read.`;
   }
