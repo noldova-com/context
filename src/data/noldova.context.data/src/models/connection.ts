@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { ExceptionOptions } from "@noldova/context.exceptions";
+
 import { DataException } from "../exceptions/data.exception.js";
 import type { DataSource } from "./data-source.js";
 import { Resources } from "../resources.js";
@@ -61,7 +63,7 @@ export abstract class Connection<TTransaction extends Transaction = Transaction>
     try {
       const result = await action(transaction);
       if (transaction.isRollbackOnly)
-        throw new DataException(Resources.transactionFailedInside);
+        throw new DataException(Resources.transactionFailedInside, new ExceptionOptions(transaction.firstFailure));
       await transaction.commitAsync();
       return result;
     }

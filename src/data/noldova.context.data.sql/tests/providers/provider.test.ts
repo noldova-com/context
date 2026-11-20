@@ -61,6 +61,7 @@ export class ProviderTests {
     }), DataException);
 
     Assert.areEqual("A statement or an inner transaction failed, so the transaction was rolled back.", failure.message);
+    Assert.isTrue(/unique/iu.test(String(failure.cause)), String(failure.cause));
     Assert.areEqual(0, (await connection.queryAsync(new SqlQuery("SELECT id FROM notes"))).length);
   }
 

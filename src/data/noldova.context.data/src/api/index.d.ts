@@ -362,7 +362,7 @@ export declare abstract class Connection<TTransaction extends Transaction = Tran
    * receives the transaction; nest through its `runInTransactionAsync`. A nested
    * failure, or a statement that failed in the transaction, rolls the
    * transaction back, with `DataException` when the outer action swallowed
-   * it. A failed commit also triggers rollback. If the action or commit and
+   * it, whose `cause` is the first such failure. A failed commit also triggers rollback. If the action or commit and
    * the rollback both fail, a `SuppressedError` retains the original failure
    * in `suppressed` and the rollback failure in `error`.
    * A closed connection rejects with `DataException`.

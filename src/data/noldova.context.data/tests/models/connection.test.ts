@@ -110,6 +110,23 @@ export class ConnectionTests {
   }
 
   @TestMethod
+  public async givesTheFirstSwallowedNestedFailureAsTheCauseOfTheRollback(): Promise<void> {
+    const connection = new MemoryConnection();
+    const first = new Error("first");
+    const second = new Error("second");
+
+    const swallowed = await Assert.throwsAsync(async () => connection.runInTransactionAsync(async t => {
+      for (const failure of [first, second])
+        await t.runInTransactionAsync(async () => {
+          throw failure;
+        }).catch(() => undefined);
+    }), DataException);
+
+    Assert.areEqual<unknown>(first, swallowed.cause);
+    Assert.areEqual(1, connection.transactions[0]?.rollbacks);
+  }
+
+  @TestMethod
   public async runsTransactionsStartedAtOnceOneAfterTheOtherEachCommittingOrRollingBackAlone(): Promise<void> {
     const connection = new MemoryConnection();
     const gate = Promise.withResolvers<void>();
