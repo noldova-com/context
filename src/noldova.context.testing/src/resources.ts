@@ -33,7 +33,8 @@ export class Resources {
   public static readonly errorEvent: string = "error";
   public static readonly exitEvent: string = "exit";
   public static readonly killSignal: "SIGKILL" = "SIGKILL";
-  public static readonly windowsProcessListingScript: string = "$all = Get-CimInstance -ClassName Win32_Process; $created = @{}; " +
+  public static readonly windowsProcessListingScript: string = "$ErrorActionPreference = 'Stop'; " +
+    "$all = Get-CimInstance -Query 'SELECT ProcessId, ParentProcessId, CreationDate, Name FROM Win32_Process'; $created = @{}; " +
     "foreach ($item in $all) { $created[$item.ProcessId] = $item.CreationDate }; " +
     "foreach ($item in $all) { $parentCreated = $created[$item.ParentProcessId]; " +
     "if ($item.Name -ne 'conhost.exe' -and $null -ne $parentCreated -and $null -ne $item.CreationDate -and $parentCreated -lt $item.CreationDate) " +

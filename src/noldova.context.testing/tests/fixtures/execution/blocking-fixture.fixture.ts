@@ -15,7 +15,7 @@ import { TestClass, TestMethod } from "@noldova/context.testing";
 @TestClass
 export class BlockingFixtureTests {
   private static readonly CHILD_SCRIPT: string = "const parent = Number(process.argv[1]); " +
-    "setInterval(() => { try { process.kill(parent, 0); } catch { process.exit(); } }, 100); setTimeout(() => process.exit(), 30_000);";
+    "setInterval(() => { try { process.kill(parent, 0); } catch { process.exit(); } }, 100);";
 
   @TestMethod
   public waitsOnAChildProcess(): void {

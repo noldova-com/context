@@ -14,9 +14,10 @@ import { ProcessTree } from "@noldova/context.testing/services/execution/process
 
 @TestClass
 export class ProcessTreeTests {
-  private static readonly CHAIN_SCRIPT: string = "const depth = Number(process.argv[1]); console.log(process.pid); " +
-    "if (depth > 0) require(\"node:child_process\").spawnSync(process.execPath, [...process.execArgv, String(depth - 1)], { stdio: \"inherit\" }); " +
-    "else setTimeout(() => undefined, 30_000);";
+  private static readonly CHAIN_SCRIPT: string = "const depth = Number(process.argv[1]); const root = Number(process.argv[2] ?? process.pid); " +
+    "console.log(process.pid); if (depth > 0) require(\"node:child_process\").spawnSync(process.execPath, " +
+    "[...process.execArgv, String(depth - 1), String(root)], { stdio: \"inherit\" }); " +
+    "else setInterval(() => { try { process.kill(root, 0); } catch { process.exit(); } }, 100);";
   private static readonly SLEEP_SCRIPT: string = "setTimeout(() => undefined, 30_000);";
 
   @TestMethod
