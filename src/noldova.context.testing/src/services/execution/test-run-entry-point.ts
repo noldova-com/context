@@ -106,6 +106,8 @@ export class TestRunEntryPoint {
     await new Promise<void>(resolve => process.stderr.write(Resources.endingOwnProcess + Resources.lineSeparator, () => resolve()));
     takeCoverage();
     process.kill(process.pid, Resources.killSignal);
+    // Windows ends a process asynchronously; blocking keeps Node's exit from writing a second profile over the one just taken.
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)), 0, 0);
   }
 
   private async writeResultsAsync(result: TestRunResult, filePath: string | undefined): Promise<void> {

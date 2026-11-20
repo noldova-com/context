@@ -228,6 +228,28 @@ export class TestRunEntryPointTests {
   }
 
   @TestMethod
+  public async writesOneMainThreadProfileWhenItEndsItsOwnProcessAsync(): Promise<void> {
+    const rootDirectory = await mkdtemp(join(tmpdir(), "context-entry-"));
+    const coverageDirectory = await mkdtemp(join(tmpdir(), "context-entry-coverage-"));
+    const emptyDirectory = await mkdtemp(join(tmpdir(), "context-entry-path-"));
+    try {
+      await FixtureTestProject.writeTestFileAsync(rootDirectory, "blocking.test.js", "blocking-fixture");
+      const result = await this.runEntryArgumentsAsync(["Sample", rootDirectory], "[]", undefined, true,
+        { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", NODE_V8_COVERAGE: coverageDirectory, PATH: emptyDirectory });
+      const mainThreadProfiles = (await readdir(coverageDirectory)).filter(t => t.startsWith(`coverage-${result.processId}-`) && t.endsWith("-0.json"));
+
+      Assert.isTrue(result.errorOutput.endsWith("The stopped tests' workers still have not ended, so the run ends its own process so it cannot hang.\n"),
+        result.errorOutput);
+      Assert.areEqual(1, mainThreadProfiles.length, mainThreadProfiles.join());
+    }
+    finally {
+      await rm(rootDirectory, { recursive: true, force: true });
+      await rm(coverageDirectory, { recursive: true, force: true });
+      await rm(emptyDirectory, { recursive: true, force: true });
+    }
+  }
+
+  @TestMethod
   public async failsARunThatCannotRemoveItsTemporaryFolderAsync(): Promise<void> {
     const temporaryRoot = await mkdtemp(join(tmpdir(), "context-entry-temporary-"));
     const rootDirectory = await mkdtemp(join(tmpdir(), "context-entry-"));
@@ -307,7 +329,7 @@ export class TestRunEntryPointTests {
         output.push(t.toString());
       });
       child.on("close", t => {
-        resolve(new EntryRun(t ?? -1, errorOutput.join(String.empty), output.join(String.empty)));
+        resolve(new EntryRun(t ?? -1, errorOutput.join(String.empty), output.join(String.empty), child.pid ?? -1));
       });
       child.on("error", reject);
     });
