@@ -346,18 +346,24 @@ export declare class SqlTransaction extends Transaction {
    * Runs a query that returns no rows in the transaction and returns the
    * number of rows it changed. A completed transaction rejects with
    * `DataException`.
+   * A failure marks the transaction rollback-only, so the connection rolls it
+   * back even when the action catches it.
    */
   public executeAsync(query: SqlQuery): Promise<number>;
 
   /**
    * Runs an `INSERT` in the transaction and returns the generated key. A
    * completed transaction rejects with `DataException`.
+   * A failure marks the transaction rollback-only, so the connection rolls it
+   * back even when the action catches it.
    */
   public insertAsync(query: SqlQuery): Promise<number>;
 
   /**
    * Runs a query in the transaction and returns its rows as records. A
    * completed transaction rejects with `DataException`.
+   * A failure marks the transaction rollback-only, so the connection rolls it
+   * back even when the action catches it.
    */
   public queryAsync(query: SqlQuery): Promise<readonly DataRecord[]>;
 

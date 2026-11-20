@@ -7,7 +7,7 @@
  */
 
 import "@noldova/context.core";
-import { ChangeOperation } from "@noldova/context.data";
+import { ChangeOperation, DataException } from "@noldova/context.data";
 import { SqlQuery } from "@noldova/context.data.sql";
 import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
@@ -44,6 +44,24 @@ export class ProviderTests {
     const records = await connection.queryAsync(new SqlQuery("SELECT id, text FROM notes WHERE text <> ? ORDER BY id", ["none"]));
 
     Assert.areEqual("a:first,b:second", records.map(t => `${String(t.readValue("id"))}:${String(t.readValue("text"))}`).join(","));
+  }
+
+  @TestMethod
+  @TestData("sqlite")
+  @TestData("postgresql")
+  public async rollsBackATransactionWhoseActionCaughtAFailedStatement(provider: string): Promise<void> {
+    await using database = await ProviderDatabase.createAsync(provider);
+    await using context = new NotesContext(database.options());
+    await context.database.migrateAsync();
+    const connection = context.database.connection;
+
+    const failure = await Assert.throwsAsync(async () => connection.runInTransactionAsync(async t => {
+      await t.executeAsync(new SqlQuery("INSERT INTO notes (id, text) VALUES (?, ?)", ["a", "first"]));
+      await t.executeAsync(new SqlQuery("INSERT INTO notes (id, text) VALUES (?, ?)", ["a", "again"])).catch(() => 0);
+    }), DataException);
+
+    Assert.areEqual("A statement or an inner transaction failed, so the transaction was rolled back.", failure.message);
+    Assert.areEqual(0, (await connection.queryAsync(new SqlQuery("SELECT id FROM notes"))).length);
   }
 
   @TestMethod

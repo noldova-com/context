@@ -29,6 +29,22 @@ export class SqlTransactionTests {
   }
 
   @TestMethod
+  public async marksItselfRollbackOnlyWhenAStatementFails(): Promise<void> {
+    const session = new RecordingSession();
+    session.failingStatement = "BROKEN";
+    const executing = new SqlTransaction(session);
+    const inserting = new SqlTransaction(session);
+    const querying = new SqlTransaction(session);
+
+    await Assert.throwsAsync(async () => executing.executeAsync(new SqlQuery("BROKEN")), Error);
+    await Assert.throwsAsync(async () => inserting.insertAsync(new SqlQuery("BROKEN")), Error);
+    await Assert.throwsAsync(async () => querying.queryAsync(new SqlQuery("BROKEN")), Error);
+
+    Assert.areEqual("true,true,true", [executing, inserting, querying].map(t => t.isRollbackOnly).join(","));
+    Assert.areEqual("false,false,false", [executing, inserting, querying].map(t => t.isCompleted).join(","));
+  }
+
+  @TestMethod
   public async rollsBackAndRefusesStatementsOnceCompleted(): Promise<void> {
     const session = new RecordingSession();
     const transaction = new SqlTransaction(session);

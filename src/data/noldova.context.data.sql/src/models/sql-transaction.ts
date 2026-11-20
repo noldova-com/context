@@ -22,18 +22,15 @@ export class SqlTransaction extends Transaction {
   }
 
   public async executeAsync(query: SqlQuery): Promise<number> {
-    this.throwIfCompleted();
-    return this.session.executeAsync(query);
+    return this.runInTransactionAsync(async () => this.session.executeAsync(query));
   }
 
   public async insertAsync(query: SqlQuery): Promise<number> {
-    this.throwIfCompleted();
-    return this.session.insertAsync(query);
+    return this.runInTransactionAsync(async () => this.session.insertAsync(query));
   }
 
   public async queryAsync(query: SqlQuery): Promise<readonly DataRecord[]> {
-    this.throwIfCompleted();
-    return this.session.queryAsync(query);
+    return this.runInTransactionAsync(async () => this.session.queryAsync(query));
   }
 
   protected override async commitCoreAsync(): Promise<void> {
