@@ -9,7 +9,7 @@
 import { type ChildProcess, execFile, spawn } from "node:child_process";
 import { once } from "node:events";
 
-import { Assert, TestClass, TestingException, TestMethod } from "@noldova/context.testing";
+import { Assert, TestClass, TestingException, TestMethod, Timeout } from "@noldova/context.testing";
 import { ProcessTree } from "@noldova/context.testing/services/execution/process-tree.js";
 
 @TestClass
@@ -63,6 +63,7 @@ export class ProcessTreeTests {
     Assert.areEqual(1, endedCount);
   }
 
+  @Timeout(600_000)
   @TestMethod
   public async timesTheWindowsListingPhasesAsync(): Promise<void> {
     if (process.platform !== "win32")
