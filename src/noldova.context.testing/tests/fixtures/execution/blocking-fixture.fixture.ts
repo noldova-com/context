@@ -14,9 +14,14 @@ import { TestClass, TestMethod } from "@noldova/context.testing";
 
 @TestClass
 export class BlockingFixtureTests {
+  private static readonly CHILD_SCRIPT: string = "const parent = Number(process.argv[1]); " +
+    "setInterval(() => { try { process.kill(parent, 0); } catch { process.exit(); } }, 100); setTimeout(() => process.exit(), 30_000);";
+
   @TestMethod
   public waitsOnAChildProcess(): void {
-    spawnSync(process.execPath, ["--eval", "setTimeout(() => undefined, 30_000);"], { stdio: "ignore" });
+    const environment = { ...process.env };
+    delete environment["NODE_V8_COVERAGE"];
+    spawnSync(process.execPath, ["--eval", BlockingFixtureTests.CHILD_SCRIPT, String(process.pid)], { env: environment, stdio: "ignore" });
   }
 
   @TestMethod

@@ -1647,7 +1647,8 @@ export declare class ParallelTestRunner {
    *   failure. Test failures and timeouts become Failed results, not rejection of this promise.
    *   A worker whose stopped test is blocked in a call that only returns by itself, such as a synchronous child process, is left behind
    *   5000 ms after it is stopped and the run goes on; Node cannot exit the process until that call returns, so the command-line entry
-   *   names the test and ends its own process.
+   *   names the test, ends the processes still running under it, waits 5000 ms more for the worker, and ends its own process if the
+   *   worker still has not ended.
    * @throws TestingException via promise rejection when a worker crashes or exits, starts no test within its start limit, discovers different
    *   tests from another worker, or exchanges invalid data, when a class leaves a timer, handle or request open in its worker, or when the totals
    *   do not reconcile with the selected tests; every worker has ended or been left behind first.

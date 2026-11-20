@@ -371,8 +371,8 @@ export class TestRunSupervisorTests {
       Assert.areEqual(0, runsBeforeTheLimit);
       Assert.areEqual("0.0 true", TestRunSupervisorTests.describeRuns(resuming));
       Assert.areEqual(1, totals.failed);
-      Assert.areEqual("Test workers that could not be ended within 5000 milliseconds of being stopped: 1, running StoppedFixtureTests.method0. " +
-        "The run ends its own process so it cannot hang.", supervisor.unendedWorkersMessage);
+      Assert.areEqual("Test workers that could not be ended within 5000 milliseconds of being stopped: 1, running StoppedFixtureTests.method0.",
+        supervisor.unendedWorkersMessage);
     }
     finally {
       release.resolve();
@@ -399,8 +399,42 @@ export class TestRunSupervisorTests {
 
       Assert.isUndefined(messageBeforeTheLimit);
       Assert.areEqual("The test worker did not end within 5000 milliseconds after its last class, so its coverage is incomplete.", error.message);
-      Assert.areEqual("Test workers that could not be ended within 5000 milliseconds of being stopped: 1. The run ends its own process so it cannot hang.",
-        supervisor.unendedWorkersMessage);
+      Assert.areEqual("Test workers that could not be ended within 5000 milliseconds of being stopped: 1.", supervisor.unendedWorkersMessage);
+    }
+    finally {
+      release.resolve();
+    }
+  }
+
+  @TestMethod
+  public async findsALeftBehindWorkerEndedWhenItEndsWithinTheLimitAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const release = Promise.withResolvers<void>();
+    try {
+      const supervisor = await TestRunSupervisorTests.leaveAWorkerBehindAsync(clock, release.promise);
+
+      const waiting = supervisor.waitForUnendedWorkersAsync();
+      clock.advance(4_999);
+      release.resolve();
+
+      Assert.isTrue(await waiting);
+    }
+    finally {
+      release.resolve();
+    }
+  }
+
+  @TestMethod
+  public async stopsWaitingForALeftBehindWorkerAtTheLimitAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const release = Promise.withResolvers<void>();
+    try {
+      const supervisor = await TestRunSupervisorTests.leaveAWorkerBehindAsync(clock, release.promise);
+
+      const waiting = supervisor.waitForUnendedWorkersAsync();
+      clock.advance(5_000);
+
+      Assert.isFalse(await waiting);
     }
     finally {
       release.resolve();
@@ -615,6 +649,20 @@ export class TestRunSupervisorTests {
     Assert.areEqual(1, fileNames.length);
     Assert.isTrue(fileNames.every(t => t.startsWith(`threads-${process.pid}-`) && t.endsWith(".txt")), fileNames.join());
     return readFile(join(coverageDirectory, fileNames.join()), "utf8");
+  }
+
+  private static async leaveAWorkerBehindAsync(clock: FakeClock, released: Promise<void>): Promise<TestRunSupervisor> {
+    const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), released);
+    const supervisor = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
+      undefined, () => worker, clock);
+    const running = supervisor.runAsync();
+    worker.send(TestWorkerMessage.ready(1, 1, 1));
+    await worker.ending;
+    clock.advance(5_000);
+    await worker.terminating;
+    clock.advance(5_000);
+    await Assert.throwsAsync(() => running, Error);
+    return supervisor;
   }
 
   private static completeClass(worker: ScriptedWorker, classIndex: number, className: string): void {

@@ -194,6 +194,15 @@ declare module "@noldova/context.testing/services/execution/test-run-supervisor.
     public static defaultWorkerCount(): number;
     public static throwIfLimitsInvalid(timeoutMilliseconds: number, workerCount: number): void;
     public runAsync(): Promise<TestRunResult>;
+    public waitForUnendedWorkersAsync(): Promise<boolean>;
+  }
+}
+
+declare module "@noldova/context.testing/services/execution/process-tree.js" {
+  export class ProcessTree {
+    public constructor(platform: string);
+    public static end(processIds: readonly number[]): number;
+    public listDescendantsAsync(rootProcessId: number): Promise<number[]>;
   }
 }
 

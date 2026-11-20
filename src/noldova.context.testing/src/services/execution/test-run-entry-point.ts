@@ -23,6 +23,7 @@ import { TestRunTotals } from "../../models/results/test-run-totals.js";
 import { TestTimeRecord } from "../../models/timing/test-time-record.js";
 import { Resources } from "../../resources.js";
 import { TestConsoleReporter } from "../reporting/test-console-reporter.js";
+import { ProcessTree } from "./process-tree.js";
 import { TestRunSupervisor } from "./test-run-supervisor.js";
 
 export class TestRunEntryPoint {
@@ -66,20 +67,40 @@ export class TestRunEntryPoint {
       process.exitCode = 1;
     }
 
-    const leftovers = await this.removeTemporaryFilesAsync(temporaryDirectory);
-    if (leftovers.length > 0) {
-      console.error(Resources.formatTemporaryLeftovers(leftovers));
-      process.exitCode = 1;
+    const isAbandonedWorkEnded = await this.endAbandonedWorkAsync(supervisor);
+    try {
+      await this.removeTemporaryFilesAsync(temporaryDirectory);
     }
-
-    const unendedWorkersMessage = supervisor?.unendedWorkersMessage;
-    if (!Object.isUndefined(unendedWorkersMessage))
-      await this.endOwnProcessAsync(unendedWorkersMessage);
+    finally {
+      if (!isAbandonedWorkEnded)
+        await this.endOwnProcessAsync();
+    }
   }
 
-  private async endOwnProcessAsync(message: string): Promise<void> {
+  private async endAbandonedWorkAsync(supervisor: TestRunSupervisor | undefined): Promise<boolean> {
+    if (Object.isUndefined(supervisor))
+      return true;
+
+    const unendedWorkersMessage = supervisor.unendedWorkersMessage;
+    if (Object.isUndefined(unendedWorkersMessage))
+      return true;
+
+    process.exitCode = 1;
+    console.error(unendedWorkersMessage);
+    try {
+      const processIds = await new ProcessTree(process.platform).listDescendantsAsync(process.pid);
+      console.error(Resources.abandonedProcessesEnded(ProcessTree.end(processIds)));
+      return await supervisor.waitForUnendedWorkersAsync();
+    }
+    catch (error) {
+      console.error(String(error));
+      return false;
+    }
+  }
+
+  private async endOwnProcessAsync(): Promise<void> {
     await new Promise<void>(resolve => process.stdout.write(String.empty, () => resolve()));
-    await new Promise<void>(resolve => process.stderr.write(message + Resources.lineSeparator, () => resolve()));
+    await new Promise<void>(resolve => process.stderr.write(Resources.endingOwnProcess + Resources.lineSeparator, () => resolve()));
     takeCoverage();
     process.kill(process.pid, Resources.killSignal);
   }
@@ -99,10 +120,20 @@ export class TestRunEntryPoint {
     return directory;
   }
 
-  private async removeTemporaryFilesAsync(directory: string): Promise<string[]> {
-    const leftovers = (await readdir(directory)).sort();
-    await rm(directory, { recursive: true, force: true, maxRetries: Resources.temporaryRemovalRetries });
-    return leftovers;
+  private async removeTemporaryFilesAsync(directory: string): Promise<void> {
+    try {
+      const leftovers = (await readdir(directory)).sort();
+      await rm(directory, { recursive: true, force: true, maxRetries: Resources.temporaryRemovalRetries });
+      if (leftovers.length > 0) {
+        console.error(Resources.formatTemporaryLeftovers(leftovers));
+        process.exitCode = 1;
+      }
+    }
+    catch (error) {
+      console.error(Resources.formatTemporaryFolderNotRemoved(directory));
+      console.error(String(error));
+      process.exitCode = 1;
+    }
   }
 
   private parseFilters(text: string | undefined): string[] {

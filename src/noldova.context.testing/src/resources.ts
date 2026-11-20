@@ -33,6 +33,16 @@ export class Resources {
   public static readonly errorEvent: string = "error";
   public static readonly exitEvent: string = "exit";
   public static readonly killSignal: "SIGKILL" = "SIGKILL";
+  public static readonly windowsProcessListingScript: string = "$all = Get-CimInstance -ClassName Win32_Process; $created = @{}; " +
+    "foreach ($item in $all) { $created[$item.ProcessId] = $item.CreationDate }; " +
+    "foreach ($item in $all) { $parentCreated = $created[$item.ParentProcessId]; " +
+    "if ($item.Name -ne 'conhost.exe' -and $null -ne $parentCreated -and $null -ne $item.CreationDate -and $parentCreated -lt $item.CreationDate) " +
+    "{ '{0} {1}' -f $item.ProcessId, $item.ParentProcessId } }";
+  public static readonly processListings: ReadonlyMap<string, { readonly file: string; readonly arguments: readonly string[] }> = new Map([
+    ["linux", { file: "ps", arguments: ["-A", "-o", "pid=,ppid="] }],
+    ["darwin", { file: "ps", arguments: ["-A", "-o", "pid=,ppid="] }],
+    ["win32", { file: "powershell.exe", arguments: ["-NoProfile", "-NonInteractive", "-Command", Resources.windowsProcessListingScript] }],
+  ]);
   public static readonly testRunWorkerFileName: string = "./test-run-worker-entry-point.js";
   public static readonly testWorkerGraceMilliseconds: number = 250;
   public static readonly testWorkerStartMilliseconds: number = 5_000;
@@ -40,6 +50,7 @@ export class Resources {
   public static readonly temporaryDirectoryPrefix: string = "noldova-test-run-";
   public static readonly temporaryDirectoryVariables: readonly string[] = ["TMPDIR", "TEMP", "TMP"];
   public static readonly temporaryRemovalRetries: number = 5;
+  public static readonly endingOwnProcess: string = "The stopped tests' workers still have not ended, so the run ends its own process so it cannot hang.";
   public static readonly minimumWorkerCount: number = 2;
   public static readonly testWorkerDataInvalid: string = "The test worker exchanged data that is not a test worker message.";
   public static readonly coverageOffsetBeforeFirstLine: string = "A coverage offset lies before the generated file's first line.";
@@ -230,8 +241,19 @@ export class Resources {
 
   public static testWorkersNotEnded(workerCount: number, limitMilliseconds: number, testNames: readonly string[]): string {
     const running = testNames.length === 0 ? String.empty : `, running ${testNames.join(", ")}`;
-    return `Test workers that could not be ended within ${limitMilliseconds} milliseconds of being stopped: ${workerCount}${running}. ` +
-      "The run ends its own process so it cannot hang.";
+    return `Test workers that could not be ended within ${limitMilliseconds} milliseconds of being stopped: ${workerCount}${running}.`;
+  }
+
+  public static abandonedProcessesEnded(processCount: number): string {
+    return `Processes the run ended that were still running under it: ${processCount}.`;
+  }
+
+  public static processListingUnsupported(platform: string): string {
+    return `The run cannot list the processes running under it on ${platform}.`;
+  }
+
+  public static processListingFailed(file: string): string {
+    return `The run could not list the processes running under it with ${file}.`;
   }
 
   public static testWorkerDiscoveryMismatch(classCount: number, methodCount: number, otherClassCount: number, otherMethodCount: number): string {
@@ -277,6 +299,10 @@ export class Resources {
 
   public static formatTestResourcesOpen(heading: string, resources: readonly string[]): string {
     return `${heading} left ${resources.join(Resources.valueSeparator)} open after its tests finished; a test must close what it opens.`;
+  }
+
+  public static formatTemporaryFolderNotRemoved(directory: string): string {
+    return `The run could not remove its temporary folder ${directory}.`;
   }
 
   public static formatTemporaryLeftovers(leftovers: readonly string[]): string {

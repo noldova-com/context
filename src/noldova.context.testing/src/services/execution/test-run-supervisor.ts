@@ -47,7 +47,7 @@ export class TestRunSupervisor {
   private readonly endedThreadIds: number[];
   private readonly runs: TestWorkerRun[];
   private readonly workers: Map<Worker, () => Promise<boolean>>;
-  private readonly unendedWorkers: Set<Worker>;
+  private readonly unendedWorkers: Map<Worker, Promise<unknown>>;
   private readonly unendedTests: Set<string>;
   private readonly methodResults: Map<number, TestMethodResult[]>;
   private readonly finishedClassResults: Map<number, TestClassResult>;
@@ -83,7 +83,7 @@ export class TestRunSupervisor {
     this.endedThreadIds = [];
     this.runs = [];
     this.workers = new Map();
-    this.unendedWorkers = new Set();
+    this.unendedWorkers = new Map();
     this.unendedTests = new Set();
     this.methodResults = new Map();
     this.finishedClassResults = new Map();
@@ -158,8 +158,20 @@ export class TestRunSupervisor {
     return result;
   }
 
+  public waitForUnendedWorkersAsync(): Promise<boolean> {
+    return this.endsWithinLimitAsync(Promise.all(this.unendedWorkers.values()));
+  }
+
   private static formatTestKey(classIndex: number, methodIndex: number): string {
     return `${classIndex}:${methodIndex}`;
+  }
+
+  private async endsWithinLimitAsync(ending: Promise<unknown>): Promise<boolean> {
+    const limit = Promise.withResolvers<boolean>();
+    const timer = this.clock.setTimeout(() => limit.resolve(false), Resources.testWorkerEndMilliseconds);
+    const isEnded = await Promise.race([ending.then(() => true), limit.promise]);
+    this.clock.clearTimeout(timer);
+    return isEnded;
   }
 
   private startWorker(resolve: () => void, reject: (error: unknown) => void): void {
@@ -176,12 +188,10 @@ export class TestRunSupervisor {
       this.clock.clearTimeout(watchdog);
       worker.removeAllListeners(Resources.messageEvent);
       worker.removeAllListeners(Resources.exitEvent);
-      const limit = Promise.withResolvers<boolean>();
-      const timer = this.clock.setTimeout(() => limit.resolve(false), Resources.testWorkerEndMilliseconds);
-      const isEnded = await Promise.race([Promise.allSettled([worker.terminate()]).then(() => true), limit.promise]);
-      this.clock.clearTimeout(timer);
+      const ending = Promise.allSettled([worker.terminate()]);
+      const isEnded = await this.endsWithinLimitAsync(ending);
       if (!isEnded) {
-        this.unendedWorkers.add(worker);
+        this.unendedWorkers.set(worker, ending);
         worker.unref();
       }
 

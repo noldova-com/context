@@ -5,8 +5,9 @@ decorators, discovered from compiled test files, run in parallel worker threads,
 and reported with their results and code coverage. A test that overruns its
 timeout is recorded as timed out, and the run goes on. If its worker cannot be
 ended, because the test is blocked in a call such as a synchronous child
-process, a command-line run names that test after its results and ends its own
-process rather than hang.
+process, a command-line run names that test after its results, ends the
+processes still running under it, and waits for the worker; if the worker still
+does not end, the run ends its own process rather than hang.
 
 ## Install
 
