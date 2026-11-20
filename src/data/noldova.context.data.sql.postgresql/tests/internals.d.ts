@@ -1336,6 +1336,7 @@ declare module "@noldova/context.data.sql.postgresql/models/client/reserved-clie
   import { SqlRunner } from "@noldova/context.data.sql.postgresql/services/client/sql-runner.js";
 
   export class ReservedClient extends SqlRunner implements AsyncDisposable, Disposable {
+    public get lost(): boolean;
     public release(): void;
     public [Symbol.dispose](): void;
     public [Symbol.asyncDispose](): Promise<void>;

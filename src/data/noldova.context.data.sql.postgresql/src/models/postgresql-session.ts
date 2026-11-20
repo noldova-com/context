@@ -19,13 +19,15 @@ import { ValueConverter } from "../services/value-converter.js";
 
 export class PostgreSQLSession extends SqlSession {
   private readonly client: PostgreSQLClient;
+  private readonly inTransaction: () => boolean;
   private reserved: ReservedClient | null = null;
   private open: boolean = true;
 
-  public constructor(client: PostgreSQLClient) {
+  public constructor(client: PostgreSQLClient, inTransaction: () => boolean) {
     super();
 
     this.client = client;
+    this.inTransaction = inTransaction;
   }
 
   public override get isOpen(): boolean {
@@ -58,14 +60,24 @@ export class PostgreSQLSession extends SqlSession {
   }
 
   private async runAsync(text: string, parameters: readonly DataValue[]): Promise<readonly [Result, readonly Column[]]> {
-    this.reserved ??= await this.client.reserveAsync();
-    const outcome = await this.reserved.query(ParameterRewriter.rewrite(text, parameters.length), parameters.map(t => ValueConverter.write(t)))
+    const reserved = await this.reserveAsync();
+    const outcome = await reserved.query(ParameterRewriter.rewrite(text, parameters.length), parameters.map(t => ValueConverter.write(t)))
       .useParsers(() => null)
       .useValueRows();
     if (!(outcome instanceof Result) || Object.isNull(outcome.columns))
       throw new DataException(Resources.unsupportedOutcome);
 
     return [outcome, outcome.columns];
+  }
+
+  private async reserveAsync(): Promise<ReservedClient> {
+    if (this.reserved?.lost === true && !this.inTransaction()) {
+      this.reserved.release();
+      this.reserved = null;
+    }
+
+    this.reserved ??= await this.client.reserveAsync();
+    return this.reserved;
   }
 
   private static toRecords([result, columns]: readonly [Result, readonly Column[]]): readonly DataRecord[] {
