@@ -26,7 +26,7 @@ export class ProcessTreeTests {
     for (const round of [1, 2]) {
       const start = performance.now();
       const output = await new Promise<string>((resolve, reject) => {
-        execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ProcessTreeTests.  private static readonly PROBE_SCRIPT: string = "$s = [DateTime]::Now; $p = [Diagnostics.Process]::GetCurrentProcess().StartTime; 'start-to-script {0:N0} ms' -f ($s - $p).TotalMilliseconds; $a = [DateTime]::Now; Import-Module CimCmdlets; 'import {0:N0} ms' -f ([DateTime]::Now - $a).TotalMilliseconds; $b = [DateTime]::Now; $all = Get-CimInstance -Query 'SELECT ProcessId, ParentProcessId, CreationDate, Name FROM Win32_Process'; 'query {0:N0} ms, {1} processes' -f ([DateTime]::Now - $b).TotalMilliseconds, @($all).Count; $c = [DateTime]::Now; $all = Get-CimInstance -Query 'SELECT ProcessId, ParentProcessId, CreationDate, Name FROM Win32_Process'; 'query2 {0:N0} ms' -f ([DateTime]::Now - $c).TotalMilliseconds; $d = [DateTime]::Now; $all = Get-CimInstance -ClassName Win32_Process; 'fullquery {0:N0} ms' -f ([DateTime]::Now - $d).TotalMilliseconds";_SCRIPT], { encoding: "utf8", windowsHide: true },
+        execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ProcessTreeTests.PROBE_SCRIPT], { encoding: "utf8", windowsHide: true },
           (error, standardOutput, standardError) => Object.isNull(error) ? resolve(standardOutput + standardError) : reject(error));
       });
       lines.push(`round ${round}: total ${Math.round(performance.now() - start)} ms; ${output.trim().split(/\r?\n/u).join("; ")}`);
