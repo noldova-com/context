@@ -13,6 +13,8 @@ export class Resources {
   public static readonly carriageReturn: string = "\r";
   public static readonly lineFeed: string = "\n";
   public static readonly lineSeparator: string = "\u2028";
+  public static readonly octalEscape: RegExp = /\\([0-3][0-7]{2})/gu;
+  public static readonly octalRadix: number = 8;
   public static readonly paragraphSeparator: string = "\u2029";
 
   public static readonly indexParameterName: string = "index";
