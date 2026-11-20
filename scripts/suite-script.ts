@@ -11,6 +11,7 @@
  * tests, unless NOLDOVA_CONTEXT_POSTGRESQL_URL names one.
  */
 
+import CommandFailedException from "./command-failed.exception.ts";
 import Config from "./config.ts";
 import type PackageInfo from "./package-info.ts";
 import PostgreSQLServer from "./postgresql-server.ts";
@@ -23,6 +24,7 @@ export default abstract class SuiteScript extends Script {
   protected static readonly FILTERS_VARIABLE: string = "CONTEXT_TEST_FILTERS";
   protected static readonly RESULTS_FILE_VARIABLE: string = "CONTEXT_TEST_RESULTS_FILE";
   protected static readonly TIMEOUT_VARIABLE: string = "CONTEXT_TEST_TIMEOUT_MILLISECONDS";
+  private static readonly NEW_LINE: string = "\n";
   private static readonly POSTGRESQL_STARTED: string = "Started a PostgreSQL server for the data tests.";
   private static readonly SOURCE_MAPS_OPTION: string = "--enable-source-maps";
   private static readonly TEST_ENTRY_PATH: string = "node_modules/@noldova/context.testing/services/execution/test-run-entry-point.js";
@@ -66,8 +68,20 @@ export default abstract class SuiteScript extends Script {
         false,
         environment);
     }
-    finally {
-      await server?.[Symbol.asyncDispose]();
+    catch (error) {
+      try {
+        await server?.[Symbol.asyncDispose]();
+      }
+      catch (cleanupError) {
+        throw new CommandFailedException(SuiteScript.describe(error) + SuiteScript.NEW_LINE + SuiteScript.describe(cleanupError));
+      }
+      throw error;
     }
+
+    await server?.[Symbol.asyncDispose]();
+  }
+
+  private static describe(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
   }
 }
