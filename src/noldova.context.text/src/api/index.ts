@@ -9,6 +9,7 @@
 import "../extensions/string.extensions.js";
 
 export { ReadOnlyStringSpan } from "../models/read-only-string-span.js";
+export { OctalEscapeService } from "../services/octal-escape.service.js";
 export { EcmaScriptLineTerminator } from "../services/line-terminators/ecma-script-line-terminator.js";
 export { LineTerminator } from "../services/line-terminators/line-terminator.js";
 export { StringBuilder } from "../services/string-builder.js";

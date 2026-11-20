@@ -1,8 +1,9 @@
 # noldova.context.text
 
 Text building blocks for CONTEXT libraries and parsers: a read-only view of part
-of a string, a string builder, line-terminator rules, Unicode identifier
-classification, and `String` additions that importing the package installs.
+of a string, a string builder, line-terminator rules, decoding of three-digit
+octal escapes, Unicode identifier classification, and `String` additions that
+importing the package installs.
 
 ## Install
 
@@ -13,7 +14,7 @@ npm install @noldova/context.text
 ## Use
 
 ```ts
-import { EcmaScriptLineTerminator, ReadOnlyStringSpan, StringBuilder, UnicodeCodePointService } from "@noldova/context.text";
+import { EcmaScriptLineTerminator, OctalEscapeService, ReadOnlyStringSpan, StringBuilder, UnicodeCodePointService } from "@noldova/context.text";
 
 const span = new ReadOnlyStringSpan("hello world", 6, 5);
 span.toString(); // "world"
@@ -25,6 +26,10 @@ builder.toString(); // "hello world"
 
 const terminator = new EcmaScriptLineTerminator();
 terminator.getLength("a\r\nb", 1); // 2: CRLF.
+
+// Linux's mount tables write a space in a mount point as \040; split each
+// line into its fields first, then decode each field.
+OctalEscapeService.decode("/media/USB\\040Drive"); // "/media/USB Drive"
 
 UnicodeCodePointService.isIdentifierStart("a".codePointAt(0)!); // true
 String.isAsciiOctalDigit("7"); // true

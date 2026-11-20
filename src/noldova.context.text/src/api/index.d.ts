@@ -165,6 +165,42 @@ export declare class EcmaScriptLineTerminator extends LineTerminator {
 }
 
 /**
+ * Decodes the three-digit octal escapes some text formats write for a
+ * character, such as Linux's mount tables, which write a space in a mount
+ * point as `\040`.
+ *
+ * @example
+ * ```ts
+ * import { OctalEscapeService } from "@noldova/context.text";
+ *
+ * OctalEscapeService.decode("/media/USB\\040Drive"); // "/media/USB Drive"
+ * OctalEscapeService.decode("a\\134040b"); // "a\\040b": an escaped backslash keeps the digits after it.
+ * ```
+ */
+export declare class OctalEscapeService {
+  /**
+   * Replaces each backslash followed by three octal digits from `\000` through
+   * `\377` with the character of that code, from U+0000 through U+00FF.
+   * The text is read once from its start, so a decoded backslash never begins
+   * another escape.
+   *
+   * @param text The complete text to decode; split a record into its fields
+   * before decoding them, since a decoded escape may be a separator.
+   * @returns The decoded text. A backslash not followed by three octal digits,
+   * and an escape past `\377`, such as `\400`, are kept as they are.
+   * @example
+   * ```ts
+   * import { OctalEscapeService } from "@noldova/context.text";
+   *
+   * OctalEscapeService.decode("a\\011b"); // "a\tb"
+   * OctalEscapeService.decode("a\\400b"); // "a\\400b": past one byte.
+   * OctalEscapeService.decode("a\\08b"); // "a\\08b": 8 isn't an octal digit.
+   * ```
+   */
+  public static decode(text: string): string;
+}
+
+/**
  * An immutable UTF-16 view backed by an existing string.
  *
  * Creating or slicing a span creates a view object without copying its
