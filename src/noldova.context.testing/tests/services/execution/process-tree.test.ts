@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, execFile, spawn } from "node:child_process";
 import { once } from "node:events";
 
 import { Assert, TestClass, TestingException, TestMethod } from "@noldova/context.testing";
@@ -18,6 +18,7 @@ export class ProcessTreeTests {
     "console.log(process.pid); if (depth > 0) require(\"node:child_process\").spawnSync(process.execPath, " +
     "[...process.execArgv, String(depth - 1), String(root)], { stdio: \"inherit\" }); " +
     "else setInterval(() => { try { process.kill(root, 0); } catch { process.exit(); } }, 100);";
+  private static readonly PROBE_SCRIPT: string = "$s = [DateTime]::Now; $p = [Diagnostics.Process]::GetCurrentProcess().StartTime; 'start-to-script {0:N0} ms' -f ($s - $p).TotalMilliseconds; $a = [DateTime]::Now; Import-Module CimCmdlets; 'import {0:N0} ms' -f ([DateTime]::Now - $a).TotalMilliseconds; $b = [DateTime]::Now; $all = Get-CimInstance -Query 'SELECT ProcessId, ParentProcessId, CreationDate, Name FROM Win32_Process'; 'query {0:N0} ms, {1} processes' -f ([DateTime]::Now - $b).TotalMilliseconds, @($all).Count; $c = [DateTime]::Now; $all = Get-CimInstance -Query 'SELECT ProcessId, ParentProcessId, CreationDate, Name FROM Win32_Process'; 'query2 {0:N0} ms' -f ([DateTime]::Now - $c).TotalMilliseconds; $d = [DateTime]::Now; $all = Get-CimInstance -ClassName Win32_Process; 'fullquery {0:N0} ms' -f ([DateTime]::Now - $d).TotalMilliseconds";
   private static readonly SLEEP_SCRIPT: string = "setTimeout(() => undefined, 30_000);";
 
   @TestMethod
@@ -60,6 +61,24 @@ export class ProcessTreeTests {
     await closed;
 
     Assert.areEqual(1, endedCount);
+  }
+
+  @TestMethod
+  public async timesTheWindowsListingPhasesAsync(): Promise<void> {
+    if (process.platform !== "win32")
+      return;
+
+    const lines: string[] = [];
+    for (const round of [1, 2]) {
+      const start = performance.now();
+      const output = await new Promise<string>((resolve, reject) => {
+        execFile("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", ProcessTreeTests.PROBE_SCRIPT], { encoding: "utf8", windowsHide: true },
+          (error, standardOutput, standardError) => Object.isNull(error) ? resolve(standardOutput + standardError) : reject(error));
+      });
+      lines.push(`round ${round}: total ${Math.round(performance.now() - start)} ms; ${output.trim().split(/\r?\n/u).join("; ")}`);
+    }
+
+    Assert.fail(`ARM64-TIMING ${lines.join(" | ")}`);
   }
 
   @TestMethod
