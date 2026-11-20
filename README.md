@@ -146,10 +146,10 @@ Test files slower than the timing check's budget:
 
 | File | Time | Why |
 |---|---|---|
+| `noldova.context.testing/services/execution/test-run-entry-point.test.js` | 22200 ms | Each of its tests starts a whole run in a child process, and two wait out a stopped worker's real 5 s. |
 | `noldova.context.parsers.typescript/conformance/conformance-cases.test.js` | 14500 ms | It runs every vendored TypeScript conformance case. |
 | `noldova.context.exceptions/api/packed-install.test.js` | 11700 ms | Each of its tests installs packed packages into an app with npm, in child processes. |
 | `noldova.context.parsers.typescript/services/typescript-syntax.parser.test.js` | 7800 ms | Its long-chain tests parse inputs large enough to show the parser's work stays linear. |
-| `noldova.context.testing/services/execution/test-run-entry-point.test.js` | 5500 ms | Each of its tests starts a whole run in a child process. |
 | `noldova.context.parsers.typescript/services/parsers/declarations/parameter-list.parser.test.js` | 3900 ms | Its long-chain tests parse signature initializers large enough to show the work stays linear. |
 | `noldova.context.data.sql.postgresql/models/client/postgresql-pool.server.test.js` | 3800 ms | It runs queries against a real PostgreSQL server and waits out its real timeouts. |
 | `noldova.context.testing/services/execution/parallel-test-runner.test.js` | 3400 ms | Each of its tests starts worker processes to show the runner handling one way a worker can fail or finish. |
