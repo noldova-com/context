@@ -6,6 +6,26 @@ Each version's section is written by the pull request that changes the version, 
 Every package moves to each version together, as [VERSIONING-AND-COMPATIBILITY.md](documents/VERSIONING-AND-COMPATIBILITY.md) says.
 Versions before 0.0.6 are described in their version pull requests.
 
+## 0.0.9
+
+CONTEXT's packages take their siblings as peers in a range, its text package decodes octal escapes, and its test runner, data packages, JSON reader and TypeScript parser get fixes.
+
+- Every package: its CONTEXT siblings are peers at `>=0.0.9 <0.1.0` in place of exact dependencies, so one copy of each serves an app whose packages need different versions in that range (#110).
+- `@noldova/context.core`: a second copy refuses to load, with an error that names `npm ls @noldova/context.core`, in place of a `TypeError` (#110).
+- `@noldova/context.text`: `OctalEscapeService.decode(text)` turns each three-digit octal escape, `\000` to `\377`, into the single character with that code, and leaves other backslashes alone (#162).
+- `@noldova/context.testing`:
+  - a run fails when a test's promise rejects after the test ended, with a `TestingException` that names the test (#157);
+  - test files run in the order of their `/`-separated relative paths, the same on every system (#158);
+  - the timing check's stale line says a list measured on several machines drops a file only once it is stale on every one of them (#114);
+  - the reporter and coverage analyzer prove values they asserted non-null, with no change to what they report (#115, #125).
+- `@noldova/context.data` and `@noldova/context.data.sql`: a statement that fails in a transaction marks it rollback-only, so the connection rolls it back and rejects with `DataException` even when the action caught the failure (#159).
+- `@noldova/context.data.sql.postgresql`:
+  - a query that a cancel sent for an earlier query stopped runs once more where the connection can retry it, and otherwise fails with a message that says so (#160);
+  - SCRAM sign-in refuses a server's iteration count above 1,000,000, derives the key off the event loop so the connection's timeouts keep running, and connections that sign in with the same password, salt and count share one running derivation.
+- `@noldova/context.json`: `JsonReader` converts a value reached through several references once, and the result shares it wherever the source does.
+- `@noldova/context.parsers.typescript`: the source parser merges the top-level regions it parses again, such as top-level awaits, in one pass over all of them. It and `@noldova/context.parsers` and `@noldova/context.parsers.regex` prove the values they asserted non-null, with no change to what they parse or report (#115, #125, #126).
+- No other package's source changes.
+
 ## 0.0.8
 
 CONTEXT's test runner takes its hang limit from the suite, writes each test's time to a file, and judges test files' times for a timing check kept apart from the suite.
