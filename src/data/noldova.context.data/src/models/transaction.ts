@@ -12,6 +12,7 @@ import { Resources } from "../resources.js";
 export abstract class Transaction implements AsyncDisposable {
   private completed: boolean = false;
   private rollbackOnly: boolean = false;
+  private firstFailureValue: unknown = undefined;
 
   public get isCompleted(): boolean {
     return this.completed;
@@ -21,12 +22,19 @@ export abstract class Transaction implements AsyncDisposable {
     return this.rollbackOnly;
   }
 
+  public get firstFailure(): unknown {
+    return this.firstFailureValue;
+  }
+
   public async runInTransactionAsync<T>(action: (transaction: this) => Promise<T>): Promise<T> {
     this.throwIfCompleted();
     try {
       return await action(this);
     }
     catch (error) {
+      if (!this.rollbackOnly)
+        this.firstFailureValue = error;
+
       this.rollbackOnly = true;
       throw error;
     }
