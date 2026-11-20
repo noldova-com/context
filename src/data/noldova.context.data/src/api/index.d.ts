@@ -522,7 +522,10 @@ export declare class DatabaseFacade<TConnection extends Connection, TMigration e
   /**
    * Opens the connection through the options' provider and creates the
    * migrator over it for the migrations and the change feed. Migrations out
-   * of order throw `DataException` before any connection opens.
+   * of order throw `DataException` before any connection opens. If the
+   * provider cannot create the migrator or the change feed, the connection
+   * starts closing and the provider's error is rethrown; a failure to close
+   * it is dropped.
    */
   public constructor(options: DbContextOptions<TConnection, TMigration>, migrations: readonly TMigration[]);
 

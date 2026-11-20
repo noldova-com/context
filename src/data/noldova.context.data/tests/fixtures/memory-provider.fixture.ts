@@ -18,18 +18,28 @@ export class MemoryProvider extends DataProvider<MemoryConnection, NotesMigratio
   public readonly history: MemoryMigrationHistory = new MemoryMigrationHistory();
   public readonly connections: MemoryConnection[] = [];
   public readonly changeFeeds: MemoryChangeFeed[] = [];
+  public migratorFailure: Error | undefined = undefined;
+  public changeFeedFailure: Error | undefined = undefined;
+  public closeFailure: Error | undefined = undefined;
 
   public override openConnection(dataSource: DataSource): MemoryConnection {
     const connection = new MemoryConnection(dataSource);
+    connection.closeFailure = this.closeFailure;
     this.connections.push(connection);
     return connection;
   }
 
   public override createMigrator(connection: MemoryConnection, migrations: readonly NotesMigration[]): Migrator<NotesMigration> {
+    if (!Object.isUndefined(this.migratorFailure))
+      throw this.migratorFailure;
+
     return new RecordingMigrator(migrations, this.history, connection);
   }
 
   public override createChangeFeed(_connection: MemoryConnection): ChangeFeed {
+    if (!Object.isUndefined(this.changeFeedFailure))
+      throw this.changeFeedFailure;
+
     const changeFeed = new MemoryChangeFeed();
     this.changeFeeds.push(changeFeed);
     return changeFeed;
