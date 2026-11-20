@@ -347,7 +347,8 @@ export declare class SqlTransaction extends Transaction {
    * number of rows it changed. A completed transaction rejects with
    * `DataException`.
    * A failure marks the transaction rollback-only, so the connection rolls it
-   * back even when the action catches it.
+   * back even when the action catches it, with the first such failure as the
+   * `cause` of its `DataException`.
    */
   public executeAsync(query: SqlQuery): Promise<number>;
 
@@ -355,7 +356,8 @@ export declare class SqlTransaction extends Transaction {
    * Runs an `INSERT` in the transaction and returns the generated key. A
    * completed transaction rejects with `DataException`.
    * A failure marks the transaction rollback-only, so the connection rolls it
-   * back even when the action catches it.
+   * back even when the action catches it, with the first such failure as the
+   * `cause` of its `DataException`.
    */
   public insertAsync(query: SqlQuery): Promise<number>;
 
@@ -363,7 +365,8 @@ export declare class SqlTransaction extends Transaction {
    * Runs a query in the transaction and returns its rows as records. A
    * completed transaction rejects with `DataException`.
    * A failure marks the transaction rollback-only, so the connection rolls it
-   * back even when the action catches it.
+   * back even when the action catches it, with the first such failure as the
+   * `cause` of its `DataException`.
    */
   public queryAsync(query: SqlQuery): Promise<readonly DataRecord[]>;
 

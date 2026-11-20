@@ -253,8 +253,9 @@ export declare abstract class Transaction implements AsyncDisposable {
   /**
    * Runs an action as part of this transaction, joining it: nothing is
    * committed until the outermost action, the connection's, ends. A failure
-   * marks the transaction rollback-only and is rethrown. A completed
-   * transaction throws `DataException`.
+   * marks the transaction rollback-only and is rethrown; the first one is
+   * kept as the `cause` of the connection's `DataException` when the outer
+   * action swallows it. A completed transaction throws `DataException`.
    */
   public runInTransactionAsync<T>(action: (transaction: this) => Promise<T>): Promise<T>;
 
@@ -362,9 +363,10 @@ export declare abstract class Connection<TTransaction extends Transaction = Tran
    * receives the transaction; nest through its `runInTransactionAsync`. A nested
    * failure, or a statement that failed in the transaction, rolls the
    * transaction back, with `DataException` when the outer action swallowed
-   * it, whose `cause` is the first such failure. A failed commit also triggers rollback. If the action or commit and
-   * the rollback both fail, a `SuppressedError` retains the original failure
-   * in `suppressed` and the rollback failure in `error`.
+   * it, whose `cause` is the first such failure. A failed commit also
+   * triggers rollback. If the action or commit and the rollback both fail, a
+   * `SuppressedError` retains the original failure in `suppressed` and the
+   * rollback failure in `error`.
    * A closed connection rejects with `DataException`.
    *
    * Never call the connection inside an action: use the transaction the

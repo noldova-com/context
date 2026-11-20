@@ -127,6 +127,44 @@ export class ConnectionTests {
   }
 
   @TestMethod
+  public async keepsTheNestedFailureAsTheCauseWhenItsParentWrapsIt(): Promise<void> {
+    const connection = new MemoryConnection();
+    const nested = new Error("nested");
+
+    const swallowed = await Assert.throwsAsync(async () => connection.runInTransactionAsync(async t => {
+      await t.runInTransactionAsync(async parent => {
+        try {
+          await parent.runInTransactionAsync(async () => {
+            throw nested;
+          });
+        }
+        catch {
+          throw new Error("wrapped");
+        }
+      }).catch(() => undefined);
+    }), DataException);
+
+    Assert.areEqual<unknown>(nested, swallowed.cause);
+    Assert.areEqual(1, connection.transactions[0]?.rollbacks);
+  }
+
+  @TestMethod
+  public async givesTheFirstOfTwoNestedFailuresAtOnceAsTheCause(): Promise<void> {
+    const connection = new MemoryConnection();
+    const first = new Error("first");
+    const second = new Error("second");
+
+    const swallowed = await Assert.throwsAsync(async () => connection.runInTransactionAsync(async t => {
+      await Promise.allSettled([first, second].map(async failure => t.runInTransactionAsync(async () => {
+        throw failure;
+      })));
+    }), DataException);
+
+    Assert.areEqual<unknown>(first, swallowed.cause);
+    Assert.areEqual(1, connection.transactions[0]?.rollbacks);
+  }
+
+  @TestMethod
   public async runsTransactionsStartedAtOnceOneAfterTheOtherEachCommittingOrRollingBackAlone(): Promise<void> {
     const connection = new MemoryConnection();
     const gate = Promise.withResolvers<void>();
