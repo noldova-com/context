@@ -219,7 +219,8 @@ declare module "@noldova/context.testing/models/execution/process-listing.js" {
     public readonly arguments: readonly string[];
     public readonly warmFile: string;
     public readonly warmArguments: readonly string[];
-    public constructor(file: string, arguments_: readonly string[], warmFile: string, warmArguments: readonly string[]);
+    public readonly script: string | undefined;
+    public constructor(file: string, arguments_: readonly string[], warmFile: string, warmArguments: readonly string[], script?: string);
   }
 }
 

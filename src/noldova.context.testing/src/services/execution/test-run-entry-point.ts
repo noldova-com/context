@@ -70,10 +70,10 @@ export class TestRunEntryPoint {
 
     const isAbandonedWorkEnded = await this.endAbandonedWorkAsync(supervisor, processTree);
     try {
-      await this.removeTemporaryFilesAsync(temporaryDirectory);
+      await processTree.closeAsync();
     }
     finally {
-      await processTree.closeAsync();
+      await this.removeTemporaryFilesAsync(temporaryDirectory);
       if (!isAbandonedWorkEnded)
         await this.endOwnProcessAsync();
     }

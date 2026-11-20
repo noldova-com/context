@@ -42,28 +42,29 @@ export class Resources {
   public static readonly listerEndLine: string = "end";
   public static readonly warmListingMilliseconds: number = 5000;
   public static readonly oneOffListingMilliseconds: number = 60_000;
-  public static readonly windowsProcessListingScript: string = "$ErrorActionPreference = 'Stop'; " +
-    "$query = (New-Object -ComObject WbemScripting.SWbemLocator).ConnectServer()" +
-    ".ExecQuery('SELECT ProcessId, ParentProcessId, CreationDate, Name FROM Win32_Process'); " +
-    "$all = foreach ($item in $query) { $values = $item.Properties_; [pscustomobject]@{ ProcessId = $values.Item('ProcessId').Value; " +
-    "ParentProcessId = $values.Item('ParentProcessId').Value; CreationDate = $values.Item('CreationDate').Value; Name = $values.Item('Name').Value } }; " +
-    "$created = @{}; foreach ($item in $all) { $created[$item.ProcessId] = $item.CreationDate }; " +
-    "foreach ($item in $all) { $parentCreated = $created[$item.ParentProcessId]; " +
-    "if ($item.Name -ne 'conhost.exe' -and $null -ne $parentCreated -and $null -ne $item.CreationDate -and $parentCreated -lt $item.CreationDate) " +
-    "{ '{0} {1}' -f $item.ProcessId, $item.ParentProcessId } }";
-  public static readonly windowsWarmListingScript: string = "$ErrorActionPreference = 'Stop'; " +
-    `$null = & { ${Resources.windowsProcessListingScript} }; ` +
-    `[Console]::Out.WriteLine('${Resources.listerReadyLine}'); [Console]::Out.Flush(); ` +
-    "while ($null -ne [Console]::In.ReadLine()) { " +
-    `& { ${Resources.windowsProcessListingScript} } | ForEach-Object { [Console]::Out.WriteLine($_) }; ` +
-    `[Console]::Out.WriteLine('${Resources.listerEndLine}'); [Console]::Out.Flush() }`;
+  public static readonly listingScriptArgument: string = "<listing script>";
+  public static readonly listingScriptDirectoryPrefix: string = "noldova-process-listing-";
+  public static readonly listingScriptFileName: string = "list-processes.js";
+  public static readonly windowsProcessListingScript: string = "var newLine = String.fromCharCode(10); var service; " +
+    "function list() { var all = [], created = {}, lines = []; " +
+    "for (var items = new Enumerator(service.ExecQuery('SELECT ProcessId, ParentProcessId, CreationDate, Name FROM Win32_Process')); " +
+    "!items.atEnd(); items.moveNext()) { var item = items.item(); " +
+    "var row = { id: item.ProcessId, parent: item.ParentProcessId, created: item.CreationDate, name: item.Name }; all.push(row); created[row.id] = row.created; } " +
+    "for (var index = 0; index < all.length; index++) { var entry = all[index]; var parentCreated = created[entry.parent]; " +
+    "if (entry.name !== 'conhost.exe' && parentCreated != null && entry.created != null && parentCreated < entry.created) " +
+    "lines.push(entry.id + ' ' + entry.parent + newLine); } return lines.join(''); } " +
+    "try { service = new ActiveXObject('WbemScripting.SWbemLocator').ConnectServer(); " +
+    "if (WScript.Arguments.length === 0) WScript.StdOut.Write(list()); " +
+    `else { list(); WScript.StdOut.WriteLine('${Resources.listerReadyLine}'); while (!WScript.StdIn.AtEndOfStream) { WScript.StdIn.ReadLine(); ` +
+    `WScript.StdOut.Write(list()); WScript.StdOut.WriteLine('${Resources.listerEndLine}'); } } } ` +
+    "catch (error) { WScript.StdErr.WriteLine(error.message); WScript.Quit(1); }";
   public static readonly unixWarmListingScript: string =
     `echo ${Resources.listerReadyLine}; while read -r line; do ps -A -o pid=,ppid=; echo ${Resources.listerEndLine}; done`;
   public static readonly processListings: ReadonlyMap<string, ProcessListing> = new Map([
     ["linux", new ProcessListing("ps", ["-A", "-o", "pid=,ppid="], "sh", ["-c", Resources.unixWarmListingScript])],
     ["darwin", new ProcessListing("ps", ["-A", "-o", "pid=,ppid="], "sh", ["-c", Resources.unixWarmListingScript])],
-    ["win32", new ProcessListing("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", Resources.windowsProcessListingScript],
-      "powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", Resources.windowsWarmListingScript])],
+    ["win32", new ProcessListing("cscript.exe", ["//nologo", "//B", "//E:jscript", Resources.listingScriptArgument],
+      "cscript.exe", ["//nologo", "//B", "//E:jscript", Resources.listingScriptArgument, "warm"], Resources.windowsProcessListingScript)],
   ]);
   public static readonly testRunWorkerFileName: string = "./test-run-worker-entry-point.js";
   public static readonly testWorkerGraceMilliseconds: number = 250;

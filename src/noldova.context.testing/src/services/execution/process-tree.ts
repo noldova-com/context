@@ -9,7 +9,11 @@
 // This file uses Node APIs and will change when we replace Node.
 
 import { type ChildProcessByStdio, execFile, spawn } from "node:child_process";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { Socket } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
 
@@ -32,6 +36,8 @@ export class ProcessTree {
   private isListerUsable: boolean;
   private answer: ((lines: string[] | undefined) => void) | undefined;
   private answerLines: string[];
+  private scriptDirectory: string | undefined;
+  private scriptPath: string | undefined;
 
   public constructor(platform: string, listings: ReadonlyMap<string, ProcessListing> = Resources.processListings, clock: IClock = new SystemClock()) {
     this.platform = platform;
@@ -43,6 +49,8 @@ export class ProcessTree {
     this.isListerUsable = false;
     this.answer = undefined;
     this.answerLines = [];
+    this.scriptDirectory = undefined;
+    this.scriptPath = undefined;
   }
 
   public get warming(): Promise<boolean> {
@@ -57,7 +65,15 @@ export class ProcessTree {
     if (!Object.isUndefined(this.lister) || Object.isUndefined(this.listing))
       return;
 
-    const lister = spawn(this.listing.warmFile, this.listing.warmArguments, { stdio: ["pipe", "pipe", "ignore"], windowsHide: true });
+    let warmArguments: readonly string[];
+    try {
+      warmArguments = this.withScript(this.listing.warmArguments);
+    }
+    catch {
+      return;
+    }
+
+    const lister = spawn(this.listing.warmFile, warmArguments, { stdio: ["pipe", "pipe", "ignore"], windowsHide: true });
     this.lister = lister;
     lister.unref();
     for (const stream of [lister.stdin, lister.stdout])
@@ -101,6 +117,8 @@ export class ProcessTree {
     this.lister?.stdin.end();
     this.lister?.kill();
     await this.listerClosed;
+    if (!Object.isUndefined(this.scriptDirectory))
+      await rm(this.scriptDirectory, { recursive: true, force: true, maxRetries: Resources.temporaryRemovalRetries });
   }
 
   private static tryEnd(processId: number): boolean {
@@ -126,6 +144,22 @@ export class ProcessTree {
       .filter(t => t.length === 2)
       .map((t): readonly [number, number] => [Number(t[0]), Number(t[1])])
       .filter(t => !listerProcessIds.includes(t[0]));
+  }
+
+  private withScript(arguments_: readonly string[]): readonly string[] {
+    const script = this.listing?.script;
+    if (Object.isUndefined(script))
+      return arguments_;
+
+    if (Object.isUndefined(this.scriptPath)) {
+      this.scriptDirectory ??= mkdtempSync(join(tmpdir(), Resources.listingScriptDirectoryPrefix));
+      const scriptPath = join(this.scriptDirectory, Resources.listingScriptFileName);
+      writeFileSync(scriptPath, script);
+      this.scriptPath = scriptPath;
+    }
+
+    const scriptPath = this.scriptPath;
+    return arguments_.map(t => t === Resources.listingScriptArgument ? scriptPath : t);
   }
 
   private settleAnswer(lines: string[] | undefined): void {
@@ -158,8 +192,16 @@ export class ProcessTree {
     if (Object.isUndefined(listing))
       return Promise.reject(new TestingException(Resources.processListingUnsupported(this.platform)));
 
+    let arguments_: readonly string[];
+    try {
+      arguments_ = this.withScript(listing.arguments);
+    }
+    catch (error) {
+      return Promise.reject(new TestingException(Resources.processListingFailed(listing.file), new ExceptionOptions(error)));
+    }
+
     return new Promise<(readonly [number, number])[]>((resolve, reject) => {
-      const lister = execFile(listing.file, listing.arguments, { encoding: Resources.textEncoding, windowsHide: true }, (error, output) => {
+      const lister = execFile(listing.file, arguments_, { encoding: Resources.textEncoding, windowsHide: true }, (error, output) => {
         this.clock.clearTimeout(timer);
         if (Object.isNull(error))
           resolve(ProcessTree.parseLinks(output.split(Resources.lineSeparator), [lister.pid, this.lister?.pid]));

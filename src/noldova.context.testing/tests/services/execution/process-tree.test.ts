@@ -8,6 +8,9 @@
 
 import { type ChildProcess, spawn } from "node:child_process";
 import { once } from "node:events";
+import { readdir } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { setImmediate } from "node:timers/promises";
 
 import { Assert, TestClass, TestingException, TestMethod, Timeout } from "@noldova/context.testing";
@@ -30,13 +33,14 @@ export class ProcessTreeTests {
   private static readonly ENDING_SCRIPT: string = "console.log(\"ready\"); process.stdin.once(\"data\", () => process.exit(1));";
   private static readonly MUTE_SCRIPT: string = "console.log(\"ready\"); process.stdin.resume();";
   private static readonly HANGING_SCRIPT: string = "setInterval(() => undefined, 1_000);";
+  private static readonly SCRIPTED_LISTER: string = `if (process.argv[2] === "warm") { ${ProcessTreeTests.ANSWERING_SCRIPT} } else { console.log("21 5"); }`;
   private static readonly UNUSED_PROCESS_ID: number = 2_147_483_647;
-  private static warmTree: ProcessTree | undefined;
+  private static readonly TEMPORARY_DIRECTORY_VARIABLES: readonly string[] = ["TMPDIR", "TEMP", "TMP"];
 
   @Timeout(60_000)
   @TestMethod
   public async listsTheDescendantsOfAProcessLeavesFirstAsync(): Promise<void> {
-    const tree = await ProcessTreeTests.warmTreeAsync();
+    const tree = await ProcessTreeTests.startWarmTreeAsync();
     const [root, processIds] = await ProcessTreeTests.startChainAsync();
     try {
       const descendants = await tree.listDescendantsAsync(root.pid ?? -1);
@@ -45,13 +49,14 @@ export class ProcessTreeTests {
     }
     finally {
       await ProcessTreeTests.endChainAsync(root, processIds);
+      await tree.closeAsync();
     }
   }
 
   @Timeout(60_000)
   @TestMethod
   public async endsTheDescendantsAProcessWaitsOnSoItReturnsAsync(): Promise<void> {
-    const tree = await ProcessTreeTests.warmTreeAsync();
+    const tree = await ProcessTreeTests.startWarmTreeAsync();
     const [root, processIds] = await ProcessTreeTests.startChainAsync();
     try {
       const closed = once(root, "close");
@@ -63,6 +68,7 @@ export class ProcessTreeTests {
     }
     finally {
       await ProcessTreeTests.endChainAsync(root, processIds);
+      await tree.closeAsync();
     }
   }
 
@@ -165,6 +171,51 @@ export class ProcessTreeTests {
   }
 
   @TestMethod
+  public async runsItsListersFromAScriptItRemovesOnCloseAsync(): Promise<void> {
+    const listings = new Map([["fake", new ProcessListing(process.execPath, ["<listing script>"], process.execPath, ["<listing script>", "warm"], ProcessTreeTests.SCRIPTED_LISTER)]]);
+    const tree = new ProcessTree("fake", listings);
+    const foldersBefore = await ProcessTreeTests.listScriptFoldersAsync();
+    let foldersWhileOpen: string[];
+    try {
+      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).join());
+      tree.warm();
+      Assert.isTrue(await tree.warming);
+      Assert.areEqual("12,11", (await tree.listDescendantsAsync(5)).join());
+      foldersWhileOpen = await ProcessTreeTests.listScriptFoldersAsync();
+    }
+    finally {
+      await tree.closeAsync();
+    }
+    const foldersAfter = await ProcessTreeTests.listScriptFoldersAsync();
+
+    Assert.areEqual(foldersBefore.length + 1, foldersWhileOpen.length);
+    Assert.areEqual(foldersBefore.join(), foldersAfter.join());
+  }
+
+  @TestMethod
+  public async failsAListingWhoseScriptItCannotWriteAsync(): Promise<void> {
+    const listings = new Map([["fake", new ProcessListing(process.execPath, ["<listing script>"], process.execPath, ["<listing script>", "warm"], ProcessTreeTests.SCRIPTED_LISTER)]]);
+    const tree = new ProcessTree("fake", listings);
+    const missingDirectory = join(tmpdir(), "missing-parent", "missing");
+    const values = ProcessTreeTests.TEMPORARY_DIRECTORY_VARIABLES.map(t => process.env[t]);
+    let error: TestingException;
+    try {
+      for (const variable of ProcessTreeTests.TEMPORARY_DIRECTORY_VARIABLES)
+        process.env[variable] = missingDirectory;
+      tree.warm();
+      error = await Assert.throwsAsync(() => tree.listDescendantsAsync(5), TestingException);
+    }
+    finally {
+      ProcessTreeTests.TEMPORARY_DIRECTORY_VARIABLES.forEach((variable, index) => ProcessTreeTests.restoreVariable(variable, values[index]));
+      await tree.closeAsync();
+    }
+
+    Assert.isFalse(await tree.warming);
+    Assert.areEqual(`The run could not list the processes running under it with ${process.execPath}.`, error.message);
+    Assert.isTrue(String(error.cause).includes("ENOENT"), String(error.cause));
+  }
+
+  @TestMethod
   public async listsAloneWhenItsListerCannotStartAsync(): Promise<void> {
     const listings = new Map([["fake", new ProcessListing(process.execPath, ["--eval", ProcessTreeTests.COLD_SCRIPT], "missing-lister", [])]]);
     const tree = new ProcessTree("fake", listings);
@@ -211,12 +262,22 @@ export class ProcessTreeTests {
     }
   }
 
-  private static async warmTreeAsync(): Promise<ProcessTree> {
-    const tree = ProcessTreeTests.warmTree ?? new ProcessTree(process.platform);
-    ProcessTreeTests.warmTree = tree;
+  private static async startWarmTreeAsync(): Promise<ProcessTree> {
+    const tree = new ProcessTree(process.platform);
     tree.warm();
     Assert.isTrue(await tree.warming);
     return tree;
+  }
+
+  private static async listScriptFoldersAsync(): Promise<string[]> {
+    return (await readdir(tmpdir())).filter(t => t.startsWith("noldova-process-listing-")).sort();
+  }
+
+  private static restoreVariable(variable: string, value: string | undefined): void {
+    if (Object.isUndefined(value))
+      Reflect.deleteProperty(process.env, variable);
+    else
+      process.env[variable] = value;
   }
 
   private static fakeListings(warmScript: string): ReadonlyMap<string, ProcessListing> {

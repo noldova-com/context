@@ -11,11 +11,13 @@ export class ProcessListing {
   public readonly arguments: readonly string[];
   public readonly warmFile: string;
   public readonly warmArguments: readonly string[];
+  public readonly script: string | undefined;
 
-  public constructor(file: string, arguments_: readonly string[], warmFile: string, warmArguments: readonly string[]) {
+  public constructor(file: string, arguments_: readonly string[], warmFile: string, warmArguments: readonly string[], script: string | undefined = undefined) {
     this.file = file;
     this.arguments = arguments_;
     this.warmFile = warmFile;
     this.warmArguments = warmArguments;
+    this.script = script;
   }
 }
