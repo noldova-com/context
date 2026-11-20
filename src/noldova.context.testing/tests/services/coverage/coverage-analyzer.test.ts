@@ -665,19 +665,46 @@ export class CoverageAnalyzerTests {
 
   @TestMethod
   public async failsWhenAListedThreadWroteNoProfileAsync(): Promise<void> {
-    const error = await Assert.throwsAsync(() => this.analyzeListedThreadsAsync("0\n7\n"), TestingException);
+    const error = await Assert.throwsAsync(() => this.analyzeListedThreadsAsync("Sample /root\n0\n7\n"), TestingException);
 
-    Assert.areEqual("No coverage profile was written for thread 7 of process 12, so the coverage would be incomplete.", error.message);
+    Assert.areEqual("No coverage profile was written for thread 7 of process 12 (the test run of Sample /root), so the coverage would be incomplete.",
+      error.message);
+  }
+
+  @TestMethod
+  public async saysWhenTheTestRunOfAThreadWithoutAProfileListedNoTestProjectsAsync(): Promise<void> {
+    const error = await Assert.throwsAsync(() => this.analyzeListedThreadsAsync("\n0\n7\n"), TestingException);
+
+    Assert.areEqual("No coverage profile was written for thread 7 of process 12 (a test run that listed no test projects), so the coverage would be " +
+      "incomplete.", error.message);
   }
 
   @TestMethod
   public async acceptsAListWhoseThreadsAllWroteProfilesAsync(): Promise<void> {
-    const result = await this.analyzeListedThreadsAsync("0\n");
+    const result = await this.analyzeListedThreadsAsync("Sample /root\n0\n");
 
     Assert.isTrue(result.isComplete);
   }
 
-  private async analyzeListedThreadsAsync(threadList: string): Promise<CoverageResult> {
+  @TestMethod
+  public async namesTheTestRunAndProfilesOfAThreadWhoseProfileIsMalformedAsync(): Promise<void> {
+    const error = await Assert.throwsAsync(
+      () => this.analyzeListedThreadsAsync("Sample /root\n0\n", new Map([["coverage-12-346-0.json", "{\"result\":["]])), TestingException);
+
+    Assert.isTrue(error.message.endsWith("coverage-12-346-0.json\" is malformed. It is a profile of thread 0 of process 12 (the test run of Sample /root), " +
+      "which wrote coverage-12-345-0.json, coverage-12-346-0.json."), error.message);
+  }
+
+  @TestMethod
+  public async saysWhenAMalformedProfilesProcessListedNoTestRunAsync(): Promise<void> {
+    const error = await Assert.throwsAsync(
+      () => this.analyzeListedThreadsAsync("Sample /root\n0\n", new Map([["coverage-13-1-2.json", String.empty]])), TestingException);
+
+    Assert.isTrue(error.message.endsWith("coverage-13-1-2.json\" is malformed. It is a profile of thread 2 of process 13 (no test run listed), " +
+      "which wrote coverage-13-1-2.json."), error.message);
+  }
+
+  private async analyzeListedThreadsAsync(threadList: string, otherProfiles: ReadonlyMap<string, string> = new Map()): Promise<CoverageResult> {
     const coverageDirectory = await mkdtemp(join(tmpdir(), "context-coverage-"));
     try {
       const includedDirectory = join(coverageDirectory, "included");
@@ -688,6 +715,8 @@ export class CoverageAnalyzerTests {
         result: [{ url: pathToFileURL(samplePath).href, functions: [{ ranges: [{ startOffset: 0, endOffset: 2, count: 1 }] }] }],
       }));
       await writeFile(join(coverageDirectory, "threads-12-0f3a.txt"), threadList);
+      for (const [fileName, text] of otherProfiles)
+        await writeFile(join(coverageDirectory, fileName), text);
 
       return await new CoverageAnalyzer().analyzeAsync(coverageDirectory, [this.createProject(includedDirectory, coverageDirectory)]);
     }

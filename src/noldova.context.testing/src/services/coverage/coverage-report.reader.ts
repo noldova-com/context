@@ -27,9 +27,11 @@ import { Resources } from "../../resources.js";
 export class CoverageReportReader {
 
   private readonly includedDirectories: readonly string[];
+  private readonly profileWriters: ReadonlyMap<string, string>;
 
-  public constructor(includedDirectories: readonly string[]) {
+  public constructor(includedDirectories: readonly string[], profileWriters: ReadonlyMap<string, string>) {
     this.includedDirectories = [...includedDirectories];
+    this.profileWriters = profileWriters;
   }
 
   public async readAsync(coverageDirectory: string): Promise<Map<string, FunctionCoverage[][]>> {
@@ -45,7 +47,9 @@ export class CoverageReportReader {
         report = JSON.parse(await readFile(reportFilePath, Resources.textEncoding));
       }
       catch (error) {
-        throw new TestingException(Resources.coverageReportMalformed(reportFilePath), new ExceptionOptions(error));
+        const writer = this.profileWriters.get(reportFileName);
+        const message = Object.isUndefined(writer) ? Resources.coverageReportMalformed(reportFilePath) : Resources.coverageReportMalformedFrom(reportFilePath, writer);
+        throw new TestingException(message, new ExceptionOptions(error));
       }
 
       this.appendReport(report, reportFilePath, scriptEntriesByFile);

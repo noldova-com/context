@@ -185,6 +185,7 @@ declare module "@noldova/context.testing/services/execution/test-run-supervisor.
   export class TestRunSupervisor {
     public get selection(): TestSelection;
     public get elapsedMilliseconds(): number;
+    public get unendedWorkersMessage(): string | undefined;
     public constructor(timeoutMilliseconds: number, testProjects: readonly TestProject[], filters: readonly string[],
       progressListener: ITestProgressListener | undefined, coverageDirectory: string | null, workerUrl?: URL, workerCount?: number,
       startLimitMilliseconds?: number, createWorker?: (url: URL, options: WorkerOptions) => Worker, clock?: IClock);
@@ -193,6 +194,33 @@ declare module "@noldova/context.testing/services/execution/test-run-supervisor.
     public static defaultWorkerCount(): number;
     public static throwIfLimitsInvalid(timeoutMilliseconds: number, workerCount: number): void;
     public runAsync(): Promise<TestRunResult>;
+    public waitForUnendedWorkersAsync(): Promise<boolean>;
+    public whenWorkerLeftBehind(callback: () => void): void;
+  }
+}
+
+declare module "@noldova/context.testing/services/execution/process-tree.js" {
+  import type { IClock } from "@noldova/context.testing";
+  import type { ProcessListing } from "@noldova/context.testing/models/execution/process-listing.js";
+
+  export class ProcessTree {
+    public constructor(platform: string, listings?: ReadonlyMap<string, ProcessListing>, clock?: IClock);
+    public get warming(): Promise<boolean>;
+    public static end(processIds: readonly number[]): number;
+    public warm(): void;
+    public listDescendantsAsync(rootProcessId: number): Promise<number[]>;
+    public closeAsync(): Promise<void>;
+  }
+}
+
+declare module "@noldova/context.testing/models/execution/process-listing.js" {
+  export class ProcessListing {
+    public readonly file: string;
+    public readonly arguments: readonly string[];
+    public readonly warmFile: string;
+    public readonly warmArguments: readonly string[];
+    public readonly script: string | undefined;
+    public constructor(file: string, arguments_: readonly string[], warmFile: string, warmArguments: readonly string[], script?: string);
   }
 }
 

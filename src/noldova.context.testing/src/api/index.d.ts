@@ -1650,12 +1650,16 @@ export declare class ParallelTestRunner {
    * @returns A promise resolving to the reconciled result, with classes in discovery order and each class's methods in execution order. Its time
    *   is the sum of its tests' durations, as from {@link TestRunner}. No matches produce a zero-test result; the command-line entry treats it as
    *   failure. Test failures and timeouts become Failed results, not rejection of this promise.
+   *   A worker whose stopped test is blocked in a call that only returns by itself, such as a synchronous child process, is left behind
+   *   5000 ms after it is stopped and the run goes on; Node cannot exit the process until that call returns, so the command-line entry
+   *   names the test, ends the processes still running under it, waits 5000 ms more for the worker, and ends its own process if the
+   *   worker still has not ended.
    * @throws TestingException via promise rejection when a worker crashes or exits, starts no test within its start limit, discovers different
    *   tests from another worker, or exchanges invalid data, when a class leaves a timer, handle or request open in its worker or a test's promise
    *   rejects after it ended, as {@link TestExecutor.executeAsync} describes, or when the totals
-   *   do not reconcile with the selected tests; every worker has ended first.
+   *   do not reconcile with the selected tests; every worker has ended or been left behind first.
    * @throws Error via promise rejection with the worker's own error when a worker fails to start or discovery fails, or with the listener's own
-   *   exception when the listener throws; every worker has ended first.
+   *   exception when the listener throws; every worker has ended or been left behind first.
    *
    * See {@link ParallelTestRunner} for usage examples.
    */

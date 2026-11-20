@@ -6,6 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type { TestProject } from "./models/discovery/test-project.js";
+import { ProcessListing } from "./models/execution/process-listing.js";
+
 export class Resources {
   public static readonly sourceMapBase64Alphabet: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   public static readonly testClassSuffix: string = "Tests";
@@ -30,8 +33,40 @@ export class Resources {
   public static readonly unprintableValue: string = "<unprintable value>";
   public static readonly unhandledRejectionEvent: "unhandledRejection" = "unhandledRejection";
   public static readonly messageEvent: string = "message";
+  public static readonly closeEvent: string = "close";
   public static readonly errorEvent: string = "error";
+  public static readonly lineEvent: string = "line";
   public static readonly exitEvent: string = "exit";
+  public static readonly killSignal: "SIGKILL" = "SIGKILL";
+  public static readonly listerReadyLine: string = "ready";
+  public static readonly listerEndLine: string = "end";
+  public static readonly warmListingMilliseconds: number = 5000;
+  public static readonly oneOffListingMilliseconds: number = 60_000;
+  public static readonly listingScriptArgument: string = "<listing script>";
+  public static readonly listingScriptDirectoryPrefix: string = "noldova-process-listing-";
+  public static readonly listingScriptFileName: string = "list-processes.js";
+  public static readonly windowsProcessListingScript: string = "var newLine = String.fromCharCode(10); var service; " +
+    "function list() { var all = [], created = {}, lines = []; " +
+    "for (var items = new Enumerator(service.ExecQuery('SELECT ProcessId, ParentProcessId, CreationDate, Name FROM Win32_Process')); " +
+    "!items.atEnd(); items.moveNext()) { var item = items.item(); " +
+    "var row = { id: item.ProcessId, parent: item.ParentProcessId, created: item.CreationDate, name: item.Name }; all.push(row); created[row.id] = row.created; } " +
+    "for (var index = 0; index < all.length; index++) { var entry = all[index]; var parentCreated = created[entry.parent]; " +
+    "if (entry.name !== 'conhost.exe' && parentCreated != null && entry.created != null && parentCreated < entry.created) " +
+    "lines.push(entry.id + ' ' + entry.parent + newLine); } return lines.join(''); } " +
+    "try { service = new ActiveXObject('WbemScripting.SWbemLocator').ConnectServer(); " +
+    `if (WScript.Arguments.length === 0) { WScript.StdOut.Write(list()); WScript.StdOut.WriteLine('${Resources.listerEndLine}'); } ` +
+    `else { list(); WScript.StdOut.WriteLine('${Resources.listerReadyLine}'); while (!WScript.StdIn.AtEndOfStream) { WScript.StdIn.ReadLine(); ` +
+    `WScript.StdOut.Write(list()); WScript.StdOut.WriteLine('${Resources.listerEndLine}'); } } } ` +
+    "catch (error) { WScript.StdErr.WriteLine(error.message); WScript.Quit(1); }";
+  public static readonly unixProcessListingScript: string = `ps -A -o pid=,ppid= && echo ${Resources.listerEndLine}`;
+  public static readonly unixWarmListingScript: string =
+    `echo ${Resources.listerReadyLine}; while read -r line; do ps -A -o pid=,ppid=; echo ${Resources.listerEndLine}; done`;
+  public static readonly processListings: ReadonlyMap<string, ProcessListing> = new Map([
+    ["linux", new ProcessListing("sh", ["-c", Resources.unixProcessListingScript], "sh", ["-c", Resources.unixWarmListingScript])],
+    ["darwin", new ProcessListing("sh", ["-c", Resources.unixProcessListingScript], "sh", ["-c", Resources.unixWarmListingScript])],
+    ["win32", new ProcessListing("cscript.exe", ["//nologo", "//B", "//E:jscript", Resources.listingScriptArgument],
+      "cscript.exe", ["//nologo", "//B", "//E:jscript", Resources.listingScriptArgument, "warm"], Resources.windowsProcessListingScript)],
+  ]);
   public static readonly testRunWorkerFileName: string = "./test-run-worker-entry-point.js";
   public static readonly testWorkerGraceMilliseconds: number = 250;
   public static readonly testWorkerStartMilliseconds: number = 5_000;
@@ -39,6 +74,7 @@ export class Resources {
   public static readonly temporaryDirectoryPrefix: string = "noldova-test-run-";
   public static readonly temporaryDirectoryVariables: readonly string[] = ["TMPDIR", "TEMP", "TMP"];
   public static readonly temporaryRemovalRetries: number = 5;
+  public static readonly endingOwnProcess: string = "The stopped tests' workers still have not ended, so the run ends its own process so it cannot hang.";
   public static readonly minimumWorkerCount: number = 2;
   public static readonly testWorkerDataInvalid: string = "The test worker exchanged data that is not a test worker message.";
   public static readonly coverageOffsetBeforeFirstLine: string = "A coverage offset lies before the generated file's first line.";
@@ -219,12 +255,56 @@ export class Resources {
     return `thread ${threadId} of process ${processId}`;
   }
 
+  public static formatThreadListRun(testProjects: readonly TestProject[]): string {
+    return testProjects.map(t => `${t.packageName} ${t.rootDirectory}`).join(", ");
+  }
+
+  public static formatProfileOwner(processId: string, threadId: string, run: string | undefined): string {
+    return `${Resources.formatProfileThread(processId, threadId)} (${Resources.formatProfileRun(run)})`;
+  }
+
+  public static formatProfileRun(run: string | undefined): string {
+    if (Object.isUndefined(run))
+      return "no test run listed";
+
+    return run === String.empty ? "a test run that listed no test projects" : `the test run of ${run}`;
+  }
+
+  public static formatProfileWriter(owner: string, profiles: readonly string[]): string {
+    return `${owner}, which wrote ${profiles.join(", ")}`;
+  }
+
   public static testWorkerEndedAfterItsLastClass(exitCode: number): string {
     return `The test worker ended with exit code ${exitCode} after its last class.`;
   }
 
   public static testWorkerDidNotEnd(limitMilliseconds: number): string {
     return `The test worker did not end within ${limitMilliseconds} milliseconds after its last class, so its coverage is incomplete.`;
+  }
+
+  public static testWorkersNotEnded(workerCount: number, limitMilliseconds: number, testNames: readonly string[]): string {
+    const running = testNames.length === 0 ? String.empty : `, running ${testNames.join(", ")}`;
+    return `Test workers that could not be ended within ${limitMilliseconds} milliseconds of being stopped: ${workerCount}${running}.`;
+  }
+
+  public static abandonedProcessesEnded(processCount: number): string {
+    return `Processes the run ended that were still running under it: ${processCount}.`;
+  }
+
+  public static processListingUnsupported(platform: string): string {
+    return `The run cannot list the processes running under it on ${platform}.`;
+  }
+
+  public static processListingFailed(file: string): string {
+    return `The run could not list the processes running under it with ${file}.`;
+  }
+
+  public static processListingUnfinished(file: string, answer: string): string {
+    return `The run could not list the processes running under it with ${file}, which ended without finishing its listing and wrote: "${answer}".`;
+  }
+
+  public static processListingTimedOut(file: string, limitMilliseconds: number): string {
+    return `The run could not list the processes running under it with ${file} within ${limitMilliseconds} milliseconds.`;
   }
 
   public static testWorkerDiscoveryMismatch(classCount: number, methodCount: number, otherClassCount: number, otherMethodCount: number): string {
@@ -274,6 +354,10 @@ export class Resources {
 
   public static formatRejectedAfterItsTest(testName: string): string {
     return `${testName} left a promise that rejected after the test ended, unhandled; a test must await or handle what it starts.`;
+  }
+
+  public static formatTemporaryFolderNotRemoved(directory: string): string {
+    return `The run could not remove its temporary folder ${directory}.`;
   }
 
   public static formatTemporaryLeftovers(leftovers: readonly string[]): string {
@@ -374,6 +458,10 @@ export class Resources {
 
   public static coverageReportMalformed(reportFilePath: string): string {
     return `The coverage report "${reportFilePath}" is malformed.`;
+  }
+
+  public static coverageReportMalformedFrom(reportFilePath: string, writer: string): string {
+    return `The coverage report "${reportFilePath}" is malformed. It is a profile of ${writer}.`;
   }
 
   public static coverageReportMalformedForReason(reportFilePath: string, reason: string): string {

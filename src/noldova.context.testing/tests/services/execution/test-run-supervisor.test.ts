@@ -16,7 +16,7 @@ import { threadId } from "node:worker_threads";
 
 import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
 import {
-  Assert, TestClass, TestConsoleReporter, TestData, TestingException, TestMethod, TestMethodResult, TestOutcome
+  Assert, TestClass, TestConsoleReporter, TestData, TestingException, TestMethod, TestMethodResult, TestOutcome, TestProject
 } from "@noldova/context.testing";
 import { TestWorkerMessage } from "@noldova/context.testing/models/execution/test-worker-message.js";
 import { TestWorkerResult } from "@noldova/context.testing/models/execution/test-worker-result.js";
@@ -100,12 +100,14 @@ export class TestRunSupervisorTests {
     try {
       const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"));
       const workerThreadId = worker.threadId;
-      const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), coverageDirectory,
+      const projects = [new TestProject("Sample", "compiled/tests"), new TestProject("Other", "other/tests")];
+      const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, projects, [], TestRunSupervisorTests.reporter([]), coverageDirectory,
         undefined, 1, undefined, () => worker, new FakeClock()).runAsync();
       worker.send(TestWorkerMessage.ready(1, 1, 1));
       await running;
 
-      Assert.areEqual(`${threadId}\n${workerThreadId}\n`, await TestRunSupervisorTests.readThreadListAsync(coverageDirectory));
+      Assert.areEqual(`Sample compiled/tests, Other other/tests\n${threadId}\n${workerThreadId}\n`,
+        await TestRunSupervisorTests.readThreadListAsync(coverageDirectory));
     }
     finally {
       await rm(coverageDirectory, { recursive: true, force: true });
@@ -126,7 +128,7 @@ export class TestRunSupervisorTests {
       await running;
 
       Assert.areEqual(1, worker.terminateCount);
-      Assert.areEqual(`${threadId}\n`, await TestRunSupervisorTests.readThreadListAsync(coverageDirectory));
+      Assert.areEqual(`\n${threadId}\n`, await TestRunSupervisorTests.readThreadListAsync(coverageDirectory));
     }
     finally {
       await rm(coverageDirectory, { recursive: true, force: true });
@@ -339,6 +341,113 @@ export class TestRunSupervisorTests {
   }
 
   @TestMethod
+  public async replacesAWorkerThatDoesNotEndWithinTheLimitAfterItsTestStopsAndNamesThatTestAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const release = Promise.withResolvers<void>();
+    const started = Promise.withResolvers<void>();
+    const blocking = new ScriptedWorker(worker => {
+      worker.send(TestWorkerMessage.started(0, 0, TestRunSupervisorTests.TIMEOUT_MILLISECONDS));
+      started.resolve();
+    }, release.promise);
+    const resuming = new ScriptedWorker(worker => {
+      TestRunSupervisorTests.completeMethod(worker, 0, TestOutcome.Failed);
+      worker.send(TestWorkerMessage.classCompleted(0, "StoppedFixtureTests.test.js"));
+    });
+    const scripted = [blocking, resuming];
+    const supervisor = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
+      undefined, () => {
+        const worker = scripted.shift() ?? new ScriptedWorker(() => undefined);
+        queueMicrotask(() => worker.send(TestWorkerMessage.ready(1, 1, 1)));
+        return worker;
+      }, clock);
+    const running = supervisor.runAsync();
+    try {
+      await started.promise;
+      clock.advance(450);
+      await blocking.terminating;
+      clock.advance(4_999);
+      await new Promise<void>(resolve => setImmediate(resolve));
+      const runsBeforeTheLimit = resuming.runs.length;
+      clock.advance(1);
+      const totals = await running;
+
+      Assert.areEqual(0, runsBeforeTheLimit);
+      Assert.areEqual("0.0 true", TestRunSupervisorTests.describeRuns(resuming));
+      Assert.areEqual(1, totals.failed);
+      Assert.areEqual("Test workers that could not be ended within 5000 milliseconds of being stopped: 1, running StoppedFixtureTests.method0.",
+        supervisor.unendedWorkersMessage);
+    }
+    finally {
+      release.resolve();
+    }
+  }
+
+  @TestMethod
+  public async failsTheRunWithoutWaitingForAWorkerThatDoesNotEndOnceStoppedAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const release = Promise.withResolvers<void>();
+    const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), release.promise);
+    const supervisor = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
+      undefined, () => worker, clock);
+    const running = supervisor.runAsync();
+    try {
+      worker.send(TestWorkerMessage.ready(1, 1, 1));
+      await worker.ending;
+      clock.advance(5_000);
+      await worker.terminating;
+      clock.advance(4_999);
+      await new Promise<void>(resolve => setImmediate(resolve));
+      const messageBeforeTheLimit = supervisor.unendedWorkersMessage;
+      clock.advance(1);
+      const error = await Assert.throwsAsync(() => running, Error);
+
+      Assert.isUndefined(messageBeforeTheLimit);
+      Assert.areEqual("The test worker did not end within 5000 milliseconds after its last class, so its coverage is incomplete.", error.message);
+      Assert.areEqual("Test workers that could not be ended within 5000 milliseconds of being stopped: 1.", supervisor.unendedWorkersMessage);
+    }
+    finally {
+      release.resolve();
+    }
+  }
+
+  @TestMethod
+  public async findsALeftBehindWorkerEndedWhenItEndsWithinTheLimitAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const release = Promise.withResolvers<void>();
+    const leftBehind: string[] = [];
+    try {
+      const supervisor = await TestRunSupervisorTests.leaveAWorkerBehindAsync(clock, release.promise, leftBehind);
+
+      const waiting = supervisor.waitForUnendedWorkersAsync();
+      clock.advance(4_999);
+      release.resolve();
+
+      Assert.isTrue(await waiting);
+      Assert.areEqual("left behind", leftBehind.join());
+    }
+    finally {
+      release.resolve();
+    }
+  }
+
+  @TestMethod
+  public async stopsWaitingForALeftBehindWorkerAtTheLimitAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const release = Promise.withResolvers<void>();
+    try {
+      const supervisor = await TestRunSupervisorTests.leaveAWorkerBehindAsync(clock, release.promise);
+
+      const waiting = supervisor.waitForUnendedWorkersAsync();
+      clock.advance(5_000);
+
+      Assert.isFalse(await waiting);
+    }
+    finally {
+      release.resolve();
+    }
+  }
+
+  @TestMethod
   public async failsTheRunWhenAWorkerDoesNotEndWithinTheLimitAsync(): Promise<void> {
     const clock = new FakeClock();
     const release = Promise.withResolvers<void>();
@@ -546,6 +655,21 @@ export class TestRunSupervisorTests {
     Assert.areEqual(1, fileNames.length);
     Assert.isTrue(fileNames.every(t => t.startsWith(`threads-${process.pid}-`) && t.endsWith(".txt")), fileNames.join());
     return readFile(join(coverageDirectory, fileNames.join()), "utf8");
+  }
+
+  private static async leaveAWorkerBehindAsync(clock: FakeClock, released: Promise<void>, leftBehind: string[] = []): Promise<TestRunSupervisor> {
+    const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), released);
+    const supervisor = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
+      undefined, () => worker, clock);
+    supervisor.whenWorkerLeftBehind(() => leftBehind.push("left behind"));
+    const running = supervisor.runAsync();
+    worker.send(TestWorkerMessage.ready(1, 1, 1));
+    await worker.ending;
+    clock.advance(5_000);
+    await worker.terminating;
+    clock.advance(5_000);
+    await Assert.throwsAsync(() => running, Error);
+    return supervisor;
   }
 
   private static completeClass(worker: ScriptedWorker, classIndex: number, className: string): void {
