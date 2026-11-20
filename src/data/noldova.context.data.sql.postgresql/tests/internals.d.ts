@@ -201,6 +201,14 @@ declare module "@noldova/context.data.sql.postgresql/exceptions/query-timeout.ex
   }
 }
 
+declare module "@noldova/context.data.sql.postgresql/exceptions/stray-cancel.exception.js" {
+  import { DataException } from "@noldova/context.data";
+
+  export class StrayCancelException extends DataException {
+    public constructor(cause: Error);
+  }
+}
+
 declare module "@noldova/context.data.sql.postgresql/exceptions/unsafe-transaction.exception.js" {
   import { DataException } from "@noldova/context.data";
 

@@ -17,6 +17,7 @@ import { SessionStarter } from "@noldova/context.data.sql.postgresql/services/se
 export class FakeSessionStarter extends SessionStarter {
   public readonly cancelled: BackendKey[] = [];
   public failure: Error | null = null;
+  public holding: Promise<void> | null = null;
 
   public constructor() {
     super(new ConnectionOptions("localhost", 5432, "app", "app", "", SslMode.Disable, ChannelBinding.Disable, 0, new Map(), new SystemCertificates()));
@@ -24,6 +25,9 @@ export class FakeSessionStarter extends SessionStarter {
 
   public override cancelAsync(backend: BackendKey, _signal: AbortSignal): Promise<void> {
     this.cancelled.push(backend);
+    if (!Object.isNull(this.holding))
+      return this.holding;
+
     return Object.isNull(this.failure) ? Promise.resolve() : Promise.reject(this.failure);
   }
 }
