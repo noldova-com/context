@@ -110,7 +110,7 @@ export class TestRunSupervisor {
 
     const testNames = this.classResults.flatMap((classResult, classIndex) => classResult.methodResults
       .filter((_, methodIndex) => this.unendedTests.has(TestRunSupervisor.formatTestKey(classIndex, methodIndex)))
-      .map(t => `${t.className}.${t.displayName}`));
+      .map(t => t.displayName));
     return Resources.testWorkersNotEnded(this.unendedWorkers.size, Resources.testWorkerEndMilliseconds, testNames);
   }
 
