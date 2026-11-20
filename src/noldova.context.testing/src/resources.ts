@@ -41,14 +41,18 @@ export class Resources {
   public static readonly listerReadyLine: string = "ready";
   public static readonly listerEndLine: string = "end";
   public static readonly warmListingMilliseconds: number = 5000;
+  public static readonly oneOffListingMilliseconds: number = 60_000;
   public static readonly windowsProcessListingScript: string = "$ErrorActionPreference = 'Stop'; " +
-    "$all = Get-CimInstance -Query 'SELECT ProcessId, ParentProcessId, CreationDate, Name FROM Win32_Process'; $created = @{}; " +
-    "foreach ($item in $all) { $created[$item.ProcessId] = $item.CreationDate }; " +
+    "$query = (New-Object -ComObject WbemScripting.SWbemLocator).ConnectServer()" +
+    ".ExecQuery('SELECT ProcessId, ParentProcessId, CreationDate, Name FROM Win32_Process'); " +
+    "$all = foreach ($item in $query) { $values = $item.Properties_; [pscustomobject]@{ ProcessId = $values.Item('ProcessId').Value; " +
+    "ParentProcessId = $values.Item('ParentProcessId').Value; CreationDate = $values.Item('CreationDate').Value; Name = $values.Item('Name').Value } }; " +
+    "$created = @{}; foreach ($item in $all) { $created[$item.ProcessId] = $item.CreationDate }; " +
     "foreach ($item in $all) { $parentCreated = $created[$item.ParentProcessId]; " +
     "if ($item.Name -ne 'conhost.exe' -and $null -ne $parentCreated -and $null -ne $item.CreationDate -and $parentCreated -lt $item.CreationDate) " +
     "{ '{0} {1}' -f $item.ProcessId, $item.ParentProcessId } }";
   public static readonly windowsWarmListingScript: string = "$ErrorActionPreference = 'Stop'; " +
-    "$null = Get-CimInstance -Query 'SELECT ProcessId FROM Win32_Process WHERE ProcessId = 0'; " +
+    `$null = & { ${Resources.windowsProcessListingScript} }; ` +
     `[Console]::Out.WriteLine('${Resources.listerReadyLine}'); [Console]::Out.Flush(); ` +
     "while ($null -ne [Console]::In.ReadLine()) { " +
     `& { ${Resources.windowsProcessListingScript} } | ForEach-Object { [Console]::Out.WriteLine($_) }; ` +
@@ -254,8 +258,14 @@ export class Resources {
   }
 
   public static formatProfileOwner(processId: string, threadId: string, run: string | undefined): string {
-    const owner = Object.isUndefined(run) ? "no test run listed" : `the test run of ${run}`;
-    return `${Resources.formatProfileThread(processId, threadId)} (${owner})`;
+    return `${Resources.formatProfileThread(processId, threadId)} (${Resources.formatProfileRun(run)})`;
+  }
+
+  public static formatProfileRun(run: string | undefined): string {
+    if (Object.isUndefined(run))
+      return "no test run listed";
+
+    return run === String.empty ? "a test run that listed no test projects" : `the test run of ${run}`;
   }
 
   public static formatProfileWriter(owner: string, profiles: readonly string[]): string {
@@ -285,6 +295,10 @@ export class Resources {
 
   public static processListingFailed(file: string): string {
     return `The run could not list the processes running under it with ${file}.`;
+  }
+
+  public static processListingTimedOut(file: string, limitMilliseconds: number): string {
+    return `The run could not list the processes running under it with ${file} within ${limitMilliseconds} milliseconds.`;
   }
 
   public static testWorkerDiscoveryMismatch(classCount: number, methodCount: number, otherClassCount: number, otherMethodCount: number): string {

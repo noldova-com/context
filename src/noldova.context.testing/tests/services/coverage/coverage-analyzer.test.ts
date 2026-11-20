@@ -672,6 +672,14 @@ export class CoverageAnalyzerTests {
   }
 
   @TestMethod
+  public async saysWhenTheTestRunOfAThreadWithoutAProfileListedNoTestProjectsAsync(): Promise<void> {
+    const error = await Assert.throwsAsync(() => this.analyzeListedThreadsAsync("\n0\n7\n"), TestingException);
+
+    Assert.areEqual("No coverage profile was written for thread 7 of process 12 (a test run that listed no test projects), so the coverage would be " +
+      "incomplete.", error.message);
+  }
+
+  @TestMethod
   public async acceptsAListWhoseThreadsAllWroteProfilesAsync(): Promise<void> {
     const result = await this.analyzeListedThreadsAsync("Sample /root\n0\n");
 

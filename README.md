@@ -131,7 +131,7 @@ Four test files wait on a real clock, because the wait is what they test; every 
 - `src/data/noldova.context.data.sql.postgresql/tests/models/client/postgresql-pool.server.test.ts`: its tests wait out a real 0.5 s query timeout against a 30 s `pg_sleep`, end the pool with real 0.01 s and 0.05 s deadlines, and run three 0.01 s `pg_sleep` queries.
 - `src/data/noldova.context.data.sql.postgresql/tests/models/client/client-timers.test.ts`: real 1 ms timers, since `ClientTimers` is what it tests.
 - `src/noldova.context.testing/tests/services/timing/system-clock.test.ts`: real 0 ms timers, since `SystemClock` is what it tests.
-- `src/noldova.context.testing/tests/services/execution/test-run-entry-point.test.ts`: one run of a test that never settles waits out a real 100 ms limit, and two runs of a test blocked on a child process wait out a real 2 s limit and the real 5 s a stopped worker has to end, since the run's own limits are what it tests.
+- `src/noldova.context.testing/tests/services/execution/test-run-entry-point.test.ts`: one run of a test that never settles waits out a real 100 ms limit, and three runs of a test blocked on a child process wait out a real 2 s limit and the real 5 s a stopped worker has to end, since the run's own limits are what it tests.
 
 The suite has one hang limit, 60 seconds, which `scripts/suite-script.ts` sets for every run of it; no test carries a limit of its own.
 It bounds a hang and is never what a test checks: a test that reaches it fails under its own name with the limit it waited for, and is a bug to fix, never a reason to raise the limit.
@@ -146,7 +146,7 @@ Test files slower than the timing check's budget:
 
 | File | Time | Why |
 |---|---|---|
-| `noldova.context.testing/services/execution/test-run-entry-point.test.js` | 22200 ms | Each of its tests starts a whole run in a child process, and two wait out a stopped worker's real 5 s. |
+| `noldova.context.testing/services/execution/test-run-entry-point.test.js` | 22200 ms | Each of its tests starts a whole run in a child process, and three wait out a stopped worker's real 5 s. |
 | `noldova.context.parsers.typescript/conformance/conformance-cases.test.js` | 14500 ms | It runs every vendored TypeScript conformance case. |
 | `noldova.context.exceptions/api/packed-install.test.js` | 11700 ms | Each of its tests installs packed packages into an app with npm, in child processes. |
 | `noldova.context.parsers.typescript/services/typescript-syntax.parser.test.js` | 7800 ms | Its long-chain tests parse inputs large enough to show the parser's work stays linear. |

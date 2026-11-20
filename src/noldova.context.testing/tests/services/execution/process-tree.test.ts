@@ -8,6 +8,7 @@
 
 import { type ChildProcess, spawn } from "node:child_process";
 import { once } from "node:events";
+import { setImmediate } from "node:timers/promises";
 
 import { Assert, TestClass, TestingException, TestMethod, Timeout } from "@noldova/context.testing";
 import { ProcessListing } from "@noldova/context.testing/models/execution/process-listing.js";
@@ -28,6 +29,8 @@ export class ProcessTreeTests {
   private static readonly SILENT_SCRIPT: string = "process.stdin.resume();";
   private static readonly ENDING_SCRIPT: string = "console.log(\"ready\"); process.stdin.once(\"data\", () => process.exit(1));";
   private static readonly MUTE_SCRIPT: string = "console.log(\"ready\"); process.stdin.resume();";
+  private static readonly HANGING_SCRIPT: string = "setInterval(() => undefined, 1_000);";
+  private static readonly UNUSED_PROCESS_ID: number = 2_147_483_647;
   private static warmTree: ProcessTree | undefined;
 
   @Timeout(60_000)
@@ -65,14 +68,14 @@ export class ProcessTreeTests {
 
   @TestMethod
   public async countsOnlyTheProcessesItEndsAsync(): Promise<void> {
-    const exited = ProcessTreeTests.startNode(["--eval", String.empty]);
-    await once(exited, "close");
+    const error = Assert.throws(() => process.kill(ProcessTreeTests.UNUSED_PROCESS_ID, 0), Error);
     const sleeping = ProcessTreeTests.startNode(["--eval", ProcessTreeTests.SLEEP_SCRIPT]);
     const closed = once(sleeping, "close");
 
-    const endedCount = ProcessTree.end([exited.pid ?? -1, sleeping.pid ?? -1]);
+    const endedCount = ProcessTree.end([ProcessTreeTests.UNUSED_PROCESS_ID, sleeping.pid ?? -1]);
     await closed;
 
+    Assert.areEqual("kill ESRCH", error.message);
     Assert.areEqual(1, endedCount);
   }
 
@@ -138,6 +141,27 @@ export class ProcessTreeTests {
     finally {
       await tree.closeAsync();
     }
+  }
+
+  @TestMethod
+  public async failsAListingThatDoesNotAnswerWithinItsLimitAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const listings = new Map([["fake", new ProcessListing(process.execPath, ["--eval", ProcessTreeTests.HANGING_SCRIPT], "missing-lister", [])]]);
+    const tree = new ProcessTree("fake", listings, clock);
+    let isSettled = false;
+    const listing = tree.listDescendantsAsync(5);
+    listing.then(() => { isSettled = true; }, () => { isSettled = true; });
+
+    await setImmediate();
+    clock.advance(59_999);
+    await setImmediate();
+    const isSettledBeforeTheLimit = isSettled;
+    clock.advance(1);
+    const error = await Assert.throwsAsync(() => listing, TestingException);
+    await tree.closeAsync();
+
+    Assert.isFalse(isSettledBeforeTheLimit);
+    Assert.areEqual(`The run could not list the processes running under it with ${process.execPath} within 60000 milliseconds.`, error.message);
   }
 
   @TestMethod

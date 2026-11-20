@@ -103,7 +103,6 @@ export class TestRunEntryPoint {
   private async endOwnProcessAsync(): Promise<void> {
     await new Promise<void>(resolve => process.stdout.write(String.empty, () => resolve()));
     await new Promise<void>(resolve => process.stderr.write(Resources.endingOwnProcess + Resources.lineSeparator, () => resolve()));
-    // Node writes the coverage profile as it kills its own process, so a profile taken here as well would be a second one, which can replace it.
     process.kill(process.pid, Resources.killSignal);
   }
 

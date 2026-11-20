@@ -366,6 +366,7 @@ export class TestRunSupervisorTests {
       clock.advance(450);
       await blocking.terminating;
       clock.advance(4_999);
+      await new Promise<void>(resolve => setImmediate(resolve));
       const runsBeforeTheLimit = resuming.runs.length;
       clock.advance(1);
       const totals = await running;
@@ -395,6 +396,7 @@ export class TestRunSupervisorTests {
       clock.advance(5_000);
       await worker.terminating;
       clock.advance(4_999);
+      await new Promise<void>(resolve => setImmediate(resolve));
       const messageBeforeTheLimit = supervisor.unendedWorkersMessage;
       clock.advance(1);
       const error = await Assert.throwsAsync(() => running, Error);
