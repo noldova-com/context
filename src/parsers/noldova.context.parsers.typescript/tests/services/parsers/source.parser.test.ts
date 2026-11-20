@@ -6,6 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// This file uses Node APIs and will change when we replace Node.
+
+import { mock } from "node:test";
+
 import { ParserException, Source, SourceReader, SourceSpan } from "@noldova/context.parsers";
 import {
   TypeScriptCallExpressionNode,
@@ -16,6 +20,7 @@ import {
 } from "@noldova/context.parsers.typescript";
 import { TypeScriptParserException } from "@noldova/context.parsers.typescript/exceptions/typescript-parser.exception.js";
 import { TypeScriptDiagnosticTemplates } from "@noldova/context.parsers.typescript/models/diagnostics/typescript-diagnostic-templates.js";
+import { TypeScriptRegionSplicer } from "@noldova/context.parsers.typescript/services/typescript-region-splicer.js";
 import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
 import { FailingSourceReader } from "../../fixtures/failing-source.reader.js";
@@ -116,6 +121,36 @@ export class SourceParserTests {
     const result = TypeScriptParser.parse(content);
     Assert.areEqual(expected, TypeScriptDiagnosticsFixture.project(result.diagnostics));
     Assert.areEqual(endOffset, result.rootNode.span.endOffset);
+  }
+
+  @TestMethod
+  public reparsesEachOfManySeparatedTopLevelAwaitsInSourceOrder(): void {
+    const statements = [...Array.from({ length: 400 }, (_, index) => [`await /p${index}/;`, `const c${index} = ${index};`]).flat(), "export {};"];
+    const content = statements.join(" ");
+
+    const result = TypeScriptParser.parse(content);
+
+    Assert.areEqual(0, result.diagnostics.length);
+    Assert.areEqual(statements.join("|"), result.rootNode.children.map(t => content.slice(t.span.startOffset, t.span.endOffset)).join("|"));
+  }
+
+  @TestMethod
+  public splicesAndMeasuresTheRegionsOfAManyAwaitSourceInOneCallEach(): void {
+    const content = [...Array.from({ length: 400 }, (_, index) => `await /p${index}/; const c${index} = ${index};`), "export {};"].join(" ");
+    const splicing = mock.method(TypeScriptRegionSplicer, "spliceStatements");
+    const measuring = mock.method(TypeScriptRegionSplicer, "measureReplacedSpans");
+    try {
+      TypeScriptParser.parse(content);
+
+      Assert.areEqual(1, splicing.mock.callCount());
+      Assert.areEqual(400, splicing.mock.calls[0]?.arguments[1].length);
+      Assert.areEqual(1, measuring.mock.callCount());
+      Assert.areEqual(400, measuring.mock.calls[0]?.arguments[1].length);
+    }
+    finally {
+      splicing.mock.restore();
+      measuring.mock.restore();
+    }
   }
 
   @TestData("(value);", 0)
