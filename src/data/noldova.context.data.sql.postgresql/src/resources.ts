@@ -155,6 +155,7 @@ export class Resources {
   public static readonly statementNameSuffix: string = "_";
   public static readonly stringEscape: string = "\\";
   public static readonly stringQuote: string = "'";
+  public static readonly strayCancel: string = "Another query's cancel request reached the server after that query had ended and canceled this statement, which could not be retried.";
   public static readonly systemCertificates: "system" = "system";
   public static readonly tableNameField: string = "table_name";
   public static readonly targetSessionAttrsOption: string = "target_session_attrs";
