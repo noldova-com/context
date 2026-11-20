@@ -28,7 +28,9 @@ const terminator = new EcmaScriptLineTerminator();
 terminator.getLength("a\r\nb", 1); // 2: CRLF.
 
 // Linux's mount tables write a space in a mount point as \040; split each
-// line into its fields first, then decode each field.
+// line into its fields first, then decode each field. Each escape becomes one
+// character, so formats that escape UTF-8 bytes, such as git's quoted paths,
+// need a decoder of their own.
 OctalEscapeService.decode("/media/USB\\040Drive"); // "/media/USB Drive"
 
 UnicodeCodePointService.isIdentifierStart("a".codePointAt(0)!); // true

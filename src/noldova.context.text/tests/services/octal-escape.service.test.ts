@@ -37,6 +37,21 @@ export class OctalEscapeServiceTests {
   }
 
   @TestMethod
+  public keepsADigitAfterAnEscape(): void {
+    Assert.areEqual("a\n3", OctalEscapeService.decode("a\\0123"));
+  }
+
+  @TestMethod
+  public decodesTheEscapeAfterABackslashWithoutDigits(): void {
+    Assert.areEqual("a\\ b", OctalEscapeService.decode("a\\\\040b"));
+  }
+
+  @TestMethod
+  public keepsASurrogatePairBesideAnEscape(): void {
+    Assert.areEqual("\u{1F600} \u{1F600}", OctalEscapeService.decode("\u{1F600}\\040\u{1F600}"));
+  }
+
+  @TestMethod
   public decodesAMountPointWithSpaces(): void {
     Assert.areEqual("/run/media/user/My Disk 2", OctalEscapeService.decode("/run/media/user/My\\040Disk\\0402"));
   }

@@ -165,9 +165,14 @@ export declare class EcmaScriptLineTerminator extends LineTerminator {
 }
 
 /**
- * Decodes the three-digit octal escapes some text formats write for a
- * character, such as Linux's mount tables, which write a space in a mount
- * point as `\040`.
+ * Decodes the three-digit octal escapes some text formats write for a single
+ * character, such as Linux's mount tables, which escape only a space, tab,
+ * newline or backslash and write a space in a mount point as `\040`.
+ *
+ * It doesn't suit formats that escape a UTF-8 text's bytes or use C's other
+ * escapes, such as git's quoted paths: each escape becomes one character, so
+ * `\303\251` gives "Ã©" rather than "é", and `\t`, `\"` and `\\` stay as they
+ * are.
  *
  * @example
  * ```ts
@@ -175,12 +180,14 @@ export declare class EcmaScriptLineTerminator extends LineTerminator {
  *
  * OctalEscapeService.decode("/media/USB\\040Drive"); // "/media/USB Drive"
  * OctalEscapeService.decode("a\\134040b"); // "a\\040b": an escaped backslash keeps the digits after it.
+ * OctalEscapeService.decode("a\\\\040b"); // "a\\ b": the first backslash isn't followed by digits.
  * ```
  */
 export declare class OctalEscapeService {
   /**
    * Replaces each backslash followed by three octal digits from `\000` through
-   * `\377` with the character of that code, from U+0000 through U+00FF.
+   * `\377` with the character of that code, from U+0000 through U+00FF, not
+   * with a byte.
    * The text is read once from its start, so a decoded backslash never begins
    * another escape.
    *
