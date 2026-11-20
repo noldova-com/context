@@ -110,14 +110,26 @@ export default class PostgreSQLServer implements AsyncDisposable {
   }
 
   public async [Symbol.asyncDispose](): Promise<void> {
+    const stopFailures: unknown[] = [];
     try {
       if (this.started)
         await this.runAsync("pg_ctl", ["-D", this.dataFolder, "-m", "fast", "-w", "stop"]);
     }
-    finally {
-      this.started = false;
+    catch (error) {
+      stopFailures.push(error);
+    }
+
+    this.started = false;
+    try {
       await fs.rm(this.temporaryFolder, { recursive: true, force: true, maxRetries: PostgreSQLServer.REMOVAL_RETRIES });
     }
+    catch (error) {
+      const messages = [...stopFailures.map(t => PostgreSQLServer.describe(t)), PostgreSQLServer.folderNotRemoved(this.temporaryFolder, error)];
+      throw new CommandFailedException(messages.join(PostgreSQLServer.NEW_LINE));
+    }
+
+    if (stopFailures.length > 0)
+      throw stopFailures[0];
   }
 
   private get dataFolder(): string {
@@ -351,6 +363,10 @@ export default class PostgreSQLServer implements AsyncDisposable {
 
   private static startAndStopFailed(start: unknown, stop: unknown): string {
     return `The PostgreSQL server did not start: ${PostgreSQLServer.describe(start)}${PostgreSQLServer.NEW_LINE}Stopping it failed too: ${PostgreSQLServer.describe(stop)}`;
+  }
+
+  private static folderNotRemoved(folder: string, error: unknown): string {
+    return `The test PostgreSQL server's folder ${folder} could not be removed: ${PostgreSQLServer.describe(error)}`;
   }
 
   private static describe(error: unknown): string {
