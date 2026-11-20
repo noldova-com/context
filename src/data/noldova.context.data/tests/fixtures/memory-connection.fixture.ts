@@ -16,6 +16,7 @@ export class MemoryConnection extends Connection<MemoryTransaction> {
   public readonly transactions: MemoryTransaction[] = [];
   public readonly log: string[] = [];
   public closeCount: number = 0;
+  public closeFailure: Error | undefined = undefined;
 
   public constructor(dataSource: DataSource = new DataSource("memory", ":memory:")) {
     super(dataSource);
@@ -41,5 +42,7 @@ export class MemoryConnection extends Connection<MemoryTransaction> {
   protected override async closeCoreAsync(): Promise<void> {
     this.open = false;
     this.closeCount += 1;
+    if (!Object.isUndefined(this.closeFailure))
+      throw this.closeFailure;
   }
 }

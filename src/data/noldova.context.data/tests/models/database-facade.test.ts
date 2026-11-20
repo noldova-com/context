@@ -30,6 +30,46 @@ export class DatabaseFacadeTests {
   }
 
   @TestMethod
+  public async closesTheConnectionWhenTheProviderCannotCreateTheMigrator(): Promise<void> {
+    const provider = new MemoryProvider();
+    provider.migratorFailure = new Error("no migrator");
+
+    const error = Assert.throws(() => new DatabaseFacade(new DbContextOptions(provider, new DataSource("notes", ":memory:")), []), Error);
+    const connection = provider.connections[0];
+    await Assert.throwsAsync(async () => connection?.recordAsync("after"), DataException);
+
+    Assert.areEqual(provider.migratorFailure, error);
+    Assert.areEqual(1, connection?.closeCount);
+  }
+
+  @TestMethod
+  public async closesTheConnectionWhenTheProviderCannotCreateTheChangeFeed(): Promise<void> {
+    const provider = new MemoryProvider();
+    provider.changeFeedFailure = new Error("no change feed");
+
+    const error = Assert.throws(() => new DatabaseFacade(new DbContextOptions(provider, new DataSource("notes", ":memory:")), []), Error);
+    const connection = provider.connections[0];
+    await Assert.throwsAsync(async () => connection?.recordAsync("after"), DataException);
+
+    Assert.areEqual(provider.changeFeedFailure, error);
+    Assert.areEqual(1, connection?.closeCount);
+  }
+
+  @TestMethod
+  public async throwsTheFactoryFailureWhenTheConnectionAlsoFailsToClose(): Promise<void> {
+    const provider = new MemoryProvider();
+    provider.migratorFailure = new Error("no migrator");
+    provider.closeFailure = new Error("no close");
+
+    const error = Assert.throws(() => new DatabaseFacade(new DbContextOptions(provider, new DataSource("notes", ":memory:")), []), Error);
+    const connection = provider.connections[0];
+    await Assert.throwsAsync(async () => connection?.recordAsync("after"), DataException);
+
+    Assert.areEqual(provider.migratorFailure, error);
+    Assert.areEqual(1, connection?.closeCount);
+  }
+
+  @TestMethod
   public opensNoConnectionForMigrationsOutOfOrder(): void {
     const provider = new MemoryProvider();
     const options = new DbContextOptions(provider, new DataSource("notes", ":memory:"));

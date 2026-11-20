@@ -21,8 +21,14 @@ export class DatabaseFacade<TConnection extends Connection, TMigration extends M
   public constructor(options: DbContextOptions<TConnection, TMigration>, migrations: readonly TMigration[]) {
     Migration.validateOrder(migrations);
     this.connection = options.provider.openConnection(options.dataSource);
-    this.migrator = options.provider.createMigrator(this.connection, migrations);
-    this.changeFeed = options.provider.createChangeFeed(this.connection);
+    try {
+      this.migrator = options.provider.createMigrator(this.connection, migrations);
+      this.changeFeed = options.provider.createChangeFeed(this.connection);
+    }
+    catch (error) {
+      this.connection.closeAsync().catch(() => undefined);
+      throw error;
+    }
   }
 
   public async migrateAsync(): Promise<readonly string[]> {
