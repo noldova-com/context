@@ -59,9 +59,9 @@ export class TestExecutor {
 
     try {
       const classResults: TestClassResult[] = [];
+      const finishedRejections: (readonly [TestMethodResult, readonly unknown[], number])[] = [];
       for (const testClass of testClasses) {
         const methodResults: TestMethodResult[] = [];
-        const finishedRejections: (readonly [TestMethodResult, readonly unknown[], number])[] = [];
         for (const method of testClass.methods) {
           if (isStopping?.() === true)
             return classResults;

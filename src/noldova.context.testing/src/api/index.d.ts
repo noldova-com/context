@@ -1475,8 +1475,9 @@ export declare class TestExecutor {
    *   classes that completed. The listener's `onMethodCompleted` may make it return `true` to stop after that invocation.
    * @returns A promise resolving to one result per supplied class and invocation. Test failures become Failed results, not rejection of this promise.
    *   Empty input returns an empty array; a stopped run returns only the classes that completed before it stopped.
-   * @throws TestingException via promise rejection, naming the test, when a promise a test started rejects unhandled after that test ended but
-   *   before its class ended; the rejection is its cause, and the class has no result.
+   * @throws TestingException via promise rejection, naming the test, when a promise a test started rejects unhandled after that test ended,
+   *   while its class or a later class of the same call runs; it rejects at the end of that class, the rejection is its cause, and that
+   *   class has no result.
    * @throws Error via promise rejection with the listener's own exception when the listener throws; the executor's unhandled-rejection listener is
    *   removed either way.
    * @example
