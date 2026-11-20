@@ -272,6 +272,10 @@ export class Resources {
     return `${heading} left ${resources.join(Resources.valueSeparator)} open after its tests finished; a test must close what it opens.`;
   }
 
+  public static formatRejectedAfterItsTest(testName: string): string {
+    return `${testName} left a promise that rejected after the test ended, unhandled; a test must await or handle what it starts.`;
+  }
+
   public static formatTemporaryLeftovers(leftovers: readonly string[]): string {
     return `The tests left ${leftovers.join(Resources.valueSeparator)} in the run's temporary folder; a test must remove what it creates.`;
   }

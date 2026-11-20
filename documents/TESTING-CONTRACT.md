@@ -50,7 +50,7 @@ Using any of these decorators outside its permitted targets fails discovery.
 Each method or data row runs on a fresh instance of its test class; no state flows between tests.
 Synchronous and asynchronous methods are supported: a returned promise is awaited, and a rejection, thrown exception, or unhandled rejection attributable to the test is a failure.
 Work that never settles fails loudly; a hang is never success or silence.
-The runner owns the timeout mechanism and reports it with the failure; later unhandled rejections remain attributed to their originating test.
+The runner owns the timeout mechanism and reports it with the failure; later unhandled rejections remain attributed to their originating test, and one that lands after that test ended but before its class ended fails the run, naming that test, as an open resource does.
 A test runs under its own `@Timeout` limit when it has one, and under the run's limit otherwise; the run's limit never changes for one test, and a test past its own limit times out as one past the run's limit does.
 The command-line run isolates tests in parallel worker threads, one per available processor and at least two by default, that its main thread times per test: the workers take whole test classes from one shared queue, and the run reports each class in discovery order, whichever worker finishes it first.
 Its summary's time is the run's elapsed time, not the sum of its tests' durations.

@@ -10,7 +10,7 @@
 
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
+import { ArgumentOutOfRangeException, ExceptionOptions } from "@noldova/context.exceptions";
 
 import { TestOutcome } from "../../enums/test-outcome.js";
 import { TestTimeoutException } from "../../exceptions/test-timeout.exception.js";
@@ -61,16 +61,22 @@ export class TestExecutor {
       const classResults: TestClassResult[] = [];
       for (const testClass of testClasses) {
         const methodResults: TestMethodResult[] = [];
+        const finishedRejections: (readonly [TestMethodResult, readonly unknown[], number])[] = [];
         for (const method of testClass.methods) {
           if (isStopping?.() === true)
             return classResults;
 
           progressListener?.onMethodStarted?.(testClass, method);
-          const methodResult = stoppedMethods.has(method) ? this.createStoppedResult(testClass, method) : await this.executeMethodAsync(testClass, method);
+          const rejections: unknown[] = [];
+          const methodResult = stoppedMethods.has(method)
+            ? this.createStoppedResult(testClass, method)
+            : await this.executeMethodAsync(testClass, method, rejections);
           methodResults.push(methodResult);
+          finishedRejections.push([methodResult, rejections, rejections.length]);
           progressListener?.onMethodCompleted?.(methodResult);
         }
 
+        TestExecutor.throwIfRejectedAfterItsTest(finishedRejections);
         const classResult = new TestClassResult(testClass.packageName, testClass.className, testClass.filePath, methodResults);
         classResults.push(classResult);
         progressListener?.onClassCompleted(classResult);
@@ -82,6 +88,15 @@ export class TestExecutor {
       if (ownsRejectionListener)
         process.off(Resources.unhandledRejectionEvent, TestExecutor.ON_UNHANDLED_REJECTION);
     }
+  }
+
+  private static throwIfRejectedAfterItsTest(finishedRejections: readonly (readonly [TestMethodResult, readonly unknown[], number])[]): void {
+    const late = finishedRejections.find(([, rejections, reportedCount]) => rejections.length > reportedCount);
+    if (Object.isUndefined(late))
+      return;
+
+    const [methodResult, rejections, reportedCount] = late;
+    throw new TestingException(Resources.formatRejectedAfterItsTest(methodResult.displayName), new ExceptionOptions(rejections[reportedCount]));
   }
 
   private createStoppedResult(testClass: DiscoveredTestClass, method: DiscoveredTestMethod): TestMethodResult {
@@ -97,7 +112,7 @@ export class TestExecutor {
       undefined);
   }
 
-  private async executeMethodAsync(testClass: DiscoveredTestClass, method: DiscoveredTestMethod): Promise<TestMethodResult> {
+  private async executeMethodAsync(testClass: DiscoveredTestClass, method: DiscoveredTestMethod, unhandledRejections: unknown[]): Promise<TestMethodResult> {
     const skipReason = method.skipReason ?? testClass.skipReason;
     if (!Object.isUndefined(skipReason))
       return new TestMethodResult(
@@ -112,7 +127,6 @@ export class TestExecutor {
         skipReason);
 
     const start = this.clock.now();
-    const unhandledRejections: unknown[] = [];
     let didFail = false;
     let failure: unknown;
 
