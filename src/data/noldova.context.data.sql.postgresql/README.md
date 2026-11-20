@@ -67,7 +67,16 @@ already sent, a cancel opens its own connection and sends PostgreSQL's
 cancel request once; a query sent behind another on the same connection
 gets it when the query ahead ends. The server ignores a cancel that arrives
 while its session is between statements, so a cancel sent as a queued query
-starts can miss it and the query runs on. When the query neither ends nor fails within the
+starts can miss it and the query runs on. The other way round, a cancel
+request names the session, not the statement, so one sent as its query
+ends can stop the next query on that connection. Until such a cancel has
+settled and the connection has since been idle, a query with no cancel of
+its own that fails with `57014` is taken as stopped by that cancel; a
+cancel accounts for one such failure at most, and for none once its own
+query fails with `57014`. Such a query runs once more when it is outside a transaction, cursor, stream and batch,
+and, on a pool of one connection, no other query waits behind it;
+otherwise it fails with `StrayCancelException`, which keeps the server's
+error as its cause. When the query neither ends nor fails within the
 connection string's `cancel_timeout` seconds, 5 by default, the client
 closes the connection and its queries fail with `ConnectionClosedException`;
 `cancel_timeout=0` waits without a limit.

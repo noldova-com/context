@@ -30,6 +30,7 @@ import { CancelUnansweredException } from "../../exceptions/cancel-unanswered.ex
 import { ConnectionClosedException } from "../../exceptions/connection-closed.exception.js";
 import { PostgreSQLException } from "../../exceptions/postgresql.exception.js";
 import { QueryCanceledException } from "../../exceptions/query-canceled.exception.js";
+import { StrayCancelException } from "../../exceptions/stray-cancel.exception.js";
 import { UnsafeTransactionException } from "../../exceptions/unsafe-transaction.exception.js";
 import type { BackendKey } from "../backend-key.js";
 import { BinaryColumns } from "../binary-columns.js";
@@ -61,6 +62,7 @@ import { CopyOutStream } from "./copy-out-stream.js";
 import { Deferred } from "./deferred.js";
 import { Exchange } from "./exchange.js";
 import type { Query } from "./query.js";
+import { SentCancel } from "./sent-cancel.js";
 import { RowReader } from "../../services/client/row.reader.js";
 
 export class PostgreSQLConnection implements CopyHost {
@@ -103,6 +105,7 @@ export class PostgreSQLConnection implements CopyHost {
   private readonly out: ProtocolWriter = new ProtocolWriter();
   private readonly frames: FrameReader;
   private blocker: Exchange | null = null;
+  private sentCancels: SentCancel[] = [];
   private stashType: number = 0;
   private stashData: Buffer | null = null;
   private heard: number;
@@ -972,9 +975,26 @@ export class PostgreSQLConnection implements CopyHost {
 
   private cancelExchangeAsync(exchange: Exchange): Promise<void> {
     this.expect(exchange);
+    const sent = new SentCancel(PostgreSQLConnection.cancelledQueryOf(exchange));
+    this.sentCancels.push(sent);
     const cancel = this.session.cancelAsync(this.events.cancels);
+    const settle = (): void => {
+      sent.settled = true;
+    };
+    cancel.then(settle, settle);
     this.events.onCancelling(cancel);
     return cancel;
+  }
+
+  private takeStrayCancel(exchange: Exchange): boolean {
+    const query = PostgreSQLConnection.cancelledQueryOf(exchange);
+    const own = this.sentCancels.findIndex(t => t.query === query);
+    if (own >= 0) {
+      this.sentCancels.splice(own, 1);
+      return false;
+    }
+
+    return !Object.isUndefined(this.sentCancels.shift()) && Object.isNull(exchange.cancel);
   }
 
   private expect(exchange: Exchange): void {
@@ -1431,6 +1451,8 @@ export class PostgreSQLConnection implements CopyHost {
       this.sent.shift();
       this.settle(next);
     }
+    if (this.sent.length === 0 && this.sentCancels.length > 0)
+      this.sentCancels = this.sentCancels.filter(t => !t.settled);
     this.release();
     this.activateHead();
 
@@ -1509,6 +1531,14 @@ export class PostgreSQLConnection implements CopyHost {
     const parsing = !Object.isNull(exchange.fresh) || (!Object.isNull(entry) && entry.owner === exchange && entry.state === PreparedState.Parsing);
     const code = error instanceof PostgreSQLException ? error.sqlState : null;
     const statement = exchange.statement;
+
+    if (code === Resources.queryCanceledState && this.takeStrayCancel(exchange)) {
+      if (this.isRetryable(exchange))
+        this.retryExchange(exchange, null);
+      else
+        this.settleError(exchange, new StrayCancelException(error));
+      return;
+    }
 
     if (code === Resources.duplicatePreparedStatementState && exchange.kind === ExchangeKind.Query && !Object.isNull(statement) && statement.name.length > 0
       && parsing) {
@@ -1765,6 +1795,10 @@ export class PostgreSQLConnection implements CopyHost {
       throw new DataException(Resources.queryWithoutStatement);
 
     return query.wire;
+  }
+
+  private static cancelledQueryOf(exchange: Exchange): Query | null {
+    return exchange.batch?.query ?? exchange.query ?? exchange.describedFor;
   }
 
   private static queryOf(exchange: Exchange): Query {
