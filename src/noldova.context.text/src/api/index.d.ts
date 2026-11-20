@@ -157,7 +157,8 @@ export declare class EcmaScriptLineTerminator extends LineTerminator {
    * import { EcmaScriptLineTerminator } from "@noldova/context.text";
    *
    * const terminator = new EcmaScriptLineTerminator();
-   * terminator.isLineTerminator(""); // true
+   * terminator.isLineTerminator("\u2028"); // true: LINE SEPARATOR.
+   * terminator.isLineTerminator(""); // false: an empty string is no line terminator.
    * terminator.isLineTerminator("\u0085"); // false: NEL is not an ECMAScript line terminator.
    * ```
    */
