@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type { TestProject } from "./models/discovery/test-project.js";
 import { ProcessListing } from "./models/execution/process-listing.js";
 
 export class Resources {
@@ -248,6 +249,19 @@ export class Resources {
     return `thread ${threadId} of process ${processId}`;
   }
 
+  public static formatThreadListRun(testProjects: readonly TestProject[]): string {
+    return testProjects.map(t => `${t.packageName} ${t.rootDirectory}`).join(", ");
+  }
+
+  public static formatProfileOwner(processId: string, threadId: string, run: string | undefined): string {
+    const owner = Object.isUndefined(run) ? "no test run listed" : `the test run of ${run}`;
+    return `${Resources.formatProfileThread(processId, threadId)} (${owner})`;
+  }
+
+  public static formatProfileWriter(owner: string, profiles: readonly string[]): string {
+    return `${owner}, which wrote ${profiles.join(", ")}`;
+  }
+
   public static testWorkerEndedAfterItsLastClass(exitCode: number): string {
     return `The test worker ended with exit code ${exitCode} after its last class.`;
   }
@@ -424,6 +438,10 @@ export class Resources {
 
   public static coverageReportMalformed(reportFilePath: string): string {
     return `The coverage report "${reportFilePath}" is malformed.`;
+  }
+
+  public static coverageReportMalformedFrom(reportFilePath: string, writer: string): string {
+    return `The coverage report "${reportFilePath}" is malformed. It is a profile of ${writer}.`;
   }
 
   public static coverageReportMalformedForReason(reportFilePath: string, reason: string): string {

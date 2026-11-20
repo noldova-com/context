@@ -311,9 +311,9 @@ export class TestRunSupervisor {
     if (Object.isNull(this.coverageDirectory))
       return;
 
-    const threadIds = [threadId, ...this.endedThreadIds];
+    const lines = [Resources.formatThreadListRun(this.testProjects), ...[threadId, ...this.endedThreadIds].map(String)];
     await writeFile(join(this.coverageDirectory, Resources.threadListFileName(process.pid, randomUUID())),
-      threadIds.map(t => `${t}${Resources.lineSeparator}`).join(String.empty));
+      lines.map(t => `${t}${Resources.lineSeparator}`).join(String.empty));
   }
 
   private queue(ready: TestWorkerMessage): void {

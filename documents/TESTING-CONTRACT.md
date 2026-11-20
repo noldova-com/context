@@ -112,7 +112,8 @@ Coverage is measured through the pinned Node runtime's V8 facility and enforced 
 Source maps must be valid flat Source Map v3 documents within the subset the pinned TypeScript bootstrap emits; only a mapped segment on the same generated line supplies an original position.
 Non-executable files appear in the inventory as not applicable without entering counts.
 A skip that removes the sole coverage of production code fails the gate.
-Each run lists, in the coverage folder, its main thread and each worker that ended by itself; a listed thread without a coverage profile fails the analysis, since V8 drops a profile it cannot serialize with only a line on that thread's standard error.
+Each run lists, in the coverage folder, its test projects, its main thread and each worker that ended by itself; a listed thread without a coverage profile fails the analysis, since V8 drops a profile it cannot serialize with only a line on that thread's standard error.
+The analysis names the thread, its process and that process's test run for a missing profile, and for a malformed one also every profile the thread wrote.
 A worker the run stops, such as one whose test does not end, writes no profile and is not listed; stopped workers occur only in failing runs.
 Context's own tests that stop workers or runs on purpose start them without coverage collection, so no profile is ever cut off while it is written.
 The reported block total varies between runs, because V8 omits a block whose count equals its parent's and the counts depend on how classes spread across workers; every reported block is still covered or uncovered as measured.

@@ -16,7 +16,7 @@ import { threadId } from "node:worker_threads";
 
 import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
 import {
-  Assert, TestClass, TestConsoleReporter, TestData, TestingException, TestMethod, TestMethodResult, TestOutcome
+  Assert, TestClass, TestConsoleReporter, TestData, TestingException, TestMethod, TestMethodResult, TestOutcome, TestProject
 } from "@noldova/context.testing";
 import { TestWorkerMessage } from "@noldova/context.testing/models/execution/test-worker-message.js";
 import { TestWorkerResult } from "@noldova/context.testing/models/execution/test-worker-result.js";
@@ -100,12 +100,14 @@ export class TestRunSupervisorTests {
     try {
       const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"));
       const workerThreadId = worker.threadId;
-      const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), coverageDirectory,
+      const projects = [new TestProject("Sample", "compiled/tests"), new TestProject("Other", "other/tests")];
+      const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, projects, [], TestRunSupervisorTests.reporter([]), coverageDirectory,
         undefined, 1, undefined, () => worker, new FakeClock()).runAsync();
       worker.send(TestWorkerMessage.ready(1, 1, 1));
       await running;
 
-      Assert.areEqual(`${threadId}\n${workerThreadId}\n`, await TestRunSupervisorTests.readThreadListAsync(coverageDirectory));
+      Assert.areEqual(`Sample compiled/tests, Other other/tests\n${threadId}\n${workerThreadId}\n`,
+        await TestRunSupervisorTests.readThreadListAsync(coverageDirectory));
     }
     finally {
       await rm(coverageDirectory, { recursive: true, force: true });
@@ -126,7 +128,7 @@ export class TestRunSupervisorTests {
       await running;
 
       Assert.areEqual(1, worker.terminateCount);
-      Assert.areEqual(`${threadId}\n`, await TestRunSupervisorTests.readThreadListAsync(coverageDirectory));
+      Assert.areEqual(`\n${threadId}\n`, await TestRunSupervisorTests.readThreadListAsync(coverageDirectory));
     }
     finally {
       await rm(coverageDirectory, { recursive: true, force: true });
