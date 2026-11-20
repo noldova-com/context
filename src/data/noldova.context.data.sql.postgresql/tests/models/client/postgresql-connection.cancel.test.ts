@@ -8,11 +8,14 @@
 
 import type { Buffer } from "node:buffer";
 
+import { LeaseKind } from "@noldova/context.data.sql.postgresql/enums/lease-kind.js";
 import { PostgreSQLException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql.exception.js";
 import { StrayCancelException } from "@noldova/context.data.sql.postgresql/exceptions/stray-cancel.exception.js";
+import { QueryStatement } from "@noldova/context.data.sql.postgresql/models/query-statement.js";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 import { BackendMessages as M } from "../../fixtures/backend-messages.fixture.js";
 import { ConnectionHarness } from "../../fixtures/connection-harness.fixture.js";
+import { FakeLease } from "../../fixtures/fake-lease.fixture.js";
 
 @TestClass
 export class PostgreSQLConnectionCancelTests {
@@ -148,6 +151,64 @@ export class PostgreSQLConnectionCancelTests {
 
     Assert.areEqual("57014", (await refused).sqlState);
     Assert.areEqual(String.empty, harness.written());
+  }
+
+  @TestMethod
+  public async forgetsASettledCancelOnABusyConnectionOnceTheQueriesSentBeforeItEndAsync(): Promise<void> {
+    const harness = new ConnectionHarness();
+    const timed = harness.unnamed("select pg_sleep(1)");
+    harness.connection.send(timed);
+    harness.written();
+    await harness.connection.cancelAsync(timed);
+    const later = harness.unnamed("select 2");
+    const last = harness.unnamed("select 3");
+    harness.connection.send(later);
+    harness.connection.send(last);
+    harness.written();
+    const refused = Assert.throwsAsync(async () => {
+      await later;
+    }, PostgreSQLException);
+
+    harness.receive(...PostgreSQLConnectionCancelTests.ENDED, ...PostgreSQLConnectionCancelTests.STOPPED, ...PostgreSQLConnectionCancelTests.ENDED);
+    await timed;
+    await last;
+
+    Assert.areEqual("57014", (await refused).sqlState);
+    Assert.areEqual(String.empty, harness.written());
+  }
+
+  @TestMethod
+  public async dropsTheStatementAStrayCancelStoppedWhileItWasParsedAsync(): Promise<void> {
+    const harness = new ConnectionHarness();
+    harness.connection.lease = new FakeLease(LeaseKind.Transaction);
+    const begin = harness.plain("begin");
+    harness.connection.sendSimple(begin, "begin");
+    harness.written();
+    harness.receive(M.commandComplete("BEGIN"), M.readyForQuery("T"));
+    await begin;
+    const statement = new QueryStatement("s1", "select 1 as x");
+    const timed = harness.unnamed("select pg_sleep(1)");
+    const named = harness.query(statement, [], []);
+    harness.connection.send(timed);
+    harness.connection.send(named);
+    harness.written();
+    const refused = Assert.throwsAsync(async () => {
+      await named;
+    }, StrayCancelException);
+
+    await harness.connection.cancelAsync(timed);
+    harness.receive(M.parseComplete(), M.parameterDescription([]), M.noData(), M.bindComplete(), M.commandComplete("SELECT 0"), M.readyForQuery("T"),
+      M.error("57014", "canceling statement due to user request"), M.readyForQuery("E"));
+    await refused;
+    await timed;
+    const again = harness.query(statement, [], []);
+    harness.connection.send(again);
+    const written = harness.written();
+    harness.receive(M.parseComplete(), M.parameterDescription([]), M.rowDescription([["x", 23]]), M.bindComplete(), M.dataRow(["1"]),
+      M.commandComplete("SELECT 1"), M.readyForQuery("E"));
+
+    Assert.isTrue(written.startsWith("P,"), written);
+    Assert.areEqual("[{\"x\":1}]", JSON.stringify(await again));
   }
 
   @TestMethod

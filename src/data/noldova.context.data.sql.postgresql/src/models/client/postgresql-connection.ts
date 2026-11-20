@@ -979,7 +979,11 @@ export class PostgreSQLConnection implements CopyHost {
     this.sentCancels.push(sent);
     const cancel = this.session.cancelAsync(this.events.cancels);
     const settle = (): void => {
-      sent.settled = true;
+      const last = this.sent.at(-1);
+      if (Object.isUndefined(last))
+        this.sentCancels = this.sentCancels.filter(t => t !== sent);
+      else
+        sent.through = last;
     };
     cancel.then(settle, settle);
     this.events.onCancelling(cancel);
@@ -1451,8 +1455,8 @@ export class PostgreSQLConnection implements CopyHost {
       this.sent.shift();
       this.settle(next);
     }
-    if (this.sent.length === 0 && this.sentCancels.length > 0)
-      this.sentCancels = this.sentCancels.filter(t => !t.settled);
+    if (this.sentCancels.length > 0)
+      this.sentCancels = this.sentCancels.filter(t => t.through?.done !== true);
     this.release();
     this.activateHead();
 
@@ -1533,6 +1537,8 @@ export class PostgreSQLConnection implements CopyHost {
     const statement = exchange.statement;
 
     if (code === Resources.queryCanceledState && this.takeStrayCancel(exchange)) {
+      if (parsing && !Object.isNull(entry))
+        this.drop(entry);
       if (this.isRetryable(exchange))
         this.retryExchange(exchange, null);
       else

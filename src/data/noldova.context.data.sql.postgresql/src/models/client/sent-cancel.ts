@@ -8,11 +8,12 @@
 
 import "@noldova/context.core";
 
+import type { Exchange } from "./exchange.js";
 import type { Query } from "./query.js";
 
 export class SentCancel {
   public readonly query: Query | null;
-  public settled: boolean = false;
+  public through: Exchange | null = null;
 
   public constructor(query: Query | null) {
     this.query = query;
