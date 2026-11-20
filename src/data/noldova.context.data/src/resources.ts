@@ -22,9 +22,9 @@ export class Resources {
   public static readonly migrationIdPattern: RegExp = /^\d{14}_[A-Z][A-Za-z0-9]*$/;
   public static readonly migrationsUnordered: string = "Migrations are listed once each, in ascending id order.";
   public static readonly nameParameterName: string = "name";
-  public static readonly nestedTransactionFailed: string = "An inner transaction failed, so the outer transaction was rolled back.";
   public static readonly sequenceParameterName: string = "sequence";
   public static readonly transactionCompleted: string = "The transaction has already been committed or rolled back.";
+  public static readonly transactionFailedInside: string = "A statement or an inner transaction failed, so the transaction was rolled back.";
   public static readonly transactionRollbackFailed: string = "The transaction failed and rollback also failed.";
 
   public static formatFieldMissing(field: string): string {
