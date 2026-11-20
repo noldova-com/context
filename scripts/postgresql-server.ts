@@ -40,6 +40,7 @@ export default class PostgreSQLServer implements AsyncDisposable {
   private static readonly BIN_FOLDER: string = "bin";
   private static readonly WINDOWS_EXECUTABLE_SUFFIX: string = ".exe";
   private static readonly TEMPORARY_PREFIX: string = "context-postgresql-";
+  private static readonly REMOVAL_RETRIES: number = 5;
   private static readonly RUNNER_TEMPORARY_VARIABLE: string = "RUNNER_TEMP";
   private static readonly DATA_FOLDER: string = "data";
   private static readonly LOG_FILE: string = "server.log";
@@ -115,7 +116,7 @@ export default class PostgreSQLServer implements AsyncDisposable {
     }
     finally {
       this.started = false;
-      await fs.rm(this.temporaryFolder, { recursive: true, force: true });
+      await fs.rm(this.temporaryFolder, { recursive: true, force: true, maxRetries: PostgreSQLServer.REMOVAL_RETRIES });
     }
   }
 
