@@ -13,7 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setImmediate } from "node:timers/promises";
 
-import { Assert, TestClass, TestingException, TestMethod, Timeout } from "@noldova/context.testing";
+import { Assert, TestClass, TestingException, TestMethod } from "@noldova/context.testing";
 import { ProcessListing } from "@noldova/context.testing/models/execution/process-listing.js";
 import { ProcessTree } from "@noldova/context.testing/services/execution/process-tree.js";
 
@@ -37,7 +37,6 @@ export class ProcessTreeTests {
   private static readonly UNUSED_PROCESS_ID: number = 2_147_483_647;
   private static readonly TEMPORARY_DIRECTORY_VARIABLES: readonly string[] = ["TMPDIR", "TEMP", "TMP"];
 
-  @Timeout(60_000)
   @TestMethod
   public async listsTheDescendantsOfAProcessLeavesFirstAsync(): Promise<void> {
     const tree = await ProcessTreeTests.startWarmTreeAsync();
@@ -53,7 +52,6 @@ export class ProcessTreeTests {
     }
   }
 
-  @Timeout(60_000)
   @TestMethod
   public async endsTheDescendantsAProcessWaitsOnSoItReturnsAsync(): Promise<void> {
     const tree = await ProcessTreeTests.startWarmTreeAsync();
