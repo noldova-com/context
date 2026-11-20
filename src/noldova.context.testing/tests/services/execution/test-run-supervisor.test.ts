@@ -339,6 +339,75 @@ export class TestRunSupervisorTests {
   }
 
   @TestMethod
+  public async replacesAWorkerThatDoesNotEndWithinTheLimitAfterItsTestStopsAndNamesThatTestAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const release = Promise.withResolvers<void>();
+    const started = Promise.withResolvers<void>();
+    const blocking = new ScriptedWorker(worker => {
+      worker.send(TestWorkerMessage.started(0, 0, TestRunSupervisorTests.TIMEOUT_MILLISECONDS));
+      started.resolve();
+    }, release.promise);
+    const resuming = new ScriptedWorker(worker => {
+      TestRunSupervisorTests.completeMethod(worker, 0, TestOutcome.Failed);
+      worker.send(TestWorkerMessage.classCompleted(0, "StoppedFixtureTests.test.js"));
+    });
+    const scripted = [blocking, resuming];
+    const supervisor = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
+      undefined, () => {
+        const worker = scripted.shift() ?? new ScriptedWorker(() => undefined);
+        queueMicrotask(() => worker.send(TestWorkerMessage.ready(1, 1, 1)));
+        return worker;
+      }, clock);
+    const running = supervisor.runAsync();
+    try {
+      await started.promise;
+      clock.advance(450);
+      await blocking.terminating;
+      clock.advance(4_999);
+      const runsBeforeTheLimit = resuming.runs.length;
+      clock.advance(1);
+      const totals = await running;
+
+      Assert.areEqual(0, runsBeforeTheLimit);
+      Assert.areEqual("0.0 true", TestRunSupervisorTests.describeRuns(resuming));
+      Assert.areEqual(1, totals.failed);
+      Assert.areEqual("Test workers that could not be ended within 5000 milliseconds of being stopped: 1, running StoppedFixtureTests.method0. " +
+        "The run ends its own process so it cannot hang.", supervisor.unendedWorkersMessage);
+    }
+    finally {
+      release.resolve();
+    }
+  }
+
+  @TestMethod
+  public async failsTheRunWithoutWaitingForAWorkerThatDoesNotEndOnceStoppedAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const release = Promise.withResolvers<void>();
+    const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), release.promise);
+    const supervisor = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
+      undefined, () => worker, clock);
+    const running = supervisor.runAsync();
+    try {
+      worker.send(TestWorkerMessage.ready(1, 1, 1));
+      await worker.ending;
+      clock.advance(5_000);
+      await worker.terminating;
+      clock.advance(4_999);
+      const messageBeforeTheLimit = supervisor.unendedWorkersMessage;
+      clock.advance(1);
+      const error = await Assert.throwsAsync(() => running, Error);
+
+      Assert.isUndefined(messageBeforeTheLimit);
+      Assert.areEqual("The test worker did not end within 5000 milliseconds after its last class, so its coverage is incomplete.", error.message);
+      Assert.areEqual("Test workers that could not be ended within 5000 milliseconds of being stopped: 1. The run ends its own process so it cannot hang.",
+        supervisor.unendedWorkersMessage);
+    }
+    finally {
+      release.resolve();
+    }
+  }
+
+  @TestMethod
   public async failsTheRunWhenAWorkerDoesNotEndWithinTheLimitAsync(): Promise<void> {
     const clock = new FakeClock();
     const release = Promise.withResolvers<void>();

@@ -3,7 +3,10 @@
 A test framework for TypeScript: tests are exported classes marked with
 decorators, discovered from compiled test files, run in parallel worker threads,
 and reported with their results and code coverage. A test that overruns its
-timeout is recorded as timed out, and the run goes on.
+timeout is recorded as timed out, and the run goes on. If its worker cannot be
+ended, because the test is blocked in a call such as a synchronous child
+process, a command-line run names that test after its results and ends its own
+process rather than hang.
 
 ## Install
 

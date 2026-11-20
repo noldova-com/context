@@ -11,6 +11,7 @@
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { takeCoverage } from "node:v8";
 
 import "@noldova/context.core";
 import { ExceptionOptions } from "@noldova/context.exceptions";
@@ -31,6 +32,7 @@ export class TestRunEntryPoint {
     const skipPassingDetails = !Object.isUndefined(process.env[Resources.skipTestDetailsVariable]);
     const reporter = new TestConsoleReporter(t => process.stdout.write(t), process.stdout.isTTY === true, skipPassingDetails);
     const temporaryDirectory = await this.isolateTemporaryFilesAsync();
+    let supervisor: TestRunSupervisor | undefined;
 
     try {
       const filters = this.parseFilters(process.env[Resources.filtersVariable]);
@@ -46,7 +48,7 @@ export class TestRunEntryPoint {
       }
 
       const timeoutMilliseconds = TestRunSupervisor.readTimeoutMilliseconds(process.env[Resources.timeoutVariable]);
-      const supervisor = new TestRunSupervisor(timeoutMilliseconds, testProjects, filters, reporter, TestRunSupervisor.readCoverageDirectory());
+      supervisor = new TestRunSupervisor(timeoutMilliseconds, testProjects, filters, reporter, TestRunSupervisor.readCoverageDirectory());
       reporter.start();
       const result = await supervisor.runAsync();
       const totals = new TestRunTotals(result.passed, result.failed, result.skipped, supervisor.elapsedMilliseconds);
@@ -69,6 +71,17 @@ export class TestRunEntryPoint {
       console.error(Resources.formatTemporaryLeftovers(leftovers));
       process.exitCode = 1;
     }
+
+    const unendedWorkersMessage = supervisor?.unendedWorkersMessage;
+    if (!Object.isUndefined(unendedWorkersMessage))
+      await this.endOwnProcessAsync(unendedWorkersMessage);
+  }
+
+  private async endOwnProcessAsync(message: string): Promise<void> {
+    await new Promise<void>(resolve => process.stdout.write(String.empty, () => resolve()));
+    await new Promise<void>(resolve => process.stderr.write(message + Resources.lineSeparator, () => resolve()));
+    takeCoverage();
+    process.kill(process.pid, Resources.killSignal);
   }
 
   private async writeResultsAsync(result: TestRunResult, filePath: string | undefined): Promise<void> {
