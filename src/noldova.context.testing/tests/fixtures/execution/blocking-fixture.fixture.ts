@@ -19,8 +19,8 @@ export class BlockingFixtureTests {
 
   @TestMethod
   public waitsOnAChildProcess(): void {
-    const environment = { ...process.env };
-    delete environment["NODE_V8_COVERAGE"];
+    // Node passes NODE_V8_COVERAGE on to a child whose environment lacks it; an empty value keeps this child from writing a profile.
+    const environment = { ...process.env, NODE_V8_COVERAGE: "" };
     spawnSync(process.execPath, ["--eval", BlockingFixtureTests.CHILD_SCRIPT, String(process.pid)], { env: environment, stdio: "ignore" });
   }
 

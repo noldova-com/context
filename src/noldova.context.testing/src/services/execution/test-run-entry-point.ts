@@ -11,7 +11,6 @@
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { takeCoverage } from "node:v8";
 
 import "@noldova/context.core";
 import { ExceptionOptions } from "@noldova/context.exceptions";
@@ -104,10 +103,8 @@ export class TestRunEntryPoint {
   private async endOwnProcessAsync(): Promise<void> {
     await new Promise<void>(resolve => process.stdout.write(String.empty, () => resolve()));
     await new Promise<void>(resolve => process.stderr.write(Resources.endingOwnProcess + Resources.lineSeparator, () => resolve()));
-    takeCoverage();
+    // Node writes the coverage profile as it kills its own process, so a profile taken here as well would be a second one, which can replace it.
     process.kill(process.pid, Resources.killSignal);
-    // Windows ends a process asynchronously; blocking keeps Node's exit from writing a second profile over the one just taken.
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)), 0, 0);
   }
 
   private async writeResultsAsync(result: TestRunResult, filePath: string | undefined): Promise<void> {
