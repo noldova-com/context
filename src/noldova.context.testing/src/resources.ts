@@ -302,6 +302,10 @@ export class Resources {
     return `${heading} left ${resources.join(Resources.valueSeparator)} open after its tests finished; a test must close what it opens.`;
   }
 
+  public static formatRejectedAfterItsTest(testName: string): string {
+    return `${testName} left a promise that rejected after the test ended, unhandled; a test must await or handle what it starts.`;
+  }
+
   public static formatTemporaryFolderNotRemoved(directory: string): string {
     return `The run could not remove its temporary folder ${directory}.`;
   }
