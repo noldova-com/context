@@ -32,9 +32,8 @@ export class TestDiscovery {
     const sortedProjects = [...testProjects]
       .sort((first, second) => this.compareProjects(first, second));
     for (const testProject of sortedProjects) {
-      for (const testFile of await this.findTestFilesAsync(testProject.rootDirectory)) {
-        const filePath = relative(testProject.rootDirectory, testFile).replaceAll(Resources.windowsDirectorySeparator, Resources.directorySeparator);
-        const moduleExports: object = await import(pathToFileURL(testFile).href);
+      for (const filePath of await this.findTestFilesAsync(testProject.rootDirectory)) {
+        const moduleExports: object = await import(pathToFileURL(join(testProject.rootDirectory, filePath)).href);
         onFileImported(filePath);
         testClasses.push(...this.discoverModuleExports(moduleExports, filePath, testProject.packageName));
       }
@@ -173,7 +172,8 @@ export class TestDiscovery {
     const testFiles: string[] = [];
     for (const entry of entries)
       if (entry.isFile() && entry.name.endsWith(Resources.testFileSuffix))
-        testFiles.push(join(entry.parentPath, entry.name));
+        testFiles.push(relative(rootDirectory, join(entry.parentPath, entry.name))
+          .replaceAll(Resources.windowsDirectorySeparator, Resources.directorySeparator));
 
     return testFiles.sort();
   }

@@ -1242,8 +1242,9 @@ export declare class TestProject {
 export declare class TestDiscovery {
   /**
    * Discovers every test class beneath the explicitly identified projects:
-   * `*.test.js` files in sorted order, exports in sorted order, methods in
-   * sorted order.
+   * `*.test.js` files sorted by their path relative to the project root with
+   * `/` separators, the same on every system, exports in sorted order,
+   * methods in sorted order.
    *
    * @param testProjects Explicit project identities and compiled roots. An empty collection discovers no tests.
    * @param onFileImported Optional callback given each test file's path, relative to its project root with `/` separators, once the file is

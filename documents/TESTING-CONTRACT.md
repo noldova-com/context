@@ -32,7 +32,7 @@ The decorators mark their targets through symbol properties readable at discover
 A general-purpose attribute or reflection mechanism is a separate future decision.
 Future Runtime-hosted discovery consumes ordinary library artifacts and their metadata; a test library is never made an executable.
 
-Discovery is deterministic: files, classes, and methods in lexicographic UTF-16 code-unit order, independent of host locale; rows in decorator order.
+Discovery is deterministic: files, classes, and methods in lexicographic UTF-16 code-unit order, independent of host locale, with files compared by their `/`-separated paths relative to the project's root so the order is the same on every system; rows in decorator order.
 Every discovered file, class, method, and row is accounted in the results.
 A test file yielding no marked class, an exported `*Tests` class without `@TestClass`, a marked class or method violating the naming convention, a malformed data row or category, and a corrupt mark are failures, not silent no-ops.
 Inline values are the only current data source, apart from the rows each conformance runner applies at module load from its committed expected answers, one per applicable case, as section 7 requires.
