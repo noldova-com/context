@@ -154,6 +154,32 @@ export class PostgreSQLConnectionCancelTests {
   }
 
   @TestMethod
+  public async forgetsACancelThatSettlesWhileNothingIsSentAsync(): Promise<void> {
+    const harness = new ConnectionHarness();
+    const held = Promise.withResolvers<void>();
+    harness.starter.holding = held.promise;
+    const timed = harness.unnamed("select pg_sleep(1)");
+    harness.connection.send(timed);
+    harness.written();
+    const cancelling = harness.connection.cancelAsync(timed);
+    harness.receive(...PostgreSQLConnectionCancelTests.ENDED);
+    await timed;
+    held.resolve();
+    await cancelling;
+
+    const later = harness.unnamed("select 2");
+    harness.connection.send(later);
+    harness.written();
+    const refused = Assert.throwsAsync(async () => {
+      await later;
+    }, PostgreSQLException);
+    harness.receive(...PostgreSQLConnectionCancelTests.STOPPED);
+
+    Assert.areEqual("57014", (await refused).sqlState);
+    Assert.areEqual(String.empty, harness.written());
+  }
+
+  @TestMethod
   public async forgetsASettledCancelOnABusyConnectionOnceTheQueriesSentBeforeItEndAsync(): Promise<void> {
     const harness = new ConnectionHarness();
     const timed = harness.unnamed("select pg_sleep(1)");
