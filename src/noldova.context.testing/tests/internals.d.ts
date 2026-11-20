@@ -185,6 +185,7 @@ declare module "@noldova/context.testing/services/execution/test-run-supervisor.
   export class TestRunSupervisor {
     public get selection(): TestSelection;
     public get elapsedMilliseconds(): number;
+    public get unendedWorkersMessage(): string | undefined;
     public constructor(timeoutMilliseconds: number, testProjects: readonly TestProject[], filters: readonly string[],
       progressListener: ITestProgressListener | undefined, coverageDirectory: string | null, workerUrl?: URL, workerCount?: number,
       startLimitMilliseconds?: number, createWorker?: (url: URL, options: WorkerOptions) => Worker, clock?: IClock);
