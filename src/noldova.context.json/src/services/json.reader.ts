@@ -11,6 +11,7 @@ import { ExceptionOptions } from "@noldova/context.exceptions";
 
 import { JsonException } from "../exceptions/json.exception.js";
 import { Resources } from "../resources.js";
+import type { JsonConversion } from "../types/json-conversion.js";
 import type { JsonObject } from "../types/json-object.js";
 import type { JsonValue } from "../types/json-value.js";
 
@@ -44,7 +45,7 @@ export class JsonReader {
   }
 
   public static toJsonValue(value: unknown, path: string = Resources.rootPath): JsonValue {
-    return JsonReader.convertToJsonValue(value, path, new Set<object>());
+    return JsonReader.convertToJsonValue(value, path, new Set<object>(), new Map<object, JsonConversion>())[0];
   }
 
   public toJson(): JsonObject {
@@ -213,26 +214,35 @@ export class JsonReader {
     }
   }
 
-  private static convertToJsonValue(value: unknown, path: string, ancestors: Set<object>): JsonValue {
+  private static convertToJsonValue(value: unknown, path: string, ancestors: Set<object>, converted: Map<object, JsonConversion>): JsonConversion {
     if (Object.isNull(value) || Object.isString(value) || Object.isBoolean(value))
-      return value;
+      return [value, 0];
 
     if (Object.isNumber(value)) {
       if (!Number.isFinite(value))
         throw new JsonException(Resources.formatNotJsonValue(String(value)), path);
-      return value;
+      return [value, 0];
     }
 
     if (Array.isArray(value) || Object.isPlainObject(value)) {
       if (ancestors.has(value))
         throw new JsonException(Resources.circularReference, path);
+      const known = converted.get(value);
+      if (!Object.isUndefined(known)) {
+        if (ancestors.size + known[1] > JsonReader.maximumDepth)
+          throw new JsonException(Resources.formatTooDeep(JsonReader.maximumDepth), path);
+        return known;
+      }
       if (ancestors.size === JsonReader.maximumDepth)
         throw new JsonException(Resources.formatTooDeep(JsonReader.maximumDepth), path);
 
       ancestors.add(value);
-      const result: JsonValue = Array.isArray(value) ? JsonReader.convertArray(value, path, ancestors) : JsonReader.convertObject(value, path, ancestors);
+      const conversion = Array.isArray(value)
+        ? JsonReader.convertArray(value, path, ancestors, converted)
+        : JsonReader.convertObject(value, path, ancestors, converted);
       ancestors.delete(value);
-      return result;
+      converted.set(value, conversion);
+      return conversion;
     }
 
     if (Object.isObject(value) && !Object.isFunction(value))
@@ -241,19 +251,31 @@ export class JsonReader {
     throw new JsonException(Resources.formatNotJsonValue(typeof value), path);
   }
 
-  private static convertArray(value: readonly unknown[], path: string, ancestors: Set<object>): JsonValue {
-    return Array.from({ length: value.length }, (_, index) => {
+  private static convertArray(value: readonly unknown[], path: string, ancestors: Set<object>, converted: Map<object, JsonConversion>): JsonConversion {
+    const items: JsonValue[] = [];
+    let height = 0;
+    for (let index = 0; index < value.length; index += 1) {
       const itemPath = JsonReader.formatChildPath(path, String(index));
       if (!Object.hasOwn(value, index))
         throw new JsonException(Resources.arrayHole, itemPath);
-      return JsonReader.convertToJsonValue(value[index], itemPath, ancestors);
-    });
+      const [item, itemHeight] = JsonReader.convertToJsonValue(value[index], itemPath, ancestors, converted);
+      items.push(item);
+      height = Math.max(height, itemHeight);
+    }
+    return [items, height + 1];
   }
 
-  private static convertObject(value: object, path: string, ancestors: Set<object>): JsonValue {
-    return Object.fromEntries(Object.entries(value as Readonly<Record<string, unknown>>)
-      .filter(([, member]) => !Object.isUndefined(member))
-      .map(([key, member]) => [key, JsonReader.convertToJsonValue(member, JsonReader.formatChildPath(path, key), ancestors)] as const));
+  private static convertObject(value: object, path: string, ancestors: Set<object>, converted: Map<object, JsonConversion>): JsonConversion {
+    const members: [string, JsonValue][] = [];
+    let height = 0;
+    for (const [key, member] of Object.entries(value as Readonly<Record<string, unknown>>)) {
+      if (Object.isUndefined(member))
+        continue;
+      const [result, memberHeight] = JsonReader.convertToJsonValue(member, JsonReader.formatChildPath(path, key), ancestors, converted);
+      members.push([key, result]);
+      height = Math.max(height, memberHeight);
+    }
+    return [Object.fromEntries(members), height + 1];
   }
 
   private static formatChildPath(parent: string, child: string): string {

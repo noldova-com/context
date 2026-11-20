@@ -166,7 +166,8 @@ export declare class JsonReader {
   /**
    * Narrows an untrusted value to JSON, preserving keys such as `__proto__` as data.
    *
-   * @param value The untrusted value; repeated references are allowed unless they form a cycle.
+   * @param value The untrusted value; repeated references are allowed unless they form a cycle, and each
+   * converts once, so the result shares it wherever the value does.
    * @param path Path to report for the value; the root path `$` by default.
    * @returns The value as JSON; object members whose value is `undefined` are dropped.
    * @throws JsonException synchronously for `undefined`, functions, symbols, bigints, non-finite

@@ -7,8 +7,8 @@
  */
 
 import "@noldova/context.core";
-import { JsonException, JsonReader } from "@noldova/context.json";
-import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
+import { JsonException, JsonReader, type JsonValue } from "@noldova/context.json";
+import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
 @TestClass
 export class JsonReaderTests {
@@ -130,7 +130,69 @@ export class JsonReaderTests {
     const reader = JsonReader.fromValue({ first: shared, second: shared, lists: [items, items] });
 
     Assert.areEqual('{"first":{"name":"shared"},"second":{"name":"shared"},"lists":[[{"name":"shared"}],[{"name":"shared"}]]}', JSON.stringify(reader.toJson()));
-    Assert.isFalse(reader.readValue("first") === reader.readValue("second"));
+    Assert.isTrue(reader.readValue("first") === reader.readValue("second"));
+  }
+
+  @TestMethod
+  public convertsEachSharedObjectOnce(): void {
+    let reads = 0;
+    let level: object = {};
+    for (let index = 0; index < 20; index += 1) {
+      const below = level;
+      level = {
+        get left(): object {
+          reads += 1;
+          return below;
+        },
+        get right(): object {
+          reads += 1;
+          return below;
+        },
+      };
+    }
+
+    JsonReader.toJsonValue(level);
+
+    Assert.areEqual(40, reads);
+  }
+
+  @TestMethod
+  public keepsTheSharingOfADeepChainThatHoldsEachLevelTwice(): void {
+    let level: object = {};
+    for (let index = 0; index < JsonReader.maximumDepth - 1; index += 1)
+      level = { left: level, right: level };
+
+    let levels = 0;
+    for (let current = JsonReader.fromValue(level); current.hasField("left"); current = current.readObject("left")) {
+      Assert.isTrue(current.readValue("left") === current.readValue("right"));
+      levels += 1;
+    }
+
+    Assert.areEqual(JsonReader.maximumDepth - 1, levels);
+  }
+
+  @TestData(54)
+  @TestData(55)
+  @TestMethod
+  public rejectsASharedObjectReachedAgainTooDeepForItsNesting(deeperLevels: number): void {
+    const shared = JsonReaderTests.chain({}, 9);
+    const deeper = JsonReaderTests.chain(shared, deeperLevels);
+
+    const exception = Assert.throws(() => JsonReader.toJsonValue({ first: shared, deeper }), JsonException);
+
+    Assert.areEqual(`$.deeper${`.${JsonReaderTests.NESTED_FIELD}`.repeat(deeperLevels)}`, exception.path);
+  }
+
+  @TestData(50)
+  @TestData(53)
+  @TestMethod
+  public acceptsASharedObjectReachedAgainWhereItsNestingFits(deeperLevels: number): void {
+    const shared = JsonReaderTests.chain({}, 9);
+    const deeper = JsonReaderTests.chain(shared, deeperLevels);
+
+    const reader = JsonReader.fromValue({ first: shared, deeper });
+
+    Assert.isTrue(reader.readValue("first") === JsonReaderTests.descend(reader.readObject("deeper"), deeperLevels));
   }
 
   @TestMethod
@@ -345,6 +407,20 @@ export class JsonReaderTests {
 
   private static nest(depth: number): string {
     return `${`{"${JsonReaderTests.NESTED_FIELD}":`.repeat(depth - 1)}{}${"}".repeat(depth - 1)}`;
+  }
+
+  private static chain(innermost: object, levels: number): object {
+    let current = innermost;
+    for (let index = 0; index < levels; index += 1)
+      current = { [JsonReaderTests.NESTED_FIELD]: current };
+    return current;
+  }
+
+  private static descend(reader: JsonReader, levels: number): JsonValue {
+    let current = reader;
+    for (let index = 1; index < levels; index += 1)
+      current = current.readObject(JsonReaderTests.NESTED_FIELD);
+    return current.readValue(JsonReaderTests.NESTED_FIELD);
   }
 
   private static measure(reader: JsonReader): number {
