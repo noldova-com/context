@@ -176,6 +176,16 @@ declare module "@noldova/context.parsers.typescript/models/typescript-reparsed-r
   }
 }
 
+declare module "@noldova/context.parsers.typescript/services/typescript-region-splicer.js" {
+  import type { Node, SourceSpan } from "@noldova/context.parsers";
+  import type { TypeScriptReparsedRegion } from "@noldova/context.parsers.typescript/models/typescript-reparsed-region.js";
+
+  export class TypeScriptRegionSplicer {
+    public static spliceStatements(statements: readonly Node[], regions: readonly TypeScriptReparsedRegion[]): Node[];
+    public static measureReplacedSpans(statements: readonly Node[], regions: readonly TypeScriptReparsedRegion[], endOffset: number): SourceSpan[];
+  }
+}
+
 declare module "@noldova/context.parsers.typescript/models/typescript-region-set.js" {
   import type { SourceSpan } from "@noldova/context.parsers";
 

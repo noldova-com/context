@@ -22,6 +22,7 @@ import { TypeScriptReparsedRegion } from "../../models/typescript-reparsed-regio
 import { Resources } from "../../resources.js";
 import { TypeScriptLexer } from "../lexers/typescript.lexer.js";
 import { TypeScriptDiagnosticLocator } from "../typescript-diagnostic-locator.js";
+import { TypeScriptRegionSplicer } from "../typescript-region-splicer.js";
 import { TypeScriptSyntaxParser } from "../typescript-syntax.parser.js";
 import { SourceDirectiveParser } from "./trivia/source-directive.parser.js";
 
@@ -54,26 +55,17 @@ export class SourceParser {
 
     const originalDiagnostics = [...context.diagnosticCollector.diagnostics];
     const regions: TypeScriptReparsedRegion[] = [];
-    const replacedDiagnosticSpans: SourceSpan[] = [];
     let regionEndOffset = 0;
     for (const [rangeIndex, range] of ranges.entries()) {
       if (range.startOffset < regionEndOffset)
         continue;
 
-      const region = this.reparseRegion(range, ranges.slice(rangeIndex + 1));
+      const region = this.reparseRegion(range, ranges, rangeIndex + 1);
       regions.push(region);
       regionEndOffset = region.span.endOffset;
-      const followingStatement = rootNode.children.find(t => t.span.startOffset >= regionEndOffset);
-      const followingOffset = followingStatement?.leadingTrivia?.span.startOffset ?? followingStatement?.span.startOffset ?? rootNode.span.endOffset;
-      replacedDiagnosticSpans.push(new SourceSpan(range.startOffset, followingOffset - range.startOffset));
     }
-    const statements = [
-      ...rootNode.children
-        .filter(t => !regions.some(region => t.span.endOffset > region.span.startOffset && t.span.startOffset < region.span.endOffset))
-        .map(t => ({ offset: t.span.startOffset, nodes: [t] })),
-      ...regions.map(t => ({ offset: t.span.startOffset, nodes: t.statements })),
-    ].sort((first, second) => first.offset - second.offset).flatMap(t => t.nodes);
-    const replacedDiagnosticRegions = new TypeScriptRegionSet(replacedDiagnosticSpans);
+    const statements = TypeScriptRegionSplicer.spliceStatements(rootNode.children, regions);
+    const replacedDiagnosticRegions = new TypeScriptRegionSet(TypeScriptRegionSplicer.measureReplacedSpans(rootNode.children, regions, rootNode.span.endOffset));
     context.diagnosticCollector.truncate(0);
     for (const diagnostic of originalDiagnostics)
       if (!replacedDiagnosticRegions.contains(TypeScriptDiagnosticLocator.locate(diagnostic).start))
@@ -217,13 +209,13 @@ export class SourceParser {
     return new TypeScriptNode(statements, span, this.leadingTrivia, trailingTrivia);
   }
 
-  private reparseRegion(range: SourceSpan, followingRanges: readonly SourceSpan[]): TypeScriptReparsedRegion {
+  private reparseRegion(range: SourceSpan, ranges: readonly SourceSpan[], followingIndex: number): TypeScriptReparsedRegion {
     const originalContext = this.typescriptParser.context;
     const reader = this.typescriptParser.typescriptLexer.reader;
     const savedOffset = reader.currentOffset;
     const startOffset = range.startOffset;
     let endOffset = range.endOffset;
-    let followingIndex = 0;
+    let nextRangeIndex = followingIndex;
     const context = new TypeScriptParserContext(reader.source);
     context.contextFlags = originalContext.contextFlags | TypeScriptContextFlags.TopLevelAwait;
     const statements: Node[] = [];
@@ -241,7 +233,7 @@ export class SourceParser {
         if (nextOffset === endOffset)
           break;
         if (nextOffset > endOffset)
-          endOffset = followingRanges[followingIndex++]?.endOffset ?? reader.endOffset;
+          endOffset = ranges[nextRangeIndex++]?.endOffset ?? reader.endOffset;
       }
       if (parser.isEndOfFile)
         endOffset = reader.endOffset;
