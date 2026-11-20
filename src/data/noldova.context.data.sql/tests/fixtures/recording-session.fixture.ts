@@ -47,6 +47,9 @@ export class RecordingSession extends SqlSession {
 
   public override async queryAsync(query: SqlQuery): Promise<readonly DataRecord[]> {
     await Promise.resolve();
+    if (!Object.isUndefined(this.failingStatement) && query.text.includes(this.failingStatement))
+      throw new Error(query.text);
+
     this.statements.push(query.text);
     if (query.text.startsWith("SELECT \"id\" FROM \"__migrations\""))
       return [...this.appliedIds].sort().map(t => new DataRecord(new Map([["id", t]])));

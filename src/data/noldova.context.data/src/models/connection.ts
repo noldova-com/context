@@ -61,7 +61,7 @@ export abstract class Connection<TTransaction extends Transaction = Transaction>
     try {
       const result = await action(transaction);
       if (transaction.isRollbackOnly)
-        throw new DataException(Resources.nestedTransactionFailed);
+        throw new DataException(Resources.transactionFailedInside);
       await transaction.commitAsync();
       return result;
     }

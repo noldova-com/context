@@ -104,7 +104,7 @@ export class ConnectionTests {
     Assert.areEqual("inner", propagated.message);
     Assert.areEqual(1, connection.transactions[0]?.rollbacks);
     Assert.areEqual(0, connection.transactions[0]?.commits);
-    Assert.isTrue(swallowed.message.startsWith("An inner transaction failed"));
+    Assert.isTrue(swallowed.message.startsWith("A statement or an inner transaction failed"));
     Assert.areEqual(1, connection.transactions[1]?.rollbacks);
     Assert.isFalse(connection.isInTransaction);
   }
