@@ -28,15 +28,15 @@ export class ProcessTreeTests {
   private static readonly SILENT_SCRIPT: string = "process.stdin.resume();";
   private static readonly ENDING_SCRIPT: string = "console.log(\"ready\"); process.stdin.once(\"data\", () => process.exit(1));";
   private static readonly MUTE_SCRIPT: string = "console.log(\"ready\"); process.stdin.resume();";
-  private static readonly TREE: ProcessTree = ProcessTreeTests.startWarmTree();
+  private static warmTree: ProcessTree | undefined;
 
   @Timeout(60_000)
   @TestMethod
   public async listsTheDescendantsOfAProcessLeavesFirstAsync(): Promise<void> {
-    Assert.isTrue(await ProcessTreeTests.TREE.warming);
+    const tree = await ProcessTreeTests.warmTreeAsync();
     const [root, processIds] = await ProcessTreeTests.startChainAsync();
     try {
-      const descendants = await ProcessTreeTests.TREE.listDescendantsAsync(root.pid ?? -1);
+      const descendants = await tree.listDescendantsAsync(root.pid ?? -1);
 
       Assert.areEqual(`${processIds[2]},${processIds[1]}`, descendants.join());
     }
@@ -48,12 +48,12 @@ export class ProcessTreeTests {
   @Timeout(60_000)
   @TestMethod
   public async endsTheDescendantsAProcessWaitsOnSoItReturnsAsync(): Promise<void> {
-    Assert.isTrue(await ProcessTreeTests.TREE.warming);
+    const tree = await ProcessTreeTests.warmTreeAsync();
     const [root, processIds] = await ProcessTreeTests.startChainAsync();
     try {
       const closed = once(root, "close");
 
-      ProcessTree.end(await ProcessTreeTests.TREE.listDescendantsAsync(root.pid ?? -1));
+      ProcessTree.end(await tree.listDescendantsAsync(root.pid ?? -1));
       const [exitCode] = await closed;
 
       Assert.areEqual(0, exitCode);
@@ -187,9 +187,11 @@ export class ProcessTreeTests {
     }
   }
 
-  private static startWarmTree(): ProcessTree {
-    const tree = new ProcessTree(process.platform);
+  private static async warmTreeAsync(): Promise<ProcessTree> {
+    const tree = ProcessTreeTests.warmTree ?? new ProcessTree(process.platform);
+    ProcessTreeTests.warmTree = tree;
     tree.warm();
+    Assert.isTrue(await tree.warming);
     return tree;
   }
 
