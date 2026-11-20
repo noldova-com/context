@@ -32,8 +32,8 @@ export class TestDiscovery {
     const sortedProjects = [...testProjects]
       .sort((first, second) => this.compareProjects(first, second));
     for (const testProject of sortedProjects) {
-      for (const filePath of await this.findTestFilesAsync(testProject.rootDirectory)) {
-        const moduleExports: object = await import(pathToFileURL(join(testProject.rootDirectory, filePath)).href);
+      for (const [filePath, nativePath] of await this.findTestFilesAsync(testProject.rootDirectory)) {
+        const moduleExports: object = await import(pathToFileURL(nativePath).href);
         onFileImported(filePath);
         testClasses.push(...this.discoverModuleExports(moduleExports, filePath, testProject.packageName));
       }
@@ -165,17 +165,18 @@ export class TestDiscovery {
     return new DiscoveredTestClass(packageName, className, filePath, testClassConstructor, this.getSkipReason(testClassConstructor), methods, classCategories);
   }
 
-  private async findTestFilesAsync(rootDirectory: string): Promise<string[]> {
+  private async findTestFilesAsync(rootDirectory: string): Promise<(readonly [string, string])[]> {
     ArgumentException.throwIfNullOrWhitespace(rootDirectory, Resources.rootDirectoryParameter);
 
     const entries = await readdir(rootDirectory, { recursive: true, withFileTypes: true });
-    const testFiles: string[] = [];
+    const testFiles: (readonly [string, string])[] = [];
     for (const entry of entries)
-      if (entry.isFile() && entry.name.endsWith(Resources.testFileSuffix))
-        testFiles.push(relative(rootDirectory, join(entry.parentPath, entry.name))
-          .replaceAll(Resources.windowsDirectorySeparator, Resources.directorySeparator));
+      if (entry.isFile() && entry.name.endsWith(Resources.testFileSuffix)) {
+        const nativePath = join(entry.parentPath, entry.name);
+        testFiles.push([this.toSlashPath(relative(rootDirectory, nativePath)), nativePath]);
+      }
 
-    return testFiles.sort();
+    return testFiles.sort(([first], [second]) => first < second ? -1 : 1);
   }
 
   private isMarkedTestClass(value: unknown): value is new () => object {
@@ -288,6 +289,12 @@ export class TestDiscovery {
     if (first.packageName !== second.packageName)
       return first.packageName < second.packageName ? -1 : 1;
 
-    return first.rootDirectory === second.rootDirectory ? 0 : first.rootDirectory < second.rootDirectory ? -1 : 1;
+    const firstRoot = this.toSlashPath(first.rootDirectory);
+    const secondRoot = this.toSlashPath(second.rootDirectory);
+    return firstRoot === secondRoot ? 0 : firstRoot < secondRoot ? -1 : 1;
+  }
+
+  private toSlashPath(path: string): string {
+    return path.replaceAll(Resources.windowsDirectorySeparator, Resources.directorySeparator);
   }
 }
