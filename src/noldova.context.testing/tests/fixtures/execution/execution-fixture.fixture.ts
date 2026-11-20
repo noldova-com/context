@@ -66,6 +66,15 @@ export class ExecutionFixture {
     void Promise.reject(new Error("stray"));
   }
 
+  public leavesALateRejection(): void {
+    void ExecutionFixture.rejectAfterTurnsAsync(3, new Error("late"));
+  }
+
+  public async waitsSeveralTurnsAsync(): Promise<void> {
+    for (let turn = 0; turn < 10; turn++)
+      await new Promise<void>(t => setImmediate(t));
+  }
+
   public async hangsAsync(): Promise<void> {
     await new Promise<void>(() => { });
   }
@@ -79,4 +88,10 @@ export class ExecutionFixture {
     throw new Error("primary");
   }
 
+  private static async rejectAfterTurnsAsync(turns: number, reason: Error): Promise<void> {
+    for (let turn = 0; turn < turns; turn++)
+      await new Promise<void>(t => setImmediate(t));
+
+    throw reason;
+  }
 }

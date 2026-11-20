@@ -1475,6 +1475,9 @@ export declare class TestExecutor {
    *   classes that completed. The listener's `onMethodCompleted` may make it return `true` to stop after that invocation.
    * @returns A promise resolving to one result per supplied class and invocation. Test failures become Failed results, not rejection of this promise.
    *   Empty input returns an empty array; a stopped run returns only the classes that completed before it stopped.
+   * @throws TestingException via promise rejection, naming the test, when a promise a test started rejects unhandled after that test ended,
+   *   while its class or a later class of the same call runs; it rejects at the end of that class, the rejection is its cause, and that
+   *   class has no result.
    * @throws Error via promise rejection with the listener's own exception when the listener throws; the executor's unhandled-rejection listener is
    *   removed either way.
    * @example
@@ -1539,7 +1542,8 @@ export declare class TestRunner {
    * @param progressListener Optional listener told of each selected class's result as soon as that class finishes, before the totals are
    *   reconciled; see {@link TestExecutor.executeAsync}.
    * @returns A promise resolving to the reconciled result. No matches produce a zero-test result; the command-line entry treats it as failure.
-   * @throws TestingException via promise rejection if execution totals do not match the selected invocations.
+   * @throws TestingException via promise rejection if execution totals do not match the selected invocations, or when a test's promise rejects
+   *   after it ended, as {@link TestExecutor.executeAsync} describes.
    * @throws Error via promise rejection when discovery fails; the original discovery failure is preserved.
    *
    * See {@link TestRunner} for usage examples.
@@ -1646,7 +1650,8 @@ export declare class ParallelTestRunner {
    *   is the sum of its tests' durations, as from {@link TestRunner}. No matches produce a zero-test result; the command-line entry treats it as
    *   failure. Test failures and timeouts become Failed results, not rejection of this promise.
    * @throws TestingException via promise rejection when a worker crashes or exits, starts no test within its start limit, discovers different
-   *   tests from another worker, or exchanges invalid data, when a class leaves a timer, handle or request open in its worker, or when the totals
+   *   tests from another worker, or exchanges invalid data, when a class leaves a timer, handle or request open in its worker or a test's promise
+   *   rejects after it ended, as {@link TestExecutor.executeAsync} describes, or when the totals
    *   do not reconcile with the selected tests; every worker has ended first.
    * @throws Error via promise rejection with the worker's own error when a worker fails to start or discovery fails, or with the listener's own
    *   exception when the listener throws; every worker has ended first.
