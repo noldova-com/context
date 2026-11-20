@@ -38,8 +38,8 @@ export class CoverageAnalyzer {
     if ([...expectedFilePathsByProject.values()].every(t => t.length === 0))
       throw new TestingException(Resources.coverageUniverseEmpty);
 
-    await this.throwIfProfilesMissingAsync(coverageDirectory);
-    const scriptEntriesByFile = await new CoverageReportReader(normalizedProjects.map(t => t.productionDirectory)).readAsync(coverageDirectory);
+    const profileWriters = await this.readProfileWritersAsync(coverageDirectory);
+    const scriptEntriesByFile = await new CoverageReportReader(normalizedProjects.map(t => t.productionDirectory), profileWriters).readAsync(coverageDirectory);
     const fileCoverages: FileCoverage[] = [];
     for (const [project, expectedFilePaths] of expectedFilePathsByProject) {
       const reportedFilePaths = [...scriptEntriesByFile.keys()].filter(t => t.startsWith(project.productionDirectory));
@@ -52,30 +52,39 @@ export class CoverageAnalyzer {
     return new CoverageResult(fileCoverages);
   }
 
-  private async throwIfProfilesMissingAsync(coverageDirectory: string): Promise<void> {
+  private async readProfileWritersAsync(coverageDirectory: string): Promise<Map<string, string>> {
     const fileNames = (await readdir(coverageDirectory)).sort();
-    const written = new Set<string>();
+    const profiles: (readonly [string, string, string])[] = [];
     for (const fileName of fileNames) {
       const match = Resources.coverageProfilePattern.exec(fileName);
       if (match !== null)
-        written.add(Resources.formatProfileThread(String(match[1]), String(match[2])));
+        profiles.push([fileName, String(match[1]), String(match[2])]);
     }
 
+    const runs = new Map<string, string | undefined>();
     const missing: string[] = [];
     for (const fileName of fileNames) {
       const processId = Resources.threadListPattern.exec(fileName)?.[1];
       if (Object.isUndefined(processId))
         continue;
 
-      for (const threadId of (await readFile(join(coverageDirectory, fileName), Resources.textEncoding)).split(Resources.lineSeparator)) {
-        const thread = Resources.formatProfileThread(processId, threadId);
-        if (threadId !== String.empty && !written.has(thread))
-          missing.push(thread);
-      }
+      const [run, ...threadIds] = (await readFile(join(coverageDirectory, fileName), Resources.textEncoding)).split(Resources.lineSeparator);
+      runs.set(processId, run);
+      for (const threadId of threadIds)
+        if (threadId !== String.empty && !profiles.some(t => t[1] === processId && t[2] === threadId))
+          missing.push(Resources.formatProfileOwner(processId, threadId, run));
     }
 
     if (missing.length > 0)
       throw new TestingException(Resources.coverageProfilesMissing(missing));
+
+    const writers = new Map<string, string>();
+    for (const [fileName, processId, threadId] of profiles) {
+      const threadProfiles = profiles.filter(t => t[1] === processId && t[2] === threadId).map(t => t[0]);
+      writers.set(fileName, Resources.formatProfileWriter(Resources.formatProfileOwner(processId, threadId, runs.get(processId)), threadProfiles));
+    }
+
+    return writers;
   }
 
   private async collectExpectedFilePathsAsync(productionDirectory: string): Promise<string[]> {

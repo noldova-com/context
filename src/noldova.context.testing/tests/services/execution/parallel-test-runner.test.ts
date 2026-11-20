@@ -26,7 +26,7 @@ export class ParallelTestRunnerTests {
   private static readonly TIMEOUT_MILLISECONDS: number = 60_000;
   private static readonly START_LIMIT_MILLISECONDS: number = 60_250;
   private static readonly HANGING_TEST_WATCHDOG: number = 6;
-  private static readonly LOOPING_TEST_WATCHDOG: number = 19;
+  private static readonly LOOPING_TEST_WATCHDOG: number = 20;
 
   @TestData(0)
   @TestData(2_147_483_647)

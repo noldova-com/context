@@ -46,7 +46,9 @@ export class TestRunSupervisor {
   private readonly coverageDirectory: string | null;
   private readonly endedThreadIds: number[];
   private readonly runs: TestWorkerRun[];
-  private readonly workers: Map<Worker, () => Promise<void>>;
+  private readonly workers: Map<Worker, () => Promise<boolean>>;
+  private readonly unendedWorkers: Map<Worker, Promise<unknown>>;
+  private readonly unendedTests: Set<string>;
   private readonly methodResults: Map<number, TestMethodResult[]>;
   private readonly finishedClassResults: Map<number, TestClassResult>;
   private readonly classResults: TestClassResult[];
@@ -56,6 +58,7 @@ export class TestRunSupervisor {
   private methodCount: number;
   private selectionValue: TestSelection;
   private elapsedMillisecondsValue: number;
+  private whenWorkerLeftBehindValue: (() => void) | undefined;
 
   public constructor(timeoutMilliseconds: number, testProjects: readonly TestProject[], filters: readonly string[],
     progressListener: ITestProgressListener | undefined, coverageDirectory: string | null, workerUrl: URL = new URL(Resources.testRunWorkerFileName, import.meta.url),
@@ -81,6 +84,8 @@ export class TestRunSupervisor {
     this.endedThreadIds = [];
     this.runs = [];
     this.workers = new Map();
+    this.unendedWorkers = new Map();
+    this.unendedTests = new Set();
     this.methodResults = new Map();
     this.finishedClassResults = new Map();
     this.classResults = [];
@@ -90,6 +95,11 @@ export class TestRunSupervisor {
     this.methodCount = 0;
     this.selectionValue = new TestSelection(filters, 0, 0);
     this.elapsedMillisecondsValue = 0;
+    this.whenWorkerLeftBehindValue = undefined;
+  }
+
+  public whenWorkerLeftBehind(callback: () => void): void {
+    this.whenWorkerLeftBehindValue = callback;
   }
 
   public get selection(): TestSelection {
@@ -98,6 +108,16 @@ export class TestRunSupervisor {
 
   public get elapsedMilliseconds(): number {
     return this.elapsedMillisecondsValue;
+  }
+
+  public get unendedWorkersMessage(): string | undefined {
+    if (this.unendedWorkers.size === 0)
+      return undefined;
+
+    const testNames = this.classResults.flatMap((classResult, classIndex) => classResult.methodResults
+      .filter((_, methodIndex) => this.unendedTests.has(TestRunSupervisor.formatTestKey(classIndex, methodIndex)))
+      .map(t => t.displayName));
+    return Resources.testWorkersNotEnded(this.unendedWorkers.size, Resources.testWorkerEndMilliseconds, testNames);
   }
 
   public static readCoverageDirectory(): string | null {
@@ -144,6 +164,22 @@ export class TestRunSupervisor {
     return result;
   }
 
+  public waitForUnendedWorkersAsync(): Promise<boolean> {
+    return this.endsWithinLimitAsync(Promise.all(this.unendedWorkers.values()));
+  }
+
+  private static formatTestKey(classIndex: number, methodIndex: number): string {
+    return `${classIndex}:${methodIndex}`;
+  }
+
+  private async endsWithinLimitAsync(ending: Promise<unknown>): Promise<boolean> {
+    const limit = Promise.withResolvers<boolean>();
+    const timer = this.clock.setTimeout(() => limit.resolve(false), Resources.testWorkerEndMilliseconds);
+    const isEnded = await Promise.race([ending.then(() => true), limit.promise]);
+    this.clock.clearTimeout(timer);
+    return isEnded;
+  }
+
   private startWorker(resolve: () => void, reject: (error: unknown) => void): void {
     const start = new TestWorkerStart(this.testProjects, this.filters, this.timeoutMilliseconds);
     const worker = this.createWorker(this.workerUrl, { workerData: start.toData() });
@@ -153,12 +189,20 @@ export class TestRunSupervisor {
     let imported: string | undefined;
     let watchdog: number | undefined;
     let isStopping = false;
-    const stopAsync = async (): Promise<void> => {
+    const stopAsync = async (): Promise<boolean> => {
       isStopping = true;
       this.clock.clearTimeout(watchdog);
       worker.removeAllListeners(Resources.messageEvent);
       worker.removeAllListeners(Resources.exitEvent);
-      await Promise.allSettled([worker.terminate()]);
+      const ending = Promise.allSettled([worker.terminate()]);
+      const isEnded = await this.endsWithinLimitAsync(ending);
+      if (!isEnded) {
+        this.unendedWorkers.set(worker, ending);
+        worker.unref();
+        this.whenWorkerLeftBehindValue?.();
+      }
+
+      return isEnded;
     };
     const finish = (): void => {
       this.workers.delete(worker);
@@ -189,7 +233,9 @@ export class TestRunSupervisor {
       worker.postMessage(undefined);
     };
     const replace = (ending: TestWorkerMessage): void => {
-      void stopAsync().then(() => {
+      void stopAsync().then(isEnded => {
+        if (!isEnded)
+          this.unendedTests.add(TestRunSupervisor.formatTestKey(ending.classIndex, ending.methodIndex));
         if (!this.isFailed)
           this.timeOut(ending);
 
@@ -265,9 +311,9 @@ export class TestRunSupervisor {
     if (Object.isNull(this.coverageDirectory))
       return;
 
-    const threadIds = [threadId, ...this.endedThreadIds];
+    const lines = [Resources.formatThreadListRun(this.testProjects), ...[threadId, ...this.endedThreadIds].map(String)];
     await writeFile(join(this.coverageDirectory, Resources.threadListFileName(process.pid, randomUUID())),
-      threadIds.map(t => `${t}${Resources.lineSeparator}`).join(String.empty));
+      lines.map(t => `${t}${Resources.lineSeparator}`).join(String.empty));
   }
 
   private queue(ready: TestWorkerMessage): void {
