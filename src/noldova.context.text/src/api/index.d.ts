@@ -166,6 +166,49 @@ export declare class EcmaScriptLineTerminator extends LineTerminator {
 }
 
 /**
+ * Orders strings by Unicode code point, the order of their UTF-8 bytes, the
+ * same under every locale and host. Use it where an order must be stable, as
+ * in a list another tool reads or a hash is taken over; use `localeCompare` or
+ * `Intl.Collator` to order text for people to read.
+ *
+ * It differs from the `<` operator and `Array.prototype.sort`'s default only
+ * for characters past U+FFFF: those compare UTF-16 code units, so an astral
+ * character such as U+1F600 sorts before U+E000 through U+FFFF, where this
+ * order puts it after them.
+ *
+ * @example
+ * ```ts
+ * import { CodePointOrderService } from "@noldova/context.text";
+ *
+ * ["b", "a", "B", "@scope/a"].sort(CodePointOrderService.compare); // ["@scope/a", "B", "a", "b"]
+ * CodePointOrderService.compare("\u{1F600}", "\uFFFD"); // 1: U+1F600 is after U+FFFD.
+ * ```
+ */
+export declare class CodePointOrderService {
+  /**
+   * Compares two strings by code point, a pair of surrogates counting as the
+   * one code point it encodes. It doesn't use `this`, so it can be passed as
+   * a sort's comparer.
+   *
+   * @param left The first string.
+   * @param right The second string.
+   * @returns -1 when `left` comes first, 1 when `right` does, and 0 when the
+   * strings are equal. A string comes before the longer strings it starts. A
+   * lone surrogate sorts by its own value, U+D800 through U+DFFF, as in WTF-8,
+   * where UTF-8 has no bytes for it.
+   * @example
+   * ```ts
+   * import { CodePointOrderService } from "@noldova/context.text";
+   *
+   * CodePointOrderService.compare("Zebra", "apple"); // -1: Z is U+005A, a is U+0061.
+   * CodePointOrderService.compare("sample", "sample-app"); // -1
+   * CodePointOrderService.compare("sample", "sample"); // 0
+   * ```
+   */
+  public static compare(left: string, right: string): number;
+}
+
+/**
  * Decodes the three-digit octal escapes some text formats write for a single
  * character, such as Linux's mount tables, which escape only a space, tab,
  * newline or backslash and write a space in a mount point as `\040`.

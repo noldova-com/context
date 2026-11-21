@@ -2,8 +2,8 @@
 
 Text building blocks for CONTEXT libraries and parsers: a read-only view of part
 of a string, a string builder, line-terminator rules, decoding of three-digit
-octal escapes, Unicode identifier classification, and `String` additions that
-importing the package installs.
+octal escapes, an order of strings by Unicode code point, Unicode identifier
+classification, and `String` additions that importing the package installs.
 
 ## Install
 
@@ -14,7 +14,7 @@ npm install @noldova/context.text
 ## Use
 
 ```ts
-import { EcmaScriptLineTerminator, OctalEscapeService, ReadOnlyStringSpan, StringBuilder, UnicodeCodePointService } from "@noldova/context.text";
+import { CodePointOrderService, EcmaScriptLineTerminator, OctalEscapeService, ReadOnlyStringSpan, StringBuilder, UnicodeCodePointService } from "@noldova/context.text";
 
 const span = new ReadOnlyStringSpan("hello world", 6, 5);
 span.toString(); // "world"
@@ -32,6 +32,9 @@ terminator.getLength("a\r\nb", 1); // 2: CRLF.
 // character, so formats that escape UTF-8 bytes, such as git's quoted paths,
 // need a decoder of their own.
 OctalEscapeService.decode("/media/USB\\040Drive"); // "/media/USB Drive"
+
+// The same order under every locale, as UTF-8 bytes sort.
+["b", "a", "B", "@scope/a"].sort(CodePointOrderService.compare); // ["@scope/a", "B", "a", "b"]
 
 UnicodeCodePointService.isIdentifierStart("a".codePointAt(0)!); // true
 String.isAsciiOctalDigit("7"); // true
