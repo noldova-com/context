@@ -29,6 +29,9 @@ Applications, libraries, frameworks, the Runtime, and the SDK keep explicit owne
 - **Portable first, native downstream.** Portable artifacts are the canonical product.
   Runtime execution and AOT are sibling consumers.
 - **Framework completeness.** CONTEXT should provide a coherent framework and tooling ecosystem, complete enough to build whole applications and services on.
+- **Designed, not inherited.** Established platforms are maps of what developers need: CONTEXT keeps their good ideas and familiar names, such as `List`, `Dictionary`, `where` and `firstOrDefault`, and never copies what they keep only for backward compatibility, such as non-generic collections, parallel read-only and writable hierarchies, or `null` meaning both absent and deliberately empty.
+  A public type or member is added only for a present need, never for completeness, and is designed on its own merits; what is waiting for its need, such as the other half of a binary search, is added when the need arrives.
+  What ships before 1.0 becomes what can't change after it, so each addition is designed to be right the first time.
 - **Owned platform boundary.** Bootstrap tools and transitional host dependencies may exist during development, but they do not define the final architecture.
   The intended platform owns its Runtime, package loading, and required user-space services.
 - **Proved performance.** Execution speed, latency, and memory efficiency are primary engineering goals alongside correctness, compatibility, and maintainability.
