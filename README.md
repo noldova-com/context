@@ -48,6 +48,7 @@ Each name opens the package's folder and its own README; each badge opens it on 
 | Package | npm | What it is |
 |---|---|---|
 | [`context.query.expressions`](src/query/noldova.context.query.expressions) | [![npm](https://badgen.net/npm/v/@noldova/context.query.expressions)](https://www.npmjs.com/package/@noldova/context.query.expressions) | Expression trees that describe a query's code as data, for a provider to run or translate to another language such as SQL |
+| [`context.query`](src/query/noldova.context.query) | [![npm](https://badgen.net/npm/v/@noldova/context.query)](https://www.npmjs.com/package/@noldova/context.query) | Queries built as expression trees, the provider contract, and the in-memory provider |
 
 ### Data
 

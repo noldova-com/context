@@ -46,7 +46,7 @@ Package size never justifies moving an unrelated responsibility into Core.
 | `noldova.context.text` | Additional text abstractions and accepted String augmentations; planned: ECMAScript URI encoding functions |
 | `noldova.context.json` | JSON reading; planned: serialization |
 | `noldova.context.query.expressions` | Expression trees: the immutable expression classes, their factories and operators, their source text and expression replacement; no evaluation or translation |
-| `noldova.context.query` | Planned: queries built as expression trees, the query provider contract, the in-memory provider that interprets the trees, and asynchronous sequences |
+| `noldova.context.query` | Queries built as expression trees, the query provider contract, and the in-memory provider that runs the trees on `Enumerable`; their results are asynchronous |
 | `noldova.context.data` | The provider-independent data model: data sources, connections, transactions, migrations and their history, the change feed, and `DbContext` with its options (section 7) |
 | `noldova.context.data.sql` | The SQL implementation of the data model: the schema model, the migration builder, the SQL dialect, and SQL connections, transactions, migration history and change feed |
 | `noldova.context.data.sql.sqlite` | The SQLite provider: its dialect, its connection, and `useSQLite` |

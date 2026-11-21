@@ -1,0 +1,27 @@
+{
+  "name": "@noldova/context.query",
+  "version": "__VERSION__",
+  "type": "module",
+  "main": "api/index.js",
+  "types": "api/index.d.ts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noldova-com/context.git",
+    "directory": "src/query/noldova.context.query"
+  },
+  "homepage": "https://github.com/noldova-com/context#readme",
+  "bugs": {
+    "url": "https://github.com/noldova-com/context/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "peerDependencies": {
+    "@noldova/context.collections": ">=__VERSION__ <__NEXT_MINOR__",
+    "@noldova/context.core": ">=__VERSION__ <__NEXT_MINOR__",
+    "@noldova/context.exceptions": ">=__VERSION__ <__NEXT_MINOR__",
+    "@noldova/context.query.expressions": ">=__VERSION__ <__NEXT_MINOR__"
+  }
+}
