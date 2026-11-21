@@ -19,6 +19,10 @@ import { SourceMapSegment } from "../../models/coverage/source-map-segment.js";
 import { Resources } from "../../resources.js";
 
 export class SourceMap {
+  private static readonly BASE64_ALPHABET: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  private static readonly CONTINUATION_BIT: number = 32;
+  private static readonly VALUE_MASK: number = 31;
+
   private readonly sourcePaths: readonly string[];
   private readonly nameCount: number;
   private readonly segmentsByGeneratedLine: readonly (readonly SourceMapSegment[])[];
@@ -142,15 +146,15 @@ export class SourceMap {
     let isContinued = false;
 
     for (const character of segmentText) {
-      const digit = Resources.sourceMapBase64Alphabet.indexOf(character);
+      const digit = SourceMap.BASE64_ALPHABET.indexOf(character);
       if (digit === -1)
         throw new TestingException(Resources.sourceMapCharacterInvalid(character));
 
-      value += (digit & Resources.sourceMapValueMask) * multiplier;
+      value += (digit & SourceMap.VALUE_MASK) * multiplier;
       if (!Number.isSafeInteger(value))
         throw new TestingException(Resources.sourceMapIntegerUnsupported);
 
-      isContinued = (digit & Resources.sourceMapContinuationBit) !== 0;
+      isContinued = (digit & SourceMap.CONTINUATION_BIT) !== 0;
       if (isContinued) {
         multiplier *= 32;
         continue;

@@ -10,7 +10,6 @@ import type { TestProject } from "./models/discovery/test-project.js";
 import { ProcessListing } from "./models/execution/process-listing.js";
 
 export class Resources {
-  public static readonly sourceMapBase64Alphabet: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
   public static readonly testClassSuffix: string = "Tests";
   public static readonly testFileSuffix: string = ".test.js";
   public static readonly filePathParameter: string = "filePath";
@@ -99,10 +98,8 @@ export class Resources {
   public static readonly blockCommentPattern: RegExp = /\/\*[\s\S]*?\*\//gu;
   public static readonly missingFileErrorCode: string = "ENOENT";
   public static readonly sourceMapSuffix: string = ".map";
-  public static readonly sourceMapContinuationBit: number = 32;
   public static readonly sourceMapLineSeparator: string = ";";
   public static readonly sourceMapSegmentSeparator: string = ",";
-  public static readonly sourceMapValueMask: number = 31;
   public static readonly sourceMapVersion: number = 3;
   public static readonly sourceMapShapeInvalid: string = "A source map must contain a numeric version, string mappings, and string-array sources; optional sourceRoot must be a string and names a string array.";
   public static readonly defaultTimeoutMilliseconds: number = 30_000;
