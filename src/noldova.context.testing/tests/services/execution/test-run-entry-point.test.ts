@@ -183,14 +183,14 @@ export class TestRunEntryPointTests {
       const resultsFile = join(resultsDirectory, "results.json");
       await FixtureTestProject.writeTestFileAsync(rootDirectory, "blocking.test.js", "blocking-fixture");
       const result = await this.runEntryArgumentsAsync(["Sample", rootDirectory], "[]", undefined, true,
-        { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", CONTEXT_TEST_RESULTS_FILE: resultsFile });
+        { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", CONTEXT_TEST_STOP_LIMIT_MILLISECONDS: "1000", CONTEXT_TEST_RESULTS_FILE: resultsFile });
       const results = await readFile(resultsFile, "utf8");
 
       Assert.areEqual(1, result.exitCode, result.errorOutput);
       Assert.isTrue(results.includes("\"methodName\":\"waitsOnAChildProcess\",\"outcome\":\"Failed\""), results);
       Assert.isTrue(results.includes("\"methodName\":\"passesAfterTheBlock\",\"outcome\":\"Passed\""), results);
       Assert.isTrue(result.output.includes("Failed:"), result.output);
-      Assert.isTrue(result.errorOutput.includes("Test workers that could not be ended within 5000 milliseconds of being stopped: 1, running " +
+      Assert.isTrue(result.errorOutput.includes("Test workers that could not be ended within 1000 milliseconds of being stopped: 1, running " +
         "BlockingFixtureTests.waitsOnAChildProcess.\nProcesses the run ended that were still running under it: 1.\n"), result.errorOutput);
       Assert.isFalse(result.errorOutput.includes("ends its own process"), result.errorOutput);
     }
@@ -209,14 +209,14 @@ export class TestRunEntryPointTests {
       const resultsFile = join(resultsDirectory, "results.json");
       await FixtureTestProject.writeTestFileAsync(rootDirectory, "blocking.test.js", "blocking-fixture");
       const result = await this.runEntryArgumentsAsync(["Sample", rootDirectory], "[]", undefined, true,
-        { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", CONTEXT_TEST_RESULTS_FILE: resultsFile, PATH: emptyDirectory });
+        { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", CONTEXT_TEST_STOP_LIMIT_MILLISECONDS: "1000", CONTEXT_TEST_RESULTS_FILE: resultsFile, PATH: emptyDirectory });
       const results = await readFile(resultsFile, "utf8");
 
       Assert.areEqual(process.platform === "win32" ? 1 : -1, result.exitCode, result.errorOutput);
       Assert.isTrue(results.includes("\"methodName\":\"waitsOnAChildProcess\",\"outcome\":\"Failed\""), results);
       Assert.isTrue(results.includes("\"methodName\":\"passesAfterTheBlock\",\"outcome\":\"Passed\""), results);
       Assert.isTrue(result.output.includes("Failed:"), result.output);
-      Assert.isTrue(result.errorOutput.includes("Test workers that could not be ended within 5000 milliseconds of being stopped: 1, running " +
+      Assert.isTrue(result.errorOutput.includes("Test workers that could not be ended within 1000 milliseconds of being stopped: 1, running " +
         "BlockingFixtureTests.waitsOnAChildProcess.\n"), result.errorOutput);
       Assert.isTrue(result.errorOutput.includes("The run could not list the processes running under it with "), result.errorOutput);
       Assert.isTrue(result.errorOutput.includes("ENOENT"), result.errorOutput);
@@ -238,7 +238,7 @@ export class TestRunEntryPointTests {
     try {
       await FixtureTestProject.writeTestFileAsync(rootDirectory, "blocking.test.js", "blocking-fixture");
       const result = await this.runEntryArgumentsAsync(["Sample", rootDirectory], "[]", undefined, true,
-        { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", NODE_V8_COVERAGE: coverageDirectory, PATH: emptyDirectory });
+        { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", CONTEXT_TEST_STOP_LIMIT_MILLISECONDS: "1000", NODE_V8_COVERAGE: coverageDirectory, PATH: emptyDirectory });
       const mainThreadProfiles = (await readdir(coverageDirectory)).filter(t => t.startsWith(`coverage-${result.processId}-`) && t.endsWith("-0.json"));
       const profiles = await Promise.all(mainThreadProfiles.map(t => readFile(join(coverageDirectory, t), "utf8")));
 
@@ -303,6 +303,7 @@ export class TestRunEntryPointTests {
     return new Promise<EntryRun>((resolve, reject) => {
       const environment = { ...process.env };
       delete environment["CONTEXT_TEST_TIMEOUT_MILLISECONDS"];
+      delete environment["CONTEXT_TEST_STOP_LIMIT_MILLISECONDS"];
       delete environment["CONTEXT_TEST_RESULTS_FILE"];
       for (const name of Object.keys(environment))
         if (Object.hasOwn(variables, name.toUpperCase()))

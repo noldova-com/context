@@ -62,6 +62,32 @@ export class TestRunSupervisorTests {
     Assert.areEqual(`CONTEXT_TEST_TIMEOUT_MILLISECONDS must be a positive integer of milliseconds within the timer limit, not "${text}".`, failure.message);
   }
 
+  @TestMethod
+  public readsTheDefaultStopLimitWhenNoneIsSet(): void {
+    Assert.areEqual(5000, TestRunSupervisor.readStopLimitMilliseconds(undefined));
+  }
+
+  @TestData("1")
+  @TestData("1000")
+  @TestData("2147483647")
+  @TestMethod
+  public readsTheStopLimitASuiteSets(text: string): void {
+    Assert.areEqual(Number(text), TestRunSupervisor.readStopLimitMilliseconds(text));
+  }
+
+  @TestData("0")
+  @TestData("-5")
+  @TestData("1.5")
+  @TestData("1e3")
+  @TestData(" 100")
+  @TestData("")
+  @TestData("soon")
+  @TestData("2147483648")
+  @TestMethod
+  public keepsTheDefaultStopLimitForAnInvalidSetting(text: string): void {
+    Assert.areEqual(5000, TestRunSupervisor.readStopLimitMilliseconds(text));
+  }
+
   @TestData(0)
   @TestData(1.5)
   @TestMethod
@@ -76,6 +102,15 @@ export class TestRunSupervisorTests {
   public rejectsAStartLimitOutOfRange(startLimitMilliseconds: number): void {
     Assert.throws(() => new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined,
       2, startLimitMilliseconds), ArgumentOutOfRangeException);
+  }
+
+  @TestData(0)
+  @TestData(1.5)
+  @TestData(2_147_483_648)
+  @TestMethod
+  public rejectsAStopLimitOutOfRange(stopLimitMilliseconds: number): void {
+    Assert.throws(() => new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined,
+      2, undefined, undefined, undefined, stopLimitMilliseconds), ArgumentOutOfRangeException);
   }
 
   @TestMethod
@@ -431,6 +466,51 @@ export class TestRunSupervisorTests {
   }
 
   @TestMethod
+  public async leavesAStoppedWorkerBehindAtTheStopLimitItIsGivenAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const release = Promise.withResolvers<void>();
+    const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), release.promise);
+    const supervisor = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
+      undefined, () => worker, clock, 1_000);
+    const running = supervisor.runAsync();
+    try {
+      worker.send(TestWorkerMessage.ready(1, 1, 1));
+      await worker.ending;
+      clock.advance(5_000);
+      await worker.terminating;
+      clock.advance(999);
+      await new Promise<void>(resolve => setImmediate(resolve));
+      const messageBeforeTheLimit = supervisor.unendedWorkersMessage;
+      clock.advance(1);
+      await Assert.throwsAsync(() => running, Error);
+
+      Assert.isUndefined(messageBeforeTheLimit);
+      Assert.areEqual("Test workers that could not be ended within 1000 milliseconds of being stopped: 1.", supervisor.unendedWorkersMessage);
+    }
+    finally {
+      release.resolve();
+    }
+  }
+
+  @TestMethod
+  public async waitsTheFullLimitForALeftBehindWorkerWhateverItsStopLimitAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const release = Promise.withResolvers<void>();
+    try {
+      const supervisor = await TestRunSupervisorTests.leaveAWorkerBehindAsync(clock, release.promise, [], 1_000);
+
+      const waiting = supervisor.waitForUnendedWorkersAsync();
+      clock.advance(4_999);
+      release.resolve();
+
+      Assert.isTrue(await waiting);
+    }
+    finally {
+      release.resolve();
+    }
+  }
+
+  @TestMethod
   public async stopsWaitingForALeftBehindWorkerAtTheLimitAsync(): Promise<void> {
     const clock = new FakeClock();
     const release = Promise.withResolvers<void>();
@@ -657,17 +737,18 @@ export class TestRunSupervisorTests {
     return readFile(join(coverageDirectory, fileNames.join()), "utf8");
   }
 
-  private static async leaveAWorkerBehindAsync(clock: FakeClock, released: Promise<void>, leftBehind: string[] = []): Promise<TestRunSupervisor> {
+  private static async leaveAWorkerBehindAsync(clock: FakeClock, released: Promise<void>, leftBehind: string[] = [],
+    stopLimitMilliseconds: number = 5_000): Promise<TestRunSupervisor> {
     const worker = new ScriptedWorker(passing => TestRunSupervisorTests.completeClass(passing, 0, "PassingFixtureTests"), released);
     const supervisor = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
-      undefined, () => worker, clock);
+      undefined, () => worker, clock, stopLimitMilliseconds);
     supervisor.whenWorkerLeftBehind(() => leftBehind.push("left behind"));
     const running = supervisor.runAsync();
     worker.send(TestWorkerMessage.ready(1, 1, 1));
     await worker.ending;
     clock.advance(5_000);
     await worker.terminating;
-    clock.advance(5_000);
+    clock.advance(stopLimitMilliseconds);
     await Assert.throwsAsync(() => running, Error);
     return supervisor;
   }

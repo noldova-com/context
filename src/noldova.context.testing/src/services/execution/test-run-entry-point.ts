@@ -49,7 +49,9 @@ export class TestRunEntryPoint {
       }
 
       const timeoutMilliseconds = TestRunSupervisor.readTimeoutMilliseconds(process.env[Resources.timeoutVariable]);
-      supervisor = new TestRunSupervisor(timeoutMilliseconds, testProjects, filters, reporter, TestRunSupervisor.readCoverageDirectory());
+      const stopLimitMilliseconds = TestRunSupervisor.readStopLimitMilliseconds(process.env[Resources.stopLimitVariable]);
+      supervisor = new TestRunSupervisor(timeoutMilliseconds, testProjects, filters, reporter, TestRunSupervisor.readCoverageDirectory(), undefined, undefined,
+        undefined, undefined, undefined, stopLimitMilliseconds);
       supervisor.whenWorkerLeftBehind(() => processTree.warm());
       reporter.start();
       const result = await supervisor.runAsync();
