@@ -6,6 +6,18 @@ Each version's section is written by the pull request that changes the version, 
 Every package moves to each version together, as [VERSIONING-AND-COMPATIBILITY.md](documents/VERSIONING-AND-COMPATIBILITY.md) says.
 Versions before 0.0.6 are described in their version pull requests.
 
+## 0.0.10
+
+CONTEXT's text package orders strings by Unicode code point, and its data packages and test runner get fixes.
+
+- `@noldova/context.text`:
+  - `CodePointComparer.compare(left, right)` orders two strings by Unicode code point, a surrogate pair counting as the one code point it encodes, which is the order of their UTF-8 bytes on every locale and host; it returns -1, 0 or 1, so `names.sort(CodePointComparer.compare)` works, and a lone surrogate sorts by its own value (#175);
+  - `EcmaScriptLineTerminator`'s example says that an empty string is no line terminator, which is what `isLineTerminator` returns (#169).
+- `@noldova/context.data` and `@noldova/context.data.sql`: when an action swallows a nested action's failure, the transaction's `DataException` gives the first such failure as its `cause` (#170).
+- `@noldova/context.data`: `DatabaseFacade`'s constructor closes the connection it opened when the provider's migrator or change-feed factory throws, and rethrows the provider's error (#171).
+- `@noldova/context.testing`: a worker that doesn't end within 5000 ms of being stopped is left behind and the run goes on; once the summary and results file are written, the command-line run fails, names each test whose worker was left behind, ends the processes still running under the run, and ends its own process only when that worker still hasn't ended (#156).
+- No other package's source changes.
+
 ## 0.0.9
 
 CONTEXT's packages take their siblings as peers in a range, its text package decodes octal escapes, and its test runner, data packages, JSON reader and TypeScript parser get fixes.
