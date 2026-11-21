@@ -188,10 +188,11 @@ declare module "@noldova/context.testing/services/execution/test-run-supervisor.
     public get unendedWorkersMessage(): string | undefined;
     public constructor(timeoutMilliseconds: number, testProjects: readonly TestProject[], filters: readonly string[],
       progressListener: ITestProgressListener | undefined, coverageDirectory: string | null, workerUrl?: URL, workerCount?: number,
-      startLimitMilliseconds?: number, createWorker?: (url: URL, options: WorkerOptions) => Worker, clock?: IClock);
+      startLimitMilliseconds?: number, createWorker?: (url: URL, options: WorkerOptions) => Worker, clock?: IClock,
+      stopLimitMilliseconds?: number);
     public static readCoverageDirectory(): string | null;
     public static readTimeoutMilliseconds(text: string | undefined): number;
-    public static readWorkerEndMilliseconds(text: string | undefined): number;
+    public static readStopLimitMilliseconds(text: string | undefined): number;
     public static defaultWorkerCount(): number;
     public static throwIfLimitsInvalid(timeoutMilliseconds: number, workerCount: number): void;
     public runAsync(): Promise<TestRunResult>;

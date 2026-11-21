@@ -24,6 +24,7 @@ export class Resources {
   public static readonly timeoutMillisecondsParameter: string = "timeoutMilliseconds";
   public static readonly workerCountParameter: string = "workerCount";
   public static readonly startLimitMillisecondsParameter: string = "startLimitMilliseconds";
+  public static readonly stopLimitMillisecondsParameter: string = "stopLimitMilliseconds";
   public static readonly nameParameter: string = "name";
   public static readonly reasonParameter: string = "reason";
   public static readonly maximumTimeoutMilliseconds: number = 2_147_483_647;
@@ -108,7 +109,7 @@ export class Resources {
   public static readonly filtersVariable: string = "CONTEXT_TEST_FILTERS";
   public static readonly skipTestDetailsVariable: string = "CONTEXT_SKIP_TEST_DETAILS";
   public static readonly timeoutVariable: string = "CONTEXT_TEST_TIMEOUT_MILLISECONDS";
-  public static readonly workerEndVariable: string = "CONTEXT_TEST_WORKER_END_MILLISECONDS";
+  public static readonly stopLimitVariable: string = "CONTEXT_TEST_STOP_LIMIT_MILLISECONDS";
   public static readonly resultsFileVariable: string = "CONTEXT_TEST_RESULTS_FILE";
   public static readonly timeoutVariablePattern: RegExp = /^[1-9][0-9]*$/u;
   public static readonly testTimeFields: readonly string[] = ["packageName", "filePath", "className", "methodName", "testDataIndex", "outcome", "durationMilliseconds"];
@@ -172,6 +173,7 @@ export class Resources {
   public static readonly timeoutInvalid: string = "The timeout must be a positive integer of milliseconds.";
   public static readonly workerCountInvalid: string = "The worker count must be a positive integer.";
   public static readonly startLimitInvalid: string = "The start limit must be a positive integer of milliseconds.";
+  public static readonly stopLimitInvalid: string = "The stop limit must be a positive integer of milliseconds.";
   public static readonly testProjectPairRequired: string = "Each test project requires a package name and a root directory.";
   public static readonly testFiltersInvalid: string = "The test filters must be a JSON array of strings.";
   public static readonly categoryFilterPrefix: string = "category:";

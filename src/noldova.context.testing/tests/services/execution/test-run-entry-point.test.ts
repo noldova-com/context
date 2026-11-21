@@ -183,7 +183,7 @@ export class TestRunEntryPointTests {
       const resultsFile = join(resultsDirectory, "results.json");
       await FixtureTestProject.writeTestFileAsync(rootDirectory, "blocking.test.js", "blocking-fixture");
       const result = await this.runEntryArgumentsAsync(["Sample", rootDirectory], "[]", undefined, true,
-        { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", CONTEXT_TEST_WORKER_END_MILLISECONDS: "1000", CONTEXT_TEST_RESULTS_FILE: resultsFile });
+        { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", CONTEXT_TEST_STOP_LIMIT_MILLISECONDS: "1000", CONTEXT_TEST_RESULTS_FILE: resultsFile });
       const results = await readFile(resultsFile, "utf8");
 
       Assert.areEqual(1, result.exitCode, result.errorOutput);
@@ -209,7 +209,7 @@ export class TestRunEntryPointTests {
       const resultsFile = join(resultsDirectory, "results.json");
       await FixtureTestProject.writeTestFileAsync(rootDirectory, "blocking.test.js", "blocking-fixture");
       const result = await this.runEntryArgumentsAsync(["Sample", rootDirectory], "[]", undefined, true,
-        { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", CONTEXT_TEST_WORKER_END_MILLISECONDS: "1000", CONTEXT_TEST_RESULTS_FILE: resultsFile, PATH: emptyDirectory });
+        { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", CONTEXT_TEST_STOP_LIMIT_MILLISECONDS: "1000", CONTEXT_TEST_RESULTS_FILE: resultsFile, PATH: emptyDirectory });
       const results = await readFile(resultsFile, "utf8");
 
       Assert.areEqual(process.platform === "win32" ? 1 : -1, result.exitCode, result.errorOutput);
@@ -238,7 +238,7 @@ export class TestRunEntryPointTests {
     try {
       await FixtureTestProject.writeTestFileAsync(rootDirectory, "blocking.test.js", "blocking-fixture");
       const result = await this.runEntryArgumentsAsync(["Sample", rootDirectory], "[]", undefined, true,
-        { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", CONTEXT_TEST_WORKER_END_MILLISECONDS: "1000", NODE_V8_COVERAGE: coverageDirectory, PATH: emptyDirectory });
+        { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", CONTEXT_TEST_STOP_LIMIT_MILLISECONDS: "1000", NODE_V8_COVERAGE: coverageDirectory, PATH: emptyDirectory });
       const mainThreadProfiles = (await readdir(coverageDirectory)).filter(t => t.startsWith(`coverage-${result.processId}-`) && t.endsWith("-0.json"));
       const profiles = await Promise.all(mainThreadProfiles.map(t => readFile(join(coverageDirectory, t), "utf8")));
 
@@ -303,7 +303,7 @@ export class TestRunEntryPointTests {
     return new Promise<EntryRun>((resolve, reject) => {
       const environment = { ...process.env };
       delete environment["CONTEXT_TEST_TIMEOUT_MILLISECONDS"];
-      delete environment["CONTEXT_TEST_WORKER_END_MILLISECONDS"];
+      delete environment["CONTEXT_TEST_STOP_LIMIT_MILLISECONDS"];
       delete environment["CONTEXT_TEST_RESULTS_FILE"];
       for (const name of Object.keys(environment))
         if (Object.hasOwn(variables, name.toUpperCase()))

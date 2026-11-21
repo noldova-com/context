@@ -9,8 +9,9 @@ process, a command-line run names that test after its results, ends the
 processes still running under it, and waits for the worker; if the worker still
 does not end, the run ends its own process rather than hang. The run waits
 five seconds for a stopped worker to end, and five more once it has ended those
-processes; `CONTEXT_TEST_WORKER_END_MILLISECONDS` sets another wait, a positive
-integer of milliseconds, and any other value keeps five seconds.
+processes. `CONTEXT_TEST_STOP_LIMIT_MILLISECONDS` exists for the runner's own
+tests: a positive integer of milliseconds shortens the first wait, so they need
+not wait out a worker blocked on purpose, and any other value keeps five seconds.
 
 ## Install
 
