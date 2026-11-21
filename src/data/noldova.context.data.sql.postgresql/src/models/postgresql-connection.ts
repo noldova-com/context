@@ -24,7 +24,8 @@ export class PostgreSQLConnection extends SqlConnection {
   public static open(dataSource: DataSource): PostgreSQLConnection {
     const configuration = LocationParser.parse(dataSource.location, { max: Resources.sessionPoolSize, maxLifetime: null, onnotice: false });
     const client = PostgreSQLClient.createFrom(configuration);
-    return new PostgreSQLConnection(dataSource, new PostgreSQLSession(client));
+    const connection: PostgreSQLConnection = new PostgreSQLConnection(dataSource, new PostgreSQLSession(client, () => connection.isInTransaction));
+    return connection;
   }
 
   public override get dialect(): SqlDialect {

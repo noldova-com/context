@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "@noldova/context.core";
+
 import type { TypeRegistry } from "../type-registry.js";
 import type { PoolLease } from "./pool-lease.js";
 import type { QueryHandler } from "../../services/client/query-handler.js";
@@ -21,6 +23,10 @@ export class ReservedClient extends SqlRunner implements AsyncDisposable, Dispos
 
   protected override get handler(): QueryHandler {
     return this.lease;
+  }
+
+  public get lost(): boolean {
+    return !Object.isNull(this.lease.connection.closed);
   }
 
   public release(): void {
