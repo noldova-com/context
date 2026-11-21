@@ -267,6 +267,23 @@ export class PostgreSQLConnectionTests {
   }
 
   @TestMethod
+  public async runsAnInsertAndItsKeyOnTheNewSessionOnceTheServerEndsTheOldOne(): Promise<void> {
+    await using schema = await TemporarySchema.createAsync();
+    await using connection = PostgreSQLConnection.open(schema.dataSource());
+    await using other = PostgreSQLConnection.open(schema.dataSource());
+    await connection.executeAsync(PostgreSQLConnectionTests.createCounters);
+    const ended = await PostgreSQLConnectionTests.backendAsync(connection);
+    const insert = new SqlQuery("INSERT INTO counters (name) VALUES (?)", ["one"]);
+
+    await PostgreSQLConnectionTests.endBackendAsync(other, ended);
+    const key = await connection.insertAsync(insert).catch(async () => connection.insertAsync(insert));
+
+    Assert.areEqual(1, key);
+    Assert.areNotEqual(ended, await PostgreSQLConnectionTests.backendAsync(connection));
+    Assert.areEqual(1, (await connection.queryAsync(new SqlQuery("SELECT id FROM counters"))).length);
+  }
+
+  @TestMethod
   public async keepsFailingATransactionWhoseSessionTheServerEndedAndReservesANewOneAfterIt(): Promise<void> {
     await using schema = await TemporarySchema.createAsync();
     await using connection = PostgreSQLConnection.open(schema.dataSource());
