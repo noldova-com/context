@@ -19,6 +19,7 @@ export class PostgreSQLConnectionTests {
   private static readonly unreachable: string = "postgres://user@127.0.0.1:1/app?connect_timeout=1";
   private static readonly createNotes: SqlQuery = new SqlQuery("CREATE TABLE notes (id TEXT PRIMARY KEY, text TEXT NOT NULL, count BIGINT)");
   private static readonly createCounters: SqlQuery = new SqlQuery("CREATE TABLE counters (id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, name TEXT NOT NULL)");
+  private static readonly selectOne: SqlQuery = new SqlQuery("SELECT 1 AS one");
   private static readonly selectNotes: SqlQuery = new SqlQuery("SELECT id, text, count FROM notes ORDER BY id");
 
   @TestMethod
@@ -247,5 +248,67 @@ export class PostgreSQLConnectionTests {
     });
 
     Assert.areEqual(1, (await connection.queryAsync(new SqlQuery("SELECT ownerId FROM pets"))).length);
+  }
+
+  @TestMethod
+  public async reservesANewSessionOnTheNextOperationOnceTheServerEndsItsOwn(): Promise<void> {
+    await using schema = await TemporarySchema.createAsync();
+    await using connection = PostgreSQLConnection.open(schema.dataSource());
+    await using other = PostgreSQLConnection.open(schema.dataSource());
+    const ended = await PostgreSQLConnectionTests.backendAsync(connection);
+
+    await PostgreSQLConnectionTests.endBackendAsync(other, ended);
+    await connection.queryAsync(PostgreSQLConnectionTests.selectOne).catch((error: unknown) => {
+      Assert.isInstanceOf(error, Error);
+    });
+
+    Assert.areNotEqual(ended, await PostgreSQLConnectionTests.backendAsync(connection));
+    Assert.isTrue(connection.isOpen);
+  }
+
+  @TestMethod
+  public async runsAnInsertAndItsKeyOnTheNewSessionOnceTheServerEndsTheOldOne(): Promise<void> {
+    await using schema = await TemporarySchema.createAsync();
+    await using connection = PostgreSQLConnection.open(schema.dataSource());
+    await using other = PostgreSQLConnection.open(schema.dataSource());
+    await connection.executeAsync(PostgreSQLConnectionTests.createCounters);
+    const ended = await PostgreSQLConnectionTests.backendAsync(connection);
+    await PostgreSQLConnectionTests.backendAsync(other);
+    await Released.downToSocketsAsync(2);
+
+    await PostgreSQLConnectionTests.endBackendAsync(other, ended);
+    await Released.downToSocketsAsync(1);
+    const key = await connection.insertAsync(new SqlQuery("INSERT INTO counters (name) VALUES (?)", ["one"]));
+
+    Assert.areEqual(1, key);
+    Assert.areNotEqual(ended, await PostgreSQLConnectionTests.backendAsync(connection));
+    Assert.areEqual(1, (await connection.queryAsync(new SqlQuery("SELECT id FROM counters"))).length);
+  }
+
+  @TestMethod
+  public async keepsFailingATransactionWhoseSessionTheServerEndedAndReservesANewOneAfterIt(): Promise<void> {
+    await using schema = await TemporarySchema.createAsync();
+    await using connection = PostgreSQLConnection.open(schema.dataSource());
+    await using other = PostgreSQLConnection.open(schema.dataSource());
+    const ended = await PostgreSQLConnectionTests.backendAsync(connection);
+
+    await Assert.throwsAsync(async () => connection.runInTransactionAsync(async t => {
+      await PostgreSQLConnectionTests.endBackendAsync(other, ended);
+      await Assert.throwsAsync(async () => t.queryAsync(PostgreSQLConnectionTests.selectOne), Error);
+      await Assert.throwsAsync(async () => t.queryAsync(PostgreSQLConnectionTests.selectOne), Error);
+    }), Error);
+
+    Assert.isFalse(connection.isInTransaction);
+    Assert.areNotEqual(ended, await PostgreSQLConnectionTests.backendAsync(connection));
+  }
+
+  private static async backendAsync(connection: PostgreSQLConnection): Promise<number | undefined> {
+    const [record] = await connection.queryAsync(new SqlQuery("SELECT pg_backend_pid() AS pid"));
+    return record?.readInteger("pid");
+  }
+
+  private static async endBackendAsync(other: PostgreSQLConnection, backend: number | undefined): Promise<void> {
+    const [record] = await other.queryAsync(new SqlQuery("SELECT pg_terminate_backend(?::integer, 10000) AS ended", [backend ?? null]));
+    Assert.areEqual("t", record?.readValue("ended"));
   }
 }

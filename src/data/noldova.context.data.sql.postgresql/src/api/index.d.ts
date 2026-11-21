@@ -55,13 +55,17 @@ export declare class PostgreSQLDialect extends SqlDialect {
 /**
  * A connection to a PostgreSQL database, holding one server session of its
  * own from its first operation until it is closed, so a transaction's
- * statements run in one session. The data source's location is the
- * connection string. Statements mark their parameters with `?`, as for every
- * SQL provider; numbers, text, and `NULL` go to the server as text. A row
- * reads `BIGINT` and the smaller integer and floating-point types as numbers,
- * a `BIGINT` outside the safe integers rejecting with `DataException`, and
- * every other type as its text. An insert returns the value the session's
- * sequences last gave, so it needs a table whose key is generated.
+ * statements run in one session. When the server ends that session, as a
+ * restart, a dropped network or `pg_terminate_backend` does, every statement
+ * of a transaction open on it rejects until the transaction ends, and the
+ * next operation outside a transaction reserves a new session. The data
+ * source's location is the connection string. Statements mark their
+ * parameters with `?`, as for every SQL provider; numbers, text, and `NULL`
+ * go to the server as text. A row reads `BIGINT` and the smaller integer and
+ * floating-point types as numbers, a `BIGINT` outside the safe integers
+ * rejecting with `DataException`, and every other type as its text. An
+ * insert returns the value the session's sequences last gave, so it needs a
+ * table whose key is generated.
  */
 export declare class PostgreSQLConnection extends SqlConnection {
   /**
