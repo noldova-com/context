@@ -8,6 +8,7 @@
 
 import "../extensions/string.extensions.js";
 
+export { CodePointComparer } from "../services/code-point-comparer.js";
 export { ReadOnlyStringSpan } from "../models/read-only-string-span.js";
 export { OctalEscapeService } from "../services/octal-escape.service.js";
 export { EcmaScriptLineTerminator } from "../services/line-terminators/ecma-script-line-terminator.js";

@@ -13,7 +13,7 @@ import * as api from "@noldova/context.text";
 export class TextApiTests {
   @TestMethod
   public exportsTheCompleteCatalog(): void {
-    Assert.areEqual("EcmaScriptLineTerminator,LineTerminator,OctalEscapeService,ReadOnlyStringSpan,StringBuilder,UnicodeCodePointService", Object.keys(api).sort().join(","));
+    Assert.areEqual("CodePointComparer,EcmaScriptLineTerminator,LineTerminator,OctalEscapeService,ReadOnlyStringSpan,StringBuilder,UnicodeCodePointService", Object.keys(api).sort().join(","));
   }
 
   @TestMethod
@@ -23,5 +23,6 @@ export class TextApiTests {
     Assert.areEqual("text", new api.StringBuilder().append("text").toString());
     Assert.areEqual("a b", api.OctalEscapeService.decode("a\\040b"));
     Assert.isTrue(api.UnicodeCodePointService.isIdentifierStart(0x41));
+    Assert.areEqual(-1, api.CodePointComparer.compare("B", "a"));
   }
 }
