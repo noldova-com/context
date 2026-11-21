@@ -108,6 +108,7 @@ export class Resources {
   public static readonly filtersVariable: string = "CONTEXT_TEST_FILTERS";
   public static readonly skipTestDetailsVariable: string = "CONTEXT_SKIP_TEST_DETAILS";
   public static readonly timeoutVariable: string = "CONTEXT_TEST_TIMEOUT_MILLISECONDS";
+  public static readonly workerEndVariable: string = "CONTEXT_TEST_WORKER_END_MILLISECONDS";
   public static readonly resultsFileVariable: string = "CONTEXT_TEST_RESULTS_FILE";
   public static readonly timeoutVariablePattern: RegExp = /^[1-9][0-9]*$/u;
   public static readonly testTimeFields: readonly string[] = ["packageName", "filePath", "className", "methodName", "testDataIndex", "outcome", "durationMilliseconds"];

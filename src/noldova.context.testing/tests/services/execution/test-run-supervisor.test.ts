@@ -62,6 +62,32 @@ export class TestRunSupervisorTests {
     Assert.areEqual(`CONTEXT_TEST_TIMEOUT_MILLISECONDS must be a positive integer of milliseconds within the timer limit, not "${text}".`, failure.message);
   }
 
+  @TestMethod
+  public readsTheDefaultWorkerEndLimitWhenNoneIsSet(): void {
+    Assert.areEqual(5000, TestRunSupervisor.readWorkerEndMilliseconds(undefined));
+  }
+
+  @TestData("1")
+  @TestData("1000")
+  @TestData("2147483647")
+  @TestMethod
+  public readsTheWorkerEndLimitASuiteSets(text: string): void {
+    Assert.areEqual(Number(text), TestRunSupervisor.readWorkerEndMilliseconds(text));
+  }
+
+  @TestData("0")
+  @TestData("-5")
+  @TestData("1.5")
+  @TestData("1e3")
+  @TestData(" 100")
+  @TestData("")
+  @TestData("soon")
+  @TestData("2147483648")
+  @TestMethod
+  public keepsTheDefaultWorkerEndLimitForAnInvalidSetting(text: string): void {
+    Assert.areEqual(5000, TestRunSupervisor.readWorkerEndMilliseconds(text));
+  }
+
   @TestData(0)
   @TestData(1.5)
   @TestMethod

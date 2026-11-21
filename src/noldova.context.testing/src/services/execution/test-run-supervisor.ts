@@ -41,6 +41,7 @@ export class TestRunSupervisor {
   private readonly workerUrl: URL;
   private readonly workerCount: number;
   private readonly startLimitMilliseconds: number;
+  private readonly endLimitMilliseconds: number;
   private readonly createWorker: (url: URL, options: WorkerOptions) => Worker;
   private readonly clock: IClock;
   private readonly coverageDirectory: string | null;
@@ -78,6 +79,7 @@ export class TestRunSupervisor {
     this.workerUrl = workerUrl;
     this.workerCount = workerCount;
     this.startLimitMilliseconds = startLimitMilliseconds;
+    this.endLimitMilliseconds = TestRunSupervisor.readWorkerEndMilliseconds(process.env[Resources.workerEndVariable]);
     this.createWorker = createWorker;
     this.clock = clock;
     this.coverageDirectory = coverageDirectory;
@@ -117,7 +119,7 @@ export class TestRunSupervisor {
     const testNames = this.classResults.flatMap((classResult, classIndex) => classResult.methodResults
       .filter((_, methodIndex) => this.unendedTests.has(TestRunSupervisor.formatTestKey(classIndex, methodIndex)))
       .map(t => t.displayName));
-    return Resources.testWorkersNotEnded(this.unendedWorkers.size, Resources.testWorkerEndMilliseconds, testNames);
+    return Resources.testWorkersNotEnded(this.unendedWorkers.size, this.endLimitMilliseconds, testNames);
   }
 
   public static readCoverageDirectory(): string | null {
@@ -133,6 +135,13 @@ export class TestRunSupervisor {
       throw new TestingException(Resources.timeoutVariableInvalid(text));
 
     return timeoutMilliseconds;
+  }
+
+  public static readWorkerEndMilliseconds(text: string | undefined): number {
+    if (Object.isUndefined(text) || !Resources.timeoutVariablePattern.test(text) || Number(text) > Resources.maximumTimeoutMilliseconds)
+      return Resources.testWorkerEndMilliseconds;
+
+    return Number(text);
   }
 
   public static defaultWorkerCount(): number {
@@ -174,7 +183,7 @@ export class TestRunSupervisor {
 
   private async endsWithinLimitAsync(ending: Promise<unknown>): Promise<boolean> {
     const limit = Promise.withResolvers<boolean>();
-    const timer = this.clock.setTimeout(() => limit.resolve(false), Resources.testWorkerEndMilliseconds);
+    const timer = this.clock.setTimeout(() => limit.resolve(false), this.endLimitMilliseconds);
     const isEnded = await Promise.race([ending.then(() => true), limit.promise]);
     this.clock.clearTimeout(timer);
     return isEnded;
