@@ -43,6 +43,7 @@ export class TestRunSupervisor {
   private readonly startLimitMilliseconds: number;
   private readonly createWorker: (url: URL, options: WorkerOptions) => Worker;
   private readonly clock: IClock;
+  private readonly stopLimitMilliseconds: number;
   private readonly coverageDirectory: string | null;
   private readonly endedThreadIds: number[];
   private readonly runs: TestWorkerRun[];
@@ -65,11 +66,11 @@ export class TestRunSupervisor {
     workerCount: number = TestRunSupervisor.defaultWorkerCount(),
     startLimitMilliseconds: number = Resources.testWorkerStartMilliseconds,
     createWorker: (url: URL, options: WorkerOptions) => Worker = (url, options) => new Worker(url, options),
-    clock: IClock = new SystemClock()) {
+    clock: IClock = new SystemClock(),
+    stopLimitMilliseconds: number = Resources.testWorkerEndMilliseconds) {
     TestRunSupervisor.throwIfLimitsInvalid(timeoutMilliseconds, workerCount);
-    ArgumentOutOfRangeException.throwIfNotPositiveInteger(startLimitMilliseconds, Resources.startLimitMillisecondsParameter, Resources.startLimitInvalid);
-    if (startLimitMilliseconds > Resources.maximumTimeoutMilliseconds)
-      throw new ArgumentOutOfRangeException(Resources.startLimitMillisecondsParameter, startLimitMilliseconds, Resources.timeoutTooLarge);
+    TestRunSupervisor.throwIfLimitInvalid(startLimitMilliseconds, Resources.startLimitMillisecondsParameter, Resources.startLimitInvalid);
+    TestRunSupervisor.throwIfLimitInvalid(stopLimitMilliseconds, Resources.stopLimitMillisecondsParameter, Resources.stopLimitInvalid);
 
     this.timeoutMilliseconds = timeoutMilliseconds;
     this.testProjects = testProjects;
@@ -80,6 +81,7 @@ export class TestRunSupervisor {
     this.startLimitMilliseconds = startLimitMilliseconds;
     this.createWorker = createWorker;
     this.clock = clock;
+    this.stopLimitMilliseconds = stopLimitMilliseconds;
     this.coverageDirectory = coverageDirectory;
     this.endedThreadIds = [];
     this.runs = [];
@@ -117,7 +119,7 @@ export class TestRunSupervisor {
     const testNames = this.classResults.flatMap((classResult, classIndex) => classResult.methodResults
       .filter((_, methodIndex) => this.unendedTests.has(TestRunSupervisor.formatTestKey(classIndex, methodIndex)))
       .map(t => t.displayName));
-    return Resources.testWorkersNotEnded(this.unendedWorkers.size, Resources.testWorkerEndMilliseconds, testNames);
+    return Resources.testWorkersNotEnded(this.unendedWorkers.size, this.stopLimitMilliseconds, testNames);
   }
 
   public static readCoverageDirectory(): string | null {
@@ -133,6 +135,13 @@ export class TestRunSupervisor {
       throw new TestingException(Resources.timeoutVariableInvalid(text));
 
     return timeoutMilliseconds;
+  }
+
+  public static readStopLimitMilliseconds(text: string | undefined): number {
+    if (Object.isUndefined(text) || !Resources.timeoutVariablePattern.test(text) || Number(text) > Resources.maximumTimeoutMilliseconds)
+      return Resources.testWorkerEndMilliseconds;
+
+    return Number(text);
   }
 
   public static defaultWorkerCount(): number {
@@ -165,16 +174,22 @@ export class TestRunSupervisor {
   }
 
   public waitForUnendedWorkersAsync(): Promise<boolean> {
-    return this.endsWithinLimitAsync(Promise.all(this.unendedWorkers.values()));
+    return this.endsWithinLimitAsync(Promise.all(this.unendedWorkers.values()), Resources.testWorkerEndMilliseconds);
   }
 
   private static formatTestKey(classIndex: number, methodIndex: number): string {
     return `${classIndex}:${methodIndex}`;
   }
 
-  private async endsWithinLimitAsync(ending: Promise<unknown>): Promise<boolean> {
+  private static throwIfLimitInvalid(limitMilliseconds: number, parameterName: string, invalidMessage: string): void {
+    ArgumentOutOfRangeException.throwIfNotPositiveInteger(limitMilliseconds, parameterName, invalidMessage);
+    if (limitMilliseconds > Resources.maximumTimeoutMilliseconds)
+      throw new ArgumentOutOfRangeException(parameterName, limitMilliseconds, Resources.timeoutTooLarge);
+  }
+
+  private async endsWithinLimitAsync(ending: Promise<unknown>, limitMilliseconds: number): Promise<boolean> {
     const limit = Promise.withResolvers<boolean>();
-    const timer = this.clock.setTimeout(() => limit.resolve(false), Resources.testWorkerEndMilliseconds);
+    const timer = this.clock.setTimeout(() => limit.resolve(false), limitMilliseconds);
     const isEnded = await Promise.race([ending.then(() => true), limit.promise]);
     this.clock.clearTimeout(timer);
     return isEnded;
@@ -195,7 +210,7 @@ export class TestRunSupervisor {
       worker.removeAllListeners(Resources.messageEvent);
       worker.removeAllListeners(Resources.exitEvent);
       const ending = Promise.allSettled([worker.terminate()]);
-      const isEnded = await this.endsWithinLimitAsync(ending);
+      const isEnded = await this.endsWithinLimitAsync(ending, this.stopLimitMilliseconds);
       if (!isEnded) {
         this.unendedWorkers.set(worker, ending);
         worker.unref();
