@@ -178,13 +178,13 @@ export declare class EcmaScriptLineTerminator extends LineTerminator {
  *
  * @example
  * ```ts
- * import { CodePointOrderService } from "@noldova/context.text";
+ * import { CodePointComparer } from "@noldova/context.text";
  *
- * ["b", "a", "B", "@scope/a"].sort(CodePointOrderService.compare); // ["@scope/a", "B", "a", "b"]
- * CodePointOrderService.compare("\u{1F600}", "\uFFFD"); // 1: U+1F600 is after U+FFFD.
+ * ["b", "a", "B", "@scope/a"].sort(CodePointComparer.compare); // ["@scope/a", "B", "a", "b"]
+ * CodePointComparer.compare("\u{1F600}", "\uFFFD"); // 1: U+1F600 is after U+FFFD.
  * ```
  */
-export declare class CodePointOrderService {
+export declare class CodePointComparer {
   /**
    * Compares two strings by code point, a pair of surrogates counting as the
    * one code point it encodes. It doesn't use `this`, so it can be passed as
@@ -198,11 +198,11 @@ export declare class CodePointOrderService {
    * where UTF-8 has no bytes for it.
    * @example
    * ```ts
-   * import { CodePointOrderService } from "@noldova/context.text";
+   * import { CodePointComparer } from "@noldova/context.text";
    *
-   * CodePointOrderService.compare("Zebra", "apple"); // -1: Z is U+005A, a is U+0061.
-   * CodePointOrderService.compare("sample", "sample-app"); // -1
-   * CodePointOrderService.compare("sample", "sample"); // 0
+   * CodePointComparer.compare("Zebra", "apple"); // -1: Z is U+005A, a is U+0061.
+   * CodePointComparer.compare("sample", "sample-app"); // -1
+   * CodePointComparer.compare("sample", "sample"); // 0
    * ```
    */
   public static compare(left: string, right: string): number;

@@ -8,12 +8,7 @@
 
 import { UnicodeCodePointService } from "./unicode-code-point.service.js";
 
-export class CodePointOrderService {
-  private static readonly MINIMUM_LEADING_SURROGATE: number = 0xD800;
-  private static readonly MINIMUM_SUPPLEMENTARY_CODE_POINT: number = 0x10000;
-  private static readonly MINIMUM_TRAILING_SURROGATE: number = 0xDC00;
-  private static readonly SURROGATE_RANGE_SIZE: number = 0x400;
-
+export class CodePointComparer {
   public static compare(left: string, right: string): number {
     const length = Math.min(left.length, right.length);
     let index = 0;
@@ -23,10 +18,10 @@ export class CodePointOrderService {
     if (index === length)
       return Math.sign(left.length - right.length);
 
-    if (index > 0 && CodePointOrderService.splitsAPair(left, right, index))
+    if (index > 0 && CodePointComparer.splitsAPair(left, right, index))
       index -= 1;
 
-    return Math.sign(CodePointOrderService.readCodePoint(left, index) - CodePointOrderService.readCodePoint(right, index));
+    return Math.sign(CodePointComparer.readCodePoint(left, index) - CodePointComparer.readCodePoint(right, index));
   }
 
   private static splitsAPair(left: string, right: string, index: number): boolean {
@@ -40,8 +35,6 @@ export class CodePointOrderService {
     if (!UnicodeCodePointService.isLeadingSurrogate(unit) || !UnicodeCodePointService.isTrailingSurrogate(next))
       return unit;
 
-    return CodePointOrderService.MINIMUM_SUPPLEMENTARY_CODE_POINT
-      + (unit - CodePointOrderService.MINIMUM_LEADING_SURROGATE) * CodePointOrderService.SURROGATE_RANGE_SIZE
-      + next - CodePointOrderService.MINIMUM_TRAILING_SURROGATE;
+    return UnicodeCodePointService.combineSurrogates(unit, next);
   }
 }
