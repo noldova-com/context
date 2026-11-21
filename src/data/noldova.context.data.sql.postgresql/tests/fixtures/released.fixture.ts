@@ -19,6 +19,17 @@ export class Released {
     return !Released.holdsSockets();
   }
 
+  public static openSockets(): number {
+    return process.getActiveResourcesInfo().filter(t => t === "TCPSocketWrap").length;
+  }
+
+  public static async downToSocketsAsync(count: number): Promise<boolean> {
+    for (let turn = 0; turn < 100000 && Released.openSockets() > count; turn += 1)
+      await new Promise<void>(resolve => setImmediate(resolve));
+
+    return Released.openSockets() <= count;
+  }
+
   private static holdsSockets(): boolean {
     const open = process.getActiveResourcesInfo();
     return open.includes("TCPSocketWrap") || open.includes("TCPServerWrap") || open.includes("ConnectWrap");

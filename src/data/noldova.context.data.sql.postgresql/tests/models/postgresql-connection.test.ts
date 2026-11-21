@@ -273,10 +273,12 @@ export class PostgreSQLConnectionTests {
     await using other = PostgreSQLConnection.open(schema.dataSource());
     await connection.executeAsync(PostgreSQLConnectionTests.createCounters);
     const ended = await PostgreSQLConnectionTests.backendAsync(connection);
-    const insert = new SqlQuery("INSERT INTO counters (name) VALUES (?)", ["one"]);
+    await PostgreSQLConnectionTests.backendAsync(other);
+    Assert.isTrue(await Released.downToSocketsAsync(2));
 
     await PostgreSQLConnectionTests.endBackendAsync(other, ended);
-    const key = await connection.insertAsync(insert).catch(async () => connection.insertAsync(insert));
+    Assert.isTrue(await Released.downToSocketsAsync(1));
+    const key = await connection.insertAsync(new SqlQuery("INSERT INTO counters (name) VALUES (?)", ["one"]));
 
     Assert.areEqual(1, key);
     Assert.areNotEqual(ended, await PostgreSQLConnectionTests.backendAsync(connection));
