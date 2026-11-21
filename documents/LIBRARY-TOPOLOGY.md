@@ -42,7 +42,7 @@ Package size never justifies moving an unrelated responsibility into Core.
 |---|---|
 | `noldova.context.core` | Foundational global identities with their complete standard behavior, utility types, and base Errors |
 | `noldova.context.exceptions` | Additional CONTEXT exceptions (`EXCEPTIONS-CONTRACT.md`) |
-| `noldova.context.collections` | Collection algorithms; planned: Map, Set, weak collections, readonly views, and collection iterators |
+| `noldova.context.collections` | Collections and their queries: `Enumerable` with the query operators, `List`, `Dictionary`, `HashSet`, `Queue`, `Stack`, their read-only views, comparers, and collection algorithms; planned: weak collections |
 | `noldova.context.text` | Additional text abstractions and accepted String augmentations; planned: ECMAScript URI encoding functions |
 | `noldova.context.json` | JSON reading; planned: serialization |
 | `noldova.context.data` | The provider-independent data model: data sources, connections, transactions, migrations and their history, the change feed, and `DbContext` with its options (section 7) |
@@ -66,7 +66,7 @@ The accepted direct library dependencies are:
 |---|---|
 | Core | None |
 | Exceptions | Core |
-| Collections | Core |
+| Collections | Core, Exceptions |
 | Text | Core, Exceptions, Collections |
 | JSON | Core, Exceptions |
 | Data | Core, Exceptions |
@@ -91,7 +91,7 @@ An extension augments the owning identity's instance or constructor contract and
 It never exposes a parallel public `StringExtensions`, `ObjectExtensions`, or equivalent identity.
 Concrete result and iterator identities required by a Core-owned member remain in Core so the lowest package acquires no reverse dependency; higher package-specific adapters remain with their concrete owners.
 
-Text owns `ReadOnlyStringSpan`, `StringBuilder`, the `LineTerminator` contract with its `EcmaScriptLineTerminator`, `CodePointComparer`, `OctalEscapeService`, and `UnicodeCodePointService`; Collections owns `BinarySearchService`, which `UnicodeCodePointService` uses.
+Text owns `ReadOnlyStringSpan`, `StringBuilder`, the `LineTerminator` contract with its `EcmaScriptLineTerminator`, `CodePointComparer`, `OctalEscapeService`, and `UnicodeCodePointService`; Collections owns `BinarySearchService`, which `UnicodeCodePointService` uses, and the collections with their query operators; arrays stay the host's, and `Enumerable.from` gives any iterable the operators.
 `UnicodeCodePointService` holds the Unicode 15.1 `ID_Start` and `ID_Continue` ranges from `DerivedCoreProperties.txt` (SHA-256 `f55d0db69123431a7317868725b1fcbf1eab6b265d756d1bd7f0f6d9f9ee108b`), and its test pins every code point's classification by a hash.
 Their contracts are documented in the packages' public APIs.
 Text's accepted `String` augmentations are the ASCII binary-digit and octal-digit classifications.

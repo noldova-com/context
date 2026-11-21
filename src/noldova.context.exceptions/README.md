@@ -2,7 +2,8 @@
 
 The exceptions CONTEXT libraries throw: an abstract `Exception` base that names
 itself after its concrete class, argument exceptions with guards that check a
-value and narrow its type in one call, and an index exception.
+value and narrow its type in one call, an index exception, and the exceptions
+for a call an object can't serve in its current state and for a missing key.
 
 ## Install
 
@@ -34,8 +35,8 @@ new InputException("Cannot read input.", new ExceptionOptions(new Error("Bad enc
 
 `ArgumentException`, `ArgumentNullException` and `ArgumentOutOfRangeException`
 keep the parameter name as a field, and `ArgumentOutOfRangeException` also keeps
-the rejected value. `IndexOutOfRangeException` carries a message and, where
-given, a cause. The declaration file `api/index.d.ts` documents every member
+the rejected value. `IndexOutOfRangeException`, `InvalidOperationException`
+and `KeyNotFoundException` carry a message and, where given, a cause. The declaration file `api/index.d.ts` documents every member
 with its contract and examples.
 
 ## License

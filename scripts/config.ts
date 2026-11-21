@@ -26,8 +26,8 @@ export default class Config {
 
   public static readonly PACKAGES_INFO: readonly PackageInfo[] = [
     new PackageInfo("noldova.context.core", "noldova.context.core", "@noldova/context.core"),
-    new PackageInfo("noldova.context.collections", "noldova.context.collections", "@noldova/context.collections"),
     new PackageInfo("noldova.context.exceptions", "noldova.context.exceptions", "@noldova/context.exceptions"),
+    new PackageInfo("noldova.context.collections", "noldova.context.collections", "@noldova/context.collections"),
     new PackageInfo("noldova.context.text", "noldova.context.text", "@noldova/context.text"),
     new PackageInfo("noldova.context.json", "noldova.context.json", "@noldova/context.json"),
     new PackageInfo("noldova.context.data", "data/noldova.context.data", "@noldova/context.data"),

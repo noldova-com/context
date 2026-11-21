@@ -19,6 +19,16 @@ export class ArgumentOutOfRangeException extends ArgumentException {
     this.actualValue = actualValue;
   }
 
+  public static throwIfNegative(value: number, parameterName: string, message?: string): void {
+    if (value < 0)
+      throw new ArgumentOutOfRangeException(parameterName, value, message);
+  }
+
+  public static throwIfNotInteger(value: number, parameterName: string, message?: string): void {
+    if (!Number.isInteger(value))
+      throw new ArgumentOutOfRangeException(parameterName, value, message);
+  }
+
   public static throwIfNotPositiveInteger(value: number, parameterName: string, message?: string): void {
     if (!Number.isInteger(value) || value <= 0)
       throw new ArgumentOutOfRangeException(parameterName, value, message);

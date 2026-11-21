@@ -1,8 +1,9 @@
 # noldova.context.collections
 
-Collection algorithms for CONTEXT libraries. Today it holds
-`BinarySearchService`, which finds positions in ascending numeric arrays, such
-as the line that holds a character offset.
+Collections for CONTEXT libraries and apps, with queries over them:
+`List`, `Dictionary`, `HashSet`, `Queue` and `Stack`, each an `Enumerable` with
+the query operators; read-only views; equality and ordering comparers; and
+`BinarySearchService`, which finds positions in ascending numeric arrays.
 
 ## Install
 
@@ -13,19 +14,46 @@ npm install @noldova/context.collections
 ## Use
 
 ```ts
-import { BinarySearchService } from "@noldova/context.collections";
+import { Enumerable, List } from "@noldova/context.collections";
 
-const lineStarts = [0, 12, 30, 41];
+class Account {
+  public readonly id: number;
+  public readonly name: string;
+  public readonly age: number;
+  public readonly active: boolean;
 
-BinarySearchService.floorIndex(lineStarts, 30); // 2: an exact match.
-BinarySearchService.floorIndex(lineStarts, 35); // 2: the nearest lower value is 30.
-BinarySearchService.floorIndex(lineStarts, 0); // 0
-BinarySearchService.floorIndex([], 5); // -1: no value qualifies.
+  public constructor(id: number, name: string, age: number, active: boolean) {
+    this.id = id;
+    this.name = name;
+    this.age = age;
+    this.active = active;
+  }
+}
+
+const accounts = new List([
+  new Account(1, "Ana", 31, true),
+  new Account(2, "Leo", 42, false),
+  new Account(3, "Mia", 27, true)
+]);
+
+accounts.where(t => t.active).orderBy(t => t.age).select(t => t.name).toArray(); // ["Mia", "Ana"]
+accounts.firstOrDefault(t => t.age > 50); // undefined
+accounts.first(t => t.age > 50); // throws InvalidOperationException
+
+const byId = accounts.toDictionary(t => t.id, t => t);
+byId.get(2).name; // "Leo"
+byId.tryGet(9); // undefined
+
+Enumerable.from([3, 1, 2]).orderByDescending(t => t).take(2).toArray(); // [3, 2]
 ```
 
-The array must be sorted from smallest to greatest; the search does not check
-or change it. The declaration file `api/index.d.ts` documents every member with
-its contract and examples.
+Arrays stay native: `Enumerable.from` gives any iterable the operators, and
+`new List(array)` copies one into a list. Operators that return a sequence are
+deferred and run again on each enumeration. A method that needs an element
+throws when there is none; its `…OrDefault` or `try…` form returns `undefined`,
+since `undefined` means there is no value and `null` is a value someone set.
+The declaration file `api/index.d.ts` documents every member with its contract
+and examples.
 
 ## License
 

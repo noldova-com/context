@@ -243,6 +243,50 @@ export declare class ArgumentOutOfRangeException extends ArgumentException {
   public constructor(parameterName?: string, actualValue?: unknown, message?: string, options?: ExceptionOptions);
 
   /**
+   * Requires a number that is not below zero. Fractional values, `NaN` and
+   * positive infinity pass; pair it with
+   * {@link ArgumentOutOfRangeException.throwIfNotInteger} to require a
+   * non-negative integer. It returns no value.
+   *
+   * @param value The number to validate.
+   * @param parameterName The caller's parameter name, included in the exception.
+   * @param message An optional explanation replacing the default out-of-range
+   * text. The parameter suffix is still appended; an explicit empty message is kept.
+   * @throws {ArgumentOutOfRangeException} If the value is below zero, negative
+   * infinity included; `-0` passes. The exception retains `parameterName` and the
+   * rejected number as `actualValue`.
+   * @example
+   * ```ts
+   * import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
+   *
+   * ArgumentOutOfRangeException.throwIfNegative(0, "count"); // Accepted.
+   * ArgumentOutOfRangeException.throwIfNegative(-1, "count"); // Throws.
+   * ```
+   */
+  public static throwIfNegative(value: number, parameterName: string, message?: string): void;
+
+  /**
+   * Requires a finite integer, using the `Number.isInteger` classification.
+   * Zero and negative integers pass. It returns no value.
+   *
+   * @param value The number to validate. This is not a safe-integer check.
+   * @param parameterName The caller's parameter name, included in the exception.
+   * @param message An optional explanation replacing the default out-of-range
+   * text. The parameter suffix is still appended; an explicit empty message is kept.
+   * @throws {ArgumentOutOfRangeException} If the value is fractional, `NaN`, or
+   * either infinity. The exception retains `parameterName` and the rejected
+   * number as `actualValue`.
+   * @example
+   * ```ts
+   * import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
+   *
+   * ArgumentOutOfRangeException.throwIfNotInteger(-3, "start"); // Accepted.
+   * ArgumentOutOfRangeException.throwIfNotInteger(1.5, "start"); // Throws.
+   * ```
+   */
+  public static throwIfNotInteger(value: number, parameterName: string, message?: string): void;
+
+  /**
    * Requires a finite positive integer, using the `Number.isInteger` classification.
    * It does not establish a narrower TypeScript type and returns no value.
    *
@@ -284,6 +328,50 @@ export declare class IndexOutOfRangeException extends Exception {
    *
    * new IndexOutOfRangeException().message; // "The index must be within the valid range."
    * new IndexOutOfRangeException("").message; // ""
+   * ```
+   */
+  public constructor(message?: string, options?: ExceptionOptions);
+}
+
+/**
+ * The exception that is thrown when a call is not valid in its object's current state,
+ * such as reading the first element of an empty sequence.
+ */
+export declare class InvalidOperationException extends Exception {
+  /**
+   * Creates an exception describing a call its object can't serve in its current state.
+   *
+   * @param message The explanation. Omission or `undefined` uses
+   * `"The operation is not valid in the object's current state."`. An empty string is preserved.
+   * @param options Optional context retaining the original cause unchanged.
+   * @example
+   * ```ts
+   * import { InvalidOperationException } from "@noldova/context.exceptions";
+   *
+   * new InvalidOperationException().message; // "The operation is not valid in the object's current state."
+   * new InvalidOperationException("The sequence contains no elements.").message; // "The sequence contains no elements."
+   * ```
+   */
+  public constructor(message?: string, options?: ExceptionOptions);
+}
+
+/**
+ * The exception that is thrown when a lookup that requires its key finds no entry
+ * with that key.
+ */
+export declare class KeyNotFoundException extends Exception {
+  /**
+   * Creates an exception describing a key the collection doesn't hold.
+   *
+   * @param message The explanation. Omission or `undefined` uses
+   * `"The key is not present in the collection."`. An empty string is preserved.
+   * @param options Optional context retaining the original cause unchanged.
+   * @example
+   * ```ts
+   * import { KeyNotFoundException } from "@noldova/context.exceptions";
+   *
+   * new KeyNotFoundException().message; // "The key is not present in the collection."
+   * new KeyNotFoundException("").message; // ""
    * ```
    */
   public constructor(message?: string, options?: ExceptionOptions);

@@ -77,4 +77,45 @@ export class ArgumentOutOfRangeExceptionTests {
   public acceptsPositiveIntegersWithoutImposingASafeIntegerLimit(value: number): void {
     Assert.doesNotThrow(() => ArgumentOutOfRangeException.throwIfNotPositiveInteger(value, "count"));
   }
+
+  @TestMethod
+  @TestData(-1)
+  @TestData(-0.5)
+  @TestData(Number.NEGATIVE_INFINITY)
+  public throwsForNegativeValues(value: number): void {
+    const exception = Assert.throws(() => ArgumentOutOfRangeException.throwIfNegative(value, "count", "Too low."), ArgumentOutOfRangeException);
+
+    Assert.areEqual("Too low. (Parameter 'count')", exception.message);
+    Assert.areEqual<unknown>(value, exception.actualValue);
+  }
+
+  @TestMethod
+  @TestData(0)
+  @TestData(-0)
+  @TestData(0.5)
+  @TestData(Number.NaN)
+  @TestData(Number.POSITIVE_INFINITY)
+  public acceptsValuesThatAreNotNegative(value: number): void {
+    Assert.doesNotThrow(() => ArgumentOutOfRangeException.throwIfNegative(value, "count"));
+  }
+
+  @TestMethod
+  @TestData(1.5)
+  @TestData(Number.NaN)
+  @TestData(Number.POSITIVE_INFINITY)
+  @TestData(Number.NEGATIVE_INFINITY)
+  public throwsForValuesThatAreNotIntegers(value: number): void {
+    const exception = Assert.throws(() => ArgumentOutOfRangeException.throwIfNotInteger(value, "start", "Whole numbers only."), ArgumentOutOfRangeException);
+
+    Assert.areEqual("Whole numbers only. (Parameter 'start')", exception.message);
+    Assert.areEqual<unknown>(value, exception.actualValue);
+  }
+
+  @TestMethod
+  @TestData(-3)
+  @TestData(0)
+  @TestData(Number.MAX_SAFE_INTEGER + 1)
+  public acceptsIntegersOfAnySign(value: number): void {
+    Assert.doesNotThrow(() => ArgumentOutOfRangeException.throwIfNotInteger(value, "start"));
+  }
 }

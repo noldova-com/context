@@ -27,7 +27,9 @@ export class ExceptionsApiTests {
       "ArgumentOutOfRangeException",
       "Exception",
       "ExceptionOptions",
-      "IndexOutOfRangeException"
+      "IndexOutOfRangeException",
+      "InvalidOperationException",
+      "KeyNotFoundException"
     ];
 
     Assert.areEqual(exportNames.sort().join(","), Object.keys(api).sort().join(","));
@@ -39,6 +41,8 @@ export class ExceptionsApiTests {
     Assert.isInstanceOf(api.ArgumentOutOfRangeException.prototype, api.ArgumentException);
     Assert.isInstanceOf(api.ArgumentException.prototype, api.Exception);
     Assert.isInstanceOf(api.IndexOutOfRangeException.prototype, api.Exception);
+    Assert.isInstanceOf(api.InvalidOperationException.prototype, api.Exception);
+    Assert.isInstanceOf(api.KeyNotFoundException.prototype, api.Exception);
     Assert.isInstanceOf(api.Exception.prototype, Error);
   }
 

@@ -11,4 +11,6 @@ export { ArgumentNullException } from "../exceptions/argument-null.exception.js"
 export { ArgumentOutOfRangeException } from "../exceptions/argument-out-of-range.exception.js";
 export { Exception } from "../exceptions/exception.js";
 export { IndexOutOfRangeException } from "../exceptions/index-out-of-range.exception.js";
+export { InvalidOperationException } from "../exceptions/invalid-operation.exception.js";
+export { KeyNotFoundException } from "../exceptions/key-not-found.exception.js";
 export { ExceptionOptions } from "../models/exception-options.js";

@@ -13,6 +13,8 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 export class CollectionsApiTests {
   @TestMethod
   public exportsTheCompleteCatalog(): void {
-    Assert.areEqual("BinarySearchService", Object.keys(api).sort().join(","));
+    Assert.areEqual(
+      "BinarySearchService,Comparer,DefaultEqualityComparer,Dictionary,Enumerable,EqualityComparers,Grouping,HashSet,KeyEqualityComparer,KeyValuePair,List,OrderedEnumerable,Queue,ReadOnlyDictionary,ReadOnlyList,ReadOnlySet,Stack",
+      Object.keys(api).sort().join(","));
   }
 }

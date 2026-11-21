@@ -16,6 +16,8 @@ export class Resources {
   public static readonly argumentOutOfRange: string = "The argument must be within the valid range.";
   public static readonly argumentWhitespace: string = "The value cannot be an empty string or composed entirely of whitespace.";
   public static readonly indexOutOfRange: string = "The index must be within the valid range.";
+  public static readonly invalidOperation: string = "The operation is not valid in the object's current state.";
+  public static readonly keyNotFound: string = "The key is not present in the collection.";
 
   public static formatArgumentMessage(message: string, parameterName?: string): string {
     if (Object.isUndefined(parameterName))

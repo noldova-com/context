@@ -5,6 +5,9 @@
   "frameworks": [],
   "dependencies": {
     "projects": [],
-    "packages": []
+    "packages": [
+      "noldova.context.core",
+      "noldova.context.exceptions"
+    ]
   }
 }

@@ -10,7 +10,9 @@ import {
   ArgumentException,
   ArgumentNullException,
   ArgumentOutOfRangeException,
-  IndexOutOfRangeException
+  IndexOutOfRangeException,
+  InvalidOperationException,
+  KeyNotFoundException
 } from "@noldova/context.exceptions";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
@@ -32,6 +34,12 @@ export class ResourcesTests {
       "The argument must be within the valid range. (Parameter 'value')",
       new ArgumentOutOfRangeException("value").message);
     Assert.areEqual("The index must be within the valid range.", new IndexOutOfRangeException().message);
+  }
+
+  @TestMethod
+  public usesTheCanonicalStateAndKeyMessages(): void {
+    Assert.areEqual("The operation is not valid in the object's current state.", new InvalidOperationException().message);
+    Assert.areEqual("The key is not present in the collection.", new KeyNotFoundException().message);
   }
 
   @TestMethod
