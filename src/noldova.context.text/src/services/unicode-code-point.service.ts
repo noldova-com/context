@@ -13,7 +13,9 @@ export class UnicodeCodePointService {
   private static readonly MAXIMUM_LEADING_SURROGATE: number = 0xDBFF;
   private static readonly MAXIMUM_TRAILING_SURROGATE: number = 0xDFFF;
   private static readonly MINIMUM_LEADING_SURROGATE: number = 0xD800;
+  private static readonly MINIMUM_SUPPLEMENTARY_CODE_POINT: number = 0x10000;
   private static readonly MINIMUM_TRAILING_SURROGATE: number = 0xDC00;
+  private static readonly SURROGATE_RANGE_SIZE: number = 0x400;
 
   private static readonly IDENTIFIER_START_STARTS: readonly number[] = [
     0x41, 0x61, 0xAA, 0xBA, 0xC1, 0xD8, 0xF8, 0x2C6, 0x2E0, 0x2EC, 0x370, 0x376,
@@ -397,6 +399,12 @@ export class UnicodeCodePointService {
 
   public static isTrailingSurrogate(value: number): boolean {
     return Number.isInteger(value) && value >= UnicodeCodePointService.MINIMUM_TRAILING_SURROGATE && value <= UnicodeCodePointService.MAXIMUM_TRAILING_SURROGATE;
+  }
+
+  public static combineSurrogates(leading: number, trailing: number): number {
+    return UnicodeCodePointService.MINIMUM_SUPPLEMENTARY_CODE_POINT
+      + (leading - UnicodeCodePointService.MINIMUM_LEADING_SURROGATE) * UnicodeCodePointService.SURROGATE_RANGE_SIZE
+      + trailing - UnicodeCodePointService.MINIMUM_TRAILING_SURROGATE;
   }
 
   private static isInRanges(value: number, starts: readonly number[], ends: readonly number[], strides: readonly number[]): boolean {

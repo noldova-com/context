@@ -91,7 +91,7 @@ An extension augments the owning identity's instance or constructor contract and
 It never exposes a parallel public `StringExtensions`, `ObjectExtensions`, or equivalent identity.
 Concrete result and iterator identities required by a Core-owned member remain in Core so the lowest package acquires no reverse dependency; higher package-specific adapters remain with their concrete owners.
 
-Text owns `ReadOnlyStringSpan`, `StringBuilder`, the `LineTerminator` contract with its `EcmaScriptLineTerminator`, `OctalEscapeService`, and `UnicodeCodePointService`; Collections owns `BinarySearchService`, which `UnicodeCodePointService` uses.
+Text owns `ReadOnlyStringSpan`, `StringBuilder`, the `LineTerminator` contract with its `EcmaScriptLineTerminator`, `CodePointComparer`, `OctalEscapeService`, and `UnicodeCodePointService`; Collections owns `BinarySearchService`, which `UnicodeCodePointService` uses.
 `UnicodeCodePointService` holds the Unicode 15.1 `ID_Start` and `ID_Continue` ranges from `DerivedCoreProperties.txt` (SHA-256 `f55d0db69123431a7317868725b1fcbf1eab6b265d756d1bd7f0f6d9f9ee108b`), and its test pins every code point's classification by a hash.
 Their contracts are documented in the packages' public APIs.
 Text's accepted `String` augmentations are the ASCII binary-digit and octal-digit classifications.
