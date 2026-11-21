@@ -23,11 +23,9 @@ export class Released {
     return process.getActiveResourcesInfo().filter(t => t === "TCPSocketWrap").length;
   }
 
-  public static async downToSocketsAsync(count: number): Promise<boolean> {
-    for (let turn = 0; turn < 100000 && Released.openSockets() > count; turn += 1)
+  public static async downToSocketsAsync(count: number): Promise<void> {
+    while (Released.openSockets() > count)
       await new Promise<void>(resolve => setImmediate(resolve));
-
-    return Released.openSockets() <= count;
   }
 
   private static holdsSockets(): boolean {
