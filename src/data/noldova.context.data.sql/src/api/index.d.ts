@@ -588,13 +588,31 @@ export declare class MigrationBuilder {
 
   /**
    * Adds an index named `IX_<table>_<columns>` over the selected
-   * properties. A blank table or no properties throws `ArgumentException`.
+   * properties, its parts joined by `_`. A blank table or no properties
+   * throws `ArgumentException`. Because the parts are joined by `_`, another
+   * table and columns can give the same name, such as table `notes_id` with
+   * column `text` and table `notes` with columns `id` and `text`.
+   *
+   * Two names are the same when they match once their ASCII letters are
+   * lower-cased and both are cut to their first 63 UTF-8 bytes, without
+   * splitting a character, since SQLite compares names regardless of ASCII
+   * case and PostgreSQL keeps only their first 63 bytes. A name the same as
+   * one this builder already creates throws `InvalidOperationException`. The
+   * builder sees only its own `createIndex` and `createUniqueIndex` calls, so
+   * a name the same as an index created through
+   * {@link MigrationBuilder.executeSql} or by an earlier migration fails when
+   * this migration runs.
    */
   public createIndex<TModel>(table: string, ...columns: readonly ColumnSelector<TModel>[]): void;
 
   /**
-   * Adds a unique index named `IX_<table>_<columns>` over the selected
-   * properties. A blank table or no properties throws `ArgumentException`.
+   * Adds a unique index named `UX_<table>_<columns>` over the selected
+   * properties, so it never shares its name with a plain index on the same
+   * columns. A blank table or no properties throws `ArgumentException`, and a
+   * repeated name is handled as {@link MigrationBuilder.createIndex} describes.
+   * A unique index created by a migration that already ran keeps the
+   * `IX_<table>_<columns>` name it was created with, since an applied
+   * migration doesn't run again.
    */
   public createUniqueIndex<TModel>(table: string, ...columns: readonly ColumnSelector<TModel>[]): void;
 

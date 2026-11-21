@@ -47,11 +47,16 @@ export class Resources {
   public static readonly sequenceColumn: string = "sequence";
   public static readonly textParameterName: string = "text";
   public static readonly statementParameterName: string = "statement";
+  public static readonly uniqueIndexNamePrefix: string = "UX";
   public static readonly unknownOperation: string = "The change holds an operation the feed does not know.";
   public static readonly wordSeparator: string = " ";
 
   public static formatCreateChangesTable(identityColumnType: string): string {
     return `CREATE TABLE IF NOT EXISTS "__changes" ("sequence" ${identityColumnType}, "entity" TEXT NOT NULL, "entityId" TEXT NOT NULL, "operation" TEXT NOT NULL, "payload" TEXT NOT NULL, "createdAt" TEXT NOT NULL)`;
+  }
+
+  public static formatIndexNameRepeated(name: string, existing: string): string {
+    return `The index name "${name}" is the same as "${existing}", which the migration already creates, once ASCII letters are lower-cased and both are cut to 63 bytes.`;
   }
 
   public static formatTableWithoutColumns(table: string): string {

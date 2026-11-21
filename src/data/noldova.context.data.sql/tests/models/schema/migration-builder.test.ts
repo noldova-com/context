@@ -7,7 +7,7 @@
  */
 
 import { ColumnType, CreateIndexOperation, CreateTableOperation, MigrationBuilder, SqlStatementOperation } from "@noldova/context.data.sql";
-import { ArgumentException } from "@noldova/context.exceptions";
+import { ArgumentException, InvalidOperationException } from "@noldova/context.exceptions";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import type { Note } from "../../fixtures/note.fixture.js";
@@ -35,7 +35,7 @@ export class MigrationBuilderTests {
     Assert.isInstanceOf(operations[1], CreateTableOperation);
     Assert.areEqual("CREATE INDEX \"IX_notes_ownerId\" ON \"notes\" (\"ownerId\")", statements[0]);
     Assert.areEqual("CREATE TABLE \"notes\" (\"id\" TEXT NOT NULL, \"ownerId\" TEXT, PRIMARY KEY (\"id\"), FOREIGN KEY (\"ownerId\") REFERENCES \"owners\" (\"id\"))", statements[1]);
-    Assert.areEqual("CREATE UNIQUE INDEX \"IX_notes_ownerId_id\" ON \"notes\" (\"ownerId\", \"id\")", statements[2]);
+    Assert.areEqual("CREATE UNIQUE INDEX \"UX_notes_ownerId_id\" ON \"notes\" (\"ownerId\", \"id\")", statements[2]);
   }
 
   @TestMethod
@@ -76,5 +76,54 @@ export class MigrationBuilderTests {
     Assert.throws(() => builder.createIndex<Note>("", t => t.id), ArgumentException);
     Assert.throws(() => builder.createIndex<Note>("notes"), ArgumentException);
     Assert.throws(() => builder.createUniqueIndex<Note>("notes"), ArgumentException);
+  }
+
+  @TestMethod
+  public namesAUniqueIndexApartFromAPlainOne(): void {
+    const builder = new MigrationBuilder();
+    builder.createIndex<Note>("notes", t => t.text);
+    builder.createUniqueIndex<Note>("notes", t => t.text);
+
+    Assert.areEqual("IX_notes_text,UX_notes_text", builder.toOperations().map(t => t instanceof CreateIndexOperation ? t.index.name : "").join(","));
+  }
+
+  @TestMethod
+  public rejectsAnIndexNameTheMigrationAlreadyCreates(): void {
+    const builder = new MigrationBuilder();
+    builder.createIndex<Note>("notes_id", t => t.text);
+
+    const exception = Assert.throws(() => builder.createIndex<Note>("notes", t => t.id, t => t.text), InvalidOperationException);
+    Assert.throws(() => builder.createIndex<Note>("notes_id", t => t.text), InvalidOperationException);
+
+    Assert.areEqual("The index name \"IX_notes_id_text\" is the same as \"IX_notes_id_text\", which the migration already creates, "
+      + "once ASCII letters are lower-cased and both are cut to 63 bytes.", exception.message);
+    Assert.areEqual(1, builder.toOperations().length);
+  }
+
+  @TestMethod
+  public rejectsANameThatDiffersOnlyInTheCaseOfAnAsciiLetter(): void {
+    const builder = new MigrationBuilder();
+    builder.createIndex<Note>("notes", t => t.text);
+    builder.createIndex<Note>("É", t => t.text);
+    builder.createIndex<Note>("é", t => t.text);
+
+    const exception = Assert.throws(() => builder.createIndex<Note>("Notes", t => t.text), InvalidOperationException);
+
+    Assert.areEqual("The index name \"IX_Notes_text\" is the same as \"IX_notes_text\", which the migration already creates, "
+      + "once ASCII letters are lower-cased and both are cut to 63 bytes.", exception.message);
+    Assert.areEqual(3, builder.toOperations().length);
+  }
+
+  @TestMethod
+  public rejectsANameThatMatchesInItsFirst63Bytes(): void {
+    const builder = new MigrationBuilder();
+    builder.createIndex<Note>("t".repeat(60), t => t.text);
+    builder.createIndex<Note>(`${"t".repeat(59)}é`, t => t.text);
+
+    Assert.throws(() => builder.createIndex<Note>("t".repeat(60), t => t.id), InvalidOperationException);
+    Assert.throws(() => builder.createIndex<Note>(`${"t".repeat(59)}ā`, t => t.id), InvalidOperationException);
+    builder.createIndex<Note>(`${"t".repeat(58)}€`, t => t.text);
+    Assert.throws(() => builder.createIndex<Note>(`${"t".repeat(58)}😀`, t => t.id), InvalidOperationException);
+    Assert.areEqual(3, builder.toOperations().length);
   }
 }

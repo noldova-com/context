@@ -8,6 +8,7 @@
 
 import { nameof } from "@noldova/context.core";
 import { Index } from "@noldova/context.data";
+import { InvalidOperationException } from "@noldova/context.exceptions";
 
 import { CreateIndexOperation } from "../operations/create-index-operation.js";
 import { CreateTableOperation } from "../operations/create-table-operation.js";
@@ -20,6 +21,9 @@ import { ColumnsBuilder } from "./columns-builder.js";
 import { ConstraintsBuilder } from "./constraints-builder.js";
 
 export class MigrationBuilder {
+  private static readonly ASCII_UPPERCASE: RegExp = /[A-Z]/g;
+  private static readonly NAME_BYTE_LIMIT: number = 63;
+
   private readonly operations: SchemaOperation[] = [];
 
   public createTable<TModel>(
@@ -52,7 +56,35 @@ export class MigrationBuilder {
   }
 
   private addIndex(table: string, columns: readonly string[], isUnique: boolean): void {
-    const name = [Resources.indexNamePrefix, table, ...columns].join(Resources.nameSeparator);
+    const prefix = isUnique ? Resources.uniqueIndexNamePrefix : Resources.indexNamePrefix;
+    const name = [prefix, table, ...columns].join(Resources.nameSeparator);
+    const key = MigrationBuilder.nameKey(name);
+    for (const operation of this.operations)
+      if (operation instanceof CreateIndexOperation && MigrationBuilder.nameKey(operation.index.name) === key)
+        throw new InvalidOperationException(Resources.formatIndexNameRepeated(name, operation.index.name));
+
     this.operations.push(new CreateIndexOperation(new Index(name, table, columns, isUnique)));
+  }
+
+  private static nameKey(name: string): string {
+    let key = "";
+    let bytes = 0;
+    for (const character of name.replace(MigrationBuilder.ASCII_UPPERCASE, t => t.toLowerCase())) {
+      bytes += MigrationBuilder.utf8Length(character);
+      if (bytes > MigrationBuilder.NAME_BYTE_LIMIT)
+        break;
+
+      key += character;
+    }
+
+    return key;
+  }
+
+  private static utf8Length(character: string): number {
+    if (character.length > 1)
+      return 4;
+
+    const code = character.charCodeAt(0);
+    return code < 0x80 ? 1 : code < 0x800 ? 2 : 3;
   }
 }
