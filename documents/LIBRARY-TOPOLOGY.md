@@ -45,6 +45,8 @@ Package size never justifies moving an unrelated responsibility into Core.
 | `noldova.context.collections` | Collections and their queries: `Enumerable` with the query operators, `List`, `Dictionary`, `HashSet`, `Queue`, `Stack`, their read-only views, comparers, and collection algorithms; planned: weak collections |
 | `noldova.context.text` | Additional text abstractions and accepted String augmentations; planned: ECMAScript URI encoding functions |
 | `noldova.context.json` | JSON reading; planned: serialization |
+| `noldova.context.query.expressions` | Expression trees: the immutable expression classes, their factories and operators, their source text and expression replacement; no evaluation or translation |
+| `noldova.context.query` | Planned: queries built as expression trees, the query provider contract, the in-memory provider that interprets the trees, and asynchronous sequences |
 | `noldova.context.data` | The provider-independent data model: data sources, connections, transactions, migrations and their history, the change feed, and `DbContext` with its options (section 7) |
 | `noldova.context.data.sql` | The SQL implementation of the data model: the schema model, the migration builder, the SQL dialect, and SQL connections, transactions, migration history and change feed |
 | `noldova.context.data.sql.sqlite` | The SQLite provider: its dialect, its connection, and `useSQLite` |
@@ -69,6 +71,8 @@ The accepted direct library dependencies are:
 | Collections | Core, Exceptions |
 | Text | Core, Exceptions, Collections |
 | JSON | Core, Exceptions |
+| Query.Expressions | Core, Exceptions |
+| Query | Core, Exceptions, Collections, Query.Expressions |
 | Data | Core, Exceptions |
 | Data.Sql | Core, Exceptions, Data |
 | Data.Sql.SQLite | Core, Exceptions, Data, Data.Sql |
@@ -97,6 +101,8 @@ Their contracts are documented in the packages' public APIs.
 Text's accepted `String` augmentations are the ASCII binary-digit and octal-digit classifications.
 `appendLine` and every environment-selected newline remain deferred until the Environment and Runtime package boundaries are accepted and implemented.
 Generic source mapping consumes an explicitly selected `LineTerminator`; lexical whitespace and line-break policy remain with each language parser.
+
+Query.Expressions owns the expression classes and the operations every consumer needs; a package that runs or translates expressions adds that operation as an extension method on `Expression`, as `ARCHITECTURE.md` section 4 describes: Query its interpreter, and later Data.Sql its SQL translation, whose base rejects an expression it can't translate.
 
 ## 6. Framework environments and campaigns
 

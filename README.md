@@ -43,6 +43,12 @@ Each name opens the package's folder and its own README; each badge opens it on 
 | [`context.collections`](src/noldova.context.collections) | [![npm](https://badgen.net/npm/v/@noldova/context.collections)](https://www.npmjs.com/package/@noldova/context.collections) | Collections and their queries: `List`, `Dictionary`, `HashSet`, `Queue`, `Stack` and `Enumerable`'s query operators |
 | [`context.text`](src/noldova.context.text) | [![npm](https://badgen.net/npm/v/@noldova/context.text)](https://www.npmjs.com/package/@noldova/context.text) | A string builder, read-only views of part of a string, line endings, and Unicode identifier rules |
 
+### Queries
+
+| Package | npm | What it is |
+|---|---|---|
+| [`context.query.expressions`](src/query/noldova.context.query.expressions) | [![npm](https://badgen.net/npm/v/@noldova/context.query.expressions)](https://www.npmjs.com/package/@noldova/context.query.expressions) | Expression trees that describe a query's code as data, for a provider to run or translate to another language such as SQL |
+
 ### Data
 
 | Package | npm | What it is |
