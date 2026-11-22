@@ -191,10 +191,11 @@ export class JsonReader {
   }
 
   private readRequiredOrNull(name: string): JsonValue {
-    if (!this.hasField(name))
+    const field = this.hasField(name) ? this.value[name] : undefined;
+    if (Object.isUndefined(field))
       throw new JsonException(Resources.missingField, this.formatFieldPath(name));
 
-    return this.value[name] as JsonValue;
+    return field;
   }
 
   private throwWrongTypeException(name: string, expected: string): never {
@@ -274,7 +275,8 @@ export class JsonReader {
   private static convertObject(value: object, path: string, ancestors: Set<object>, converted: Map<object, JsonConversion>): JsonConversion {
     const members: Record<string, JsonValue> = {};
     let height = 0;
-    for (const [key, member] of Object.entries(value as Readonly<Record<string, unknown>>)) {
+    for (const [key, entry] of Object.entries(value)) {
+      const member: unknown = entry;
       if (Object.isUndefined(member))
         continue;
       const result = JsonReader.convertToJsonValue(member, JsonReader.formatKeyPath(path, key), ancestors, converted);
