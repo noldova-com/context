@@ -62,6 +62,7 @@ import { CopyInStream } from "./copy-in-stream.js";
 import { CopyOutStream } from "./copy-out-stream.js";
 import { Deferred } from "./deferred.js";
 import { Exchange } from "./exchange.js";
+import { PoolQueue } from "./pool-queue.js";
 import type { Query } from "./query.js";
 import { SentCancel } from "./sent-cancel.js";
 import { RowReader } from "../../services/client/row.reader.js";
@@ -81,8 +82,8 @@ export class PostgreSQLConnection implements CopyHost {
   private readonly socket: ConnectionSocket;
   private readonly timers: ClientTimers;
   private readonly frontend: Frontend = new Frontend();
-  private readonly sent: Exchange[] = [];
-  private readonly pending: Exchange[] = [];
+  private readonly sent: PoolQueue<Exchange> = new PoolQueue<Exchange>();
+  private readonly pending: PoolQueue<Exchange> = new PoolQueue<Exchange>();
   private readonly running: Set<Query> = new Set();
   private readonly open: Set<Exchange> = new Set();
   private readonly out: ProtocolWriter = new ProtocolWriter();
@@ -116,6 +117,8 @@ export class PostgreSQLConnection implements CopyHost {
   public uncertain: boolean = false;
   public releasing: boolean = false;
   public retiring: boolean = false;
+  public closeCalled: boolean = false;
+  public callbackError: Error | null = null;
   public loading: boolean = false;
   public typing: Query | null = null;
   public idleTimer: number | null = null;
@@ -254,7 +257,7 @@ export class PostgreSQLConnection implements CopyHost {
     if (!Object.isNull(query.parts))
       return this.cancelBatchAsync(query);
 
-    const head = this.sent[0];
+    const head = this.sent.peek();
     if (!Object.isNull(this.stashData) && !Object.isUndefined(head) && head.query === query) {
       head.own = new QueryCanceledException();
       this.go();
@@ -267,9 +270,9 @@ export class PostgreSQLConnection implements CopyHost {
     }
 
     const index = this.pending.findIndex(item => item.query === query || item.describedFor === query);
-    const waiting = this.pending[index];
+    const waiting = this.pending.get(index);
     if (!Object.isUndefined(waiting)) {
-      this.pending.splice(index, 1);
+      this.pending.removeAt(index);
       if (waiting === this.fence)
         this.fence = null;
       if (waiting.isNotable(PostgreSQLConnection.notable))
@@ -333,7 +336,7 @@ export class PostgreSQLConnection implements CopyHost {
 
   public computeBacklog(time: number): number {
     let wait = 0;
-    this.sent.forEach((item, index) => {
+    this.sent.toArray().forEach((item, index) => {
       const cost = item.cost ?? 0;
       if (index === 0) {
         const elapsed = time - this.headSince;
@@ -342,14 +345,14 @@ export class PostgreSQLConnection implements CopyHost {
       else
         wait += cost;
     });
-    for (const item of this.pending)
+    for (const item of this.pending.toArray())
       wait += item.cost ?? 0;
 
     return wait;
   }
 
   public isHeavy(): boolean {
-    return this.sent.some(item => item.isNotable(PostgreSQLConnection.slow)) || this.pending.some(item => item.isNotable(PostgreSQLConnection.slow));
+    return this.sent.findIndex(item => item.isNotable(PostgreSQLConnection.slow)) !== -1 || this.pending.findIndex(item => item.isNotable(PostgreSQLConnection.slow)) !== -1;
   }
 
   public writeCopyData(chunk: string | Uint8Array, callback: (error?: Error | null) => void): void {
@@ -451,7 +454,7 @@ export class PostgreSQLConnection implements CopyHost {
     if (!Object.isNull(exchange.query))
       exchange.query.state = this.backend;
     if (!Object.isNull(this.fence))
-      this.pending.splice(this.pending.indexOf(this.fence), 0, exchange);
+      this.pending.insertAt(this.pending.indexOf(this.fence), exchange);
     else if (exchange.ends && this.open.size > 0) {
       this.fence = exchange;
       this.pending.push(exchange);
@@ -468,7 +471,7 @@ export class PostgreSQLConnection implements CopyHost {
   }
 
   private release(): void {
-    for (let next = this.pending[0]; Object.isNull(this.blocker) && !Object.isUndefined(next) && next !== this.fence; next = this.pending[0]) {
+    for (let next = this.pending.peek(); Object.isNull(this.blocker) && !Object.isUndefined(next) && next !== this.fence; next = this.pending.peek()) {
       this.pending.shift();
       this.write(next);
     }
@@ -649,9 +652,9 @@ export class PostgreSQLConnection implements CopyHost {
     let synced = !exchange.nosync && exchange.synced;
     const at = this.sent.indexOf(exchange);
     for (let index = at === -1 ? this.sent.length : at + 1; index < this.sent.length;) {
-      const item = this.sent[index];
+      const item = this.sent.get(index);
       if (!Object.isUndefined(item) && item.batch === batch) {
-        this.sent.splice(index, 1);
+        this.sent.removeAt(index);
         synced ||= !item.nosync && item.synced;
         this.dropFromBatch(item, batch, error);
         if (this.blocker === item)
@@ -662,9 +665,9 @@ export class PostgreSQLConnection implements CopyHost {
     }
 
     for (let index = 0; index < this.pending.length;) {
-      const item = this.pending[index];
+      const item = this.pending.get(index);
       if (!Object.isUndefined(item) && item.batch === batch) {
-        this.pending.splice(index, 1);
+        this.pending.removeAt(index);
         this.dropFromBatch(item, batch, error);
       }
       else
@@ -933,7 +936,7 @@ export class PostgreSQLConnection implements CopyHost {
 
     const go = (): void => {
       exchange.silence = null;
-      if (!Object.isNull(this.closedError) || exchange.done || this.sent[0] !== exchange) {
+      if (!Object.isNull(this.closedError) || exchange.done || this.sent.peek() !== exchange) {
         cancel.resolve();
         return;
       }
@@ -980,7 +983,7 @@ export class PostgreSQLConnection implements CopyHost {
     this.sentCancels.push(sent);
     const cancel = this.session.cancelAsync(this.events.cancels);
     const settle = (): void => {
-      const last = this.sent.at(-1);
+      const last = this.sent.get(this.sent.length - 1);
       if (Object.isUndefined(last))
         this.sentCancels = this.sentCancels.filter(t => t !== sent);
       else
@@ -1039,7 +1042,7 @@ export class PostgreSQLConnection implements CopyHost {
   private cancelBatchAsync(query: Query): Promise<void> {
     const exchange = this.sent.find(item => item.batch?.query === query);
     if (!Object.isUndefined(exchange)) {
-      if (exchange === this.sent[0])
+      if (exchange === this.sent.peek())
         return this.cancelExchangeAsync(exchange);
 
       exchange.cancel = new Deferred<void>();
@@ -1076,22 +1079,22 @@ export class PostgreSQLConnection implements CopyHost {
     this.blocker = null;
     this.fence = null;
     this.notables = 0;
-    const head = this.sent[0];
+    const head = this.sent.peek();
     const failed = head?.error instanceof PostgreSQLException && head.error.severity === Resources.fatalSeverity ? head.error : null;
     const fatal = this.fatal ?? failed;
     this.uncertain = !Object.isNull(fatal) && !Object.isUndefined(head) && head.ends;
     const closed = new ConnectionClosedException(this.closing, this.host, this.port, fatal ?? error);
     this.closedError = closed;
-    for (const item of [...this.sent, ...this.pending])
+    for (const item of [...this.sent.toArray(), ...this.pending.toArray()])
       item.cancel?.resolve();
-    for (const item of this.sent.splice(0)) {
+    for (const item of this.sent.take()) {
       item.stream?.destroy(closed);
       if (!Object.isNull(item.own))
         this.settle(item);
       else
         this.settleError(item, failed ?? closed);
     }
-    for (const item of this.pending.splice(0)) {
+    for (const item of this.pending.take()) {
       if (!Object.isNull(item.own))
         this.settle(item);
       else
@@ -1147,7 +1150,7 @@ export class PostgreSQLConnection implements CopyHost {
         return;
       }
 
-      const head = this.sent[0];
+      const head = this.sent.peek();
       if (Object.isUndefined(head))
         this.destroy(PostgreSQLConnection.toError(error));
       else
@@ -1225,8 +1228,10 @@ export class PostgreSQLConnection implements CopyHost {
       case BackendMessage.NegotiateProtocolVersion:
         this.rejectUnsupported(String(BackendMessage[type]));
         break;
-      default:
+      case BackendMessage.CloseComplete:
         break;
+      default:
+        throw new MalformedMessageException();
     }
   }
 
@@ -1241,7 +1246,7 @@ export class PostgreSQLConnection implements CopyHost {
   }
 
   private rejectUnsupported(name: string): void {
-    const head = this.sent[0];
+    const head = this.sent.peek();
     if (!Object.isUndefined(head))
       this.fail(head, new DataException(Resources.formatMessageNotSupported(name)));
   }
@@ -1362,7 +1367,7 @@ export class PostgreSQLConnection implements CopyHost {
   private markUnsafe(exchange: Exchange): void {
     this.rolling = true;
     exchange.own = new UnsafeTransactionException(Resources.unsafeTransaction);
-    for (const item of this.sent)
+    for (const item of this.sent.toArray())
       if (item.kind !== ExchangeKind.Local)
         item.own = new UnsafeTransactionException(Resources.unsafeTransaction);
     this.pending.unshift(new Exchange(ExchangeKind.Internal, null, null, item => {
@@ -1399,7 +1404,7 @@ export class PostgreSQLConnection implements CopyHost {
       const next: unknown = await query.callCursor(exchange.result);
       exchange.awaiting = false;
       exchange.result = new Result();
-      if (!Object.isNull(this.closedError) || exchange.synced || this.sent[0] !== exchange)
+      if (!Object.isNull(this.closedError) || exchange.synced || this.sent.peek() !== exchange)
         return;
       if (!Object.isNull(query.aborted))
         throw query.aborted;
@@ -1416,7 +1421,7 @@ export class PostgreSQLConnection implements CopyHost {
     }
     catch (error) {
       exchange.awaiting = false;
-      if (!Object.isNull(this.closedError) || exchange.synced || this.sent[0] !== exchange)
+      if (!Object.isNull(this.closedError) || exchange.synced || this.sent.peek() !== exchange)
         return;
       this.fail(exchange, PostgreSQLConnection.toError(error));
     }
@@ -1425,7 +1430,7 @@ export class PostgreSQLConnection implements CopyHost {
   }
 
   private handleErrorResponse(data: Buffer, start: number, end: number): void {
-    const exchange = this.sent[0];
+    const exchange = this.sent.peek();
     const error = new PostgreSQLException(Backend.readError(data, start, end));
     if (Object.isUndefined(exchange)) {
       this.fatal = error;
@@ -1460,7 +1465,7 @@ export class PostgreSQLConnection implements CopyHost {
     this.settle(exchange);
     if (exchange.entry?.owner === exchange)
       exchange.entry.owner = null;
-    for (let next = this.sent[0]; next?.kind === ExchangeKind.Local; next = this.sent[0]) {
+    for (let next = this.sent.peek(); next?.kind === ExchangeKind.Local; next = this.sent.peek()) {
       this.sent.shift();
       this.settle(next);
     }
@@ -1475,7 +1480,7 @@ export class PostgreSQLConnection implements CopyHost {
   }
 
   private activateHead(): void {
-    const next = this.sent[0];
+    const next = this.sent.peek();
     if (Object.isUndefined(next) || Object.isNull(next.query))
       return;
 
@@ -1703,7 +1708,7 @@ export class PostgreSQLConnection implements CopyHost {
 
   private handleNotificationResponse(data: Buffer, start: number, end: number): void {
     const notification = Backend.readNotification(data, start, end);
-    PostgreSQLConnection.guard(() => this.events.onNotify(notification.channel, notification.payload, notification.pid));
+    this.events.onNotify(notification.channel, notification.payload, notification.pid);
   }
 
   private handleNoticeResponse(data: Buffer, start: number, end: number): void {
@@ -1712,13 +1717,13 @@ export class PostgreSQLConnection implements CopyHost {
     if (Object.isNull(onnotice))
       console.log(Object.fromEntries(notice));
     else if (onnotice !== false)
-      PostgreSQLConnection.guard(() => onnotice(notice));
+      onnotice(notice);
   }
 
   private handleParameterStatus(data: Buffer, start: number, end: number): void {
     const status = Backend.readParameterStatus(data, start, end);
     this.parameters.set(status.name, status.value);
-    PostgreSQLConnection.guard(() => this.events.onParameter(status.name, status.value));
+    this.events.onParameter(status.name, status.value);
   }
 
   private copyInResponse(): void {
@@ -1764,7 +1769,7 @@ export class PostgreSQLConnection implements CopyHost {
   }
 
   private peekHead(): Exchange {
-    const head = this.sent[0];
+    const head = this.sent.peek();
     if (Object.isUndefined(head))
       throw new DataException(Resources.unexpectedMessage);
 
@@ -1822,15 +1827,6 @@ export class PostgreSQLConnection implements CopyHost {
 
   private static readStatement(exchange: Exchange): QueryStatement {
     return PostgreSQLConnection.readWire(PostgreSQLConnection.queryOf(exchange)).statement;
-  }
-
-  private static guard(action: () => void): void {
-    try {
-      action();
-    }
-    catch {
-      return;
-    }
   }
 
   private static toError(error: unknown): Error {

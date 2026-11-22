@@ -13,6 +13,7 @@ import { ExceptionOptions } from "@noldova/context.exceptions";
 import type { LeaseKind } from "../../enums/lease-kind.js";
 import { TransactionStatus } from "../../enums/transaction-status.js";
 import { BatchException } from "../../exceptions/batch.exception.js";
+import { CallbacksFailedException } from "../../exceptions/callbacks-failed.exception.js";
 import { ConnectionClosedException } from "../../exceptions/connection-closed.exception.js";
 import { ConnectionEndedException } from "../../exceptions/connection-ended.exception.js";
 import { PostgreSQLException } from "../../exceptions/postgresql.exception.js";
@@ -36,6 +37,7 @@ import type { SessionStarter } from "../../services/session-starter.js";
 import type { TypeRegistry } from "../type-registry.js";
 import type { ClientTimers } from "./client-timers.js";
 import { ConnectionEvents } from "../../services/client/connection-events.js";
+import { Deferred } from "./deferred.js";
 import { DerivedKeys } from "../../services/derived-keys.js";
 import { PoolJob } from "./pool-job.js";
 import { PoolLease } from "./pool-lease.js";
@@ -70,7 +72,8 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
   private cancelling: number = 0;
   private readonly cancelAbort: AbortController = new AbortController();
   private ending: Promise<void> | null = null;
-  private ended: (() => void) | null = null;
+  private ended: Deferred<void> | null = null;
+  private readonly kept: Error[] = [];
   private used: boolean = false;
   private endTimer: number | null = null;
   private retries: number = 0;
@@ -216,7 +219,7 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
     if (!Object.isNull(this.ending))
       throw this.createEndedError();
 
-    const failing = this.readFastFailure();
+    const failing = this.takeKept() ?? this.readFastFailure();
     if (!Object.isNull(failing))
       throw failing;
 
@@ -257,25 +260,31 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
     if (!Object.isNull(this.ending))
       return this.ending;
 
-    this.ending = new Promise<void>(resolve => {
-      this.ended = (): void => resolve();
-      if (!Object.isNull(timeout))
-        this.endTimer = this.timers.setTimeout(() => this.destroy(), timeout * 1000);
-      this.timers.clearTimeout(this.retryTimer);
-      this.retryTimer = null;
-      queueMicrotask(() => this.finishEnding());
-    });
+    const ended = new Deferred<void>();
+    this.ended = ended;
+    this.ending = ended.promise;
+    if (!Object.isNull(timeout))
+      this.endTimer = this.timers.setTimeout(() => this.destroy(), timeout * 1000);
+    this.timers.clearTimeout(this.retryTimer);
+    this.retryTimer = null;
+    queueMicrotask(() => this.finishEnding());
     return this.ending;
   }
 
   public async closeAsync(): Promise<void> {
     this.used = false;
-    await Promise.all([...this.connections].map(connection => Object.isNull(connection.lease)
+    const connections = [...this.connections];
+    for (const connection of connections)
+      connection.closeCalled = true;
+    await Promise.all(connections.map(connection => Object.isNull(connection.lease)
       ? connection.closeAsync()
       : new Promise<void>(resolve => {
         connection.retiring = true;
         connection.retired.push(() => resolve());
       })));
+    for (const connection of connections)
+      if (!Object.isNull(connection.callbackError))
+        throw connection.callbackError;
   }
 
   public override requestTypes(connection: PostgreSQLConnection | null): void {
@@ -337,10 +346,13 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
       resolve();
     this.timers.clearTimeout(connection.idleTimer);
     this.timers.clearTimeout(connection.lifeTimer);
+    const failure = this.notifyClosed(connection);
+    const claimed = !Object.isNull(failure) && this.claimFailure(connection, failure);
     const lease = connection.lease;
     if (!Object.isNull(lease))
-      lease.onClose(PostgreSQLPool.createLostError(connection, error));
-    this.clientOptions.onclose?.(connection.id);
+      lease.onClose(Object.isNull(failure) || claimed ? PostgreSQLPool.createLostError(connection, error) : failure);
+    else if (!Object.isNull(failure) && !claimed)
+      this.kept.push(failure);
     if (this.connections.size === 0 && this.opening === 0)
       this.statements.clear();
     this.drain();
@@ -469,7 +481,7 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
       return;
     }
 
-    const failing = this.readFastFailure();
+    const failing = this.takeKept() ?? this.readFastFailure();
     if (!Object.isNull(failing)) {
       this.reject(job, failing);
       return;
@@ -697,6 +709,40 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
     }
   }
 
+  private takeKept(): Error | null {
+    const failures = this.kept.splice(0);
+    const [first] = failures;
+    if (Object.isUndefined(first))
+      return null;
+
+    return failures.length === 1 ? first : new CallbacksFailedException(failures);
+  }
+
+  private notifyClosed(connection: PostgreSQLConnection): Error | null {
+    const onclose = this.clientOptions.onclose;
+    if (Object.isNull(onclose))
+      return null;
+
+    try {
+      onclose(connection.id);
+      return null;
+    }
+    catch (error) {
+      return PostgreSQLPool.toError(error);
+    }
+  }
+
+  private claimFailure(connection: PostgreSQLConnection, failure: Error): boolean {
+    if (connection.closeCalled)
+      connection.callbackError = failure;
+    else if (!Object.isNull(this.ended))
+      this.kept.push(failure);
+    else
+      return false;
+
+    return true;
+  }
+
   private readFastFailure(): Error | null {
     return this.retries > 1 && this.opening === 0 && this.timers.readTime() < this.nextAttempt && this.isStuck() ? this.failure : null;
   }
@@ -717,11 +763,21 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
       return;
     }
 
-    for (const [name, value] of session.parameters)
-      this.onParameter(name, value);
+    let life: number | null;
+    try {
+      for (const [name, value] of session.parameters)
+        this.onParameter(name, value);
+      life = this.readLifetime();
+    }
+    catch (error) {
+      session.socket.destroy();
+      this.failOpened(PostgreSQLPool.toError(error));
+      return;
+    }
+
     const connection = new PostgreSQLConnection(session, this.clientOptions, this);
     this.connections.add(connection);
-    this.scheduleLifetime(connection);
+    this.scheduleLifetime(connection, life);
     if (!this.typesLoaded && this.eager) {
       if (this.typesLoading)
         connection.loading = true;
@@ -789,20 +845,35 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
     this.typeRetries += 1;
     const timeout = this.connection.connectTimeout;
     if (timeout > 0 && now - failing >= timeout * 1000) {
-      this.typeRetries = 0;
-      this.typesFailing = null;
-      for (const connection of [...this.paused]) {
-        this.paused.delete(connection);
-        connection.destroy(failure);
-      }
+      this.dropPaused(failure);
       return;
     }
 
-    if (this.paused.size > 0)
-      this.retryTypes = this.timers.setTimeout(() => {
-        this.retryTypes = null;
-        this.requestTypes(null);
-      }, 1000 * this.computeBackoff(this.typeRetries));
+    if (this.paused.size === 0)
+      return;
+
+    let seconds: number;
+    try {
+      seconds = this.computeBackoff(this.typeRetries);
+    }
+    catch (error) {
+      this.dropPaused(PostgreSQLPool.toError(error));
+      return;
+    }
+
+    this.retryTypes = this.timers.setTimeout(() => {
+      this.retryTypes = null;
+      this.requestTypes(null);
+    }, 1000 * seconds);
+  }
+
+  private dropPaused(error: Error | null): void {
+    this.typeRetries = 0;
+    this.typesFailing = null;
+    for (const connection of [...this.paused]) {
+      this.paused.delete(connection);
+      connection.destroy(error);
+    }
   }
 
   private resume(): void {
@@ -901,6 +972,19 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
       return;
     }
 
+    this.retryOpen(error);
+  }
+
+  private failOpened(error: Error): void {
+    const job = this.waiting.shift();
+    if (Object.isUndefined(job))
+      this.kept.push(error);
+    else
+      this.reject(job, error);
+    this.retryOpen(error);
+  }
+
+  private retryOpen(error: Error): void {
     this.recordFailedAttempt(error);
     if (Object.isNull(this.ending))
       this.grow();
@@ -913,7 +997,13 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
     const since = this.failingSince ?? now;
     this.failingSince = since;
     this.retries += 1;
-    this.nextAttempt = now + 1000 * this.computeBackoff(this.retries);
+    try {
+      this.nextAttempt = now + 1000 * this.computeBackoff(this.retries);
+    }
+    catch (failure) {
+      for (const job of this.waiting.take())
+        this.reject(job, PostgreSQLPool.toError(failure));
+    }
 
     const transient = (error instanceof ConnectionClosedException && !error.destroyed)
       || (error instanceof PostgreSQLException && error.sqlState === Resources.tooManyConnectionsState);
@@ -935,9 +1025,12 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
     job.fail(error);
   }
 
-  private scheduleLifetime(connection: PostgreSQLConnection): void {
+  private readLifetime(): number | null {
     const configured = this.clientOptions.maxLifetime;
-    const life = Object.isFunction(configured) ? configured() : configured;
+    return Object.isFunction(configured) ? configured() : configured;
+  }
+
+  private scheduleLifetime(connection: PostgreSQLConnection, life: number | null): void {
     if (!Object.isNull(life) && life > 0)
       connection.lifeTimer = this.unref(this.timers.setTimeout(() => {
         connection.retiring = true;
@@ -1017,7 +1110,11 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
       this.timers.clearTimeout(this.retryTypes);
       this.ended = null;
       this.keys.clear();
-      ended();
+      const failure = this.takeKept();
+      if (Object.isNull(failure))
+        ended.resolve();
+      else
+        ended.reject(failure);
     }
   }
 

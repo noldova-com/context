@@ -182,6 +182,8 @@ export class SessionStarter {
               resolve(new StartedSession(socket, frames.takeRemainder(), parameters, backend, status, this.options.host, this.options.port, this));
             }, () => undefined);
           }
+          else if (type !== BackendMessage.NoticeResponse)
+            fail(new MalformedMessageException());
         }
         catch (error) {
           fail(error);

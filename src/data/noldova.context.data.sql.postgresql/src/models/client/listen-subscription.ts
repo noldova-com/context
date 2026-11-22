@@ -28,6 +28,10 @@ export class ListenSubscription {
     return this.channel.state;
   }
 
+  public get ended(): Promise<void> {
+    return this.listener.ended.promise;
+  }
+
   public unlistenAsync(): Promise<void> {
     return this.owner.unlistenAsync(this.name, this.channel, this.listener);
   }

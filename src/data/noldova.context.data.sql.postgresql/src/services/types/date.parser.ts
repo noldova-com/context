@@ -7,6 +7,7 @@
  */
 
 import "@noldova/context.core";
+import { DataException } from "@noldova/context.data";
 
 import { DateParts } from "../../models/date-parts.js";
 import { Resources } from "../../resources.js";
@@ -28,10 +29,7 @@ export class DateParser {
     if (!Object.isNull(infinite))
       return infinite;
 
-    const parts = DateParser.parseParts(text);
-    if (Object.isNull(parts))
-      return new Date(text);
-
+    const parts = DateParser.readParts(text);
     const date = DateParser.toUtcDate(parts);
     date.setTime(date.getTime() - parts.offset);
     return date;
@@ -42,8 +40,7 @@ export class DateParser {
     if (!Object.isNull(infinite))
       return infinite;
 
-    const parts = DateParser.parseParts(text);
-    return Object.isNull(parts) ? new Date(text) : DateParser.toUtcDate(parts);
+    return DateParser.toUtcDate(DateParser.readParts(text));
   }
 
   public static parseTimestamp(text: string): Date | number {
@@ -51,10 +48,7 @@ export class DateParser {
     if (!Object.isNull(infinite))
       return infinite;
 
-    const parts = DateParser.parseParts(text);
-    if (Object.isNull(parts))
-      return new Date(text);
-
+    const parts = DateParser.readParts(text);
     if (parts.year >= 100)
       return new Date(parts.year, parts.month, parts.day, parts.hour, parts.minute, parts.second, parts.milliseconds);
 
@@ -87,10 +81,10 @@ export class DateParser {
     return text === Resources.negativeInfinity ? -Infinity : null;
   }
 
-  private static parseParts(text: string): DateParts | null {
+  private static readParts(text: string): DateParts {
     const match = DateParser.timestampPattern.exec(text);
     if (Object.isNull(match))
-      return null;
+      throw new DataException(Resources.dateNotIso);
 
     const group = (index: number): string => match[index] ?? "";
     const year = group(12).length > 0 ? 1 - Number(group(1)) : Number(group(1));

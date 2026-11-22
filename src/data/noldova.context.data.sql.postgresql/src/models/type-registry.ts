@@ -13,6 +13,7 @@ import { Buffer } from "node:buffer";
 import "@noldova/context.core";
 
 import { TypeNotFoundException } from "../exceptions/type-not-found.exception.js";
+import { ArrayElement } from "./array-element.js";
 import type { ClientOptions } from "./client-options.js";
 import { TypeDefinition } from "./type-definition.js";
 import { TypedParameter } from "./typed-parameter.js";
@@ -57,7 +58,7 @@ export class TypeRegistry {
 
   private readonly parsers: Map<number, ValueParser> = new Map();
   private readonly serializers: Map<number, ValueSerializer> = new Map();
-  private readonly elements: Map<number, readonly [number, string]> = new Map();
+  private readonly elements: Map<number, ArrayElement> = new Map();
   private readonly bases: Map<number, number> = new Map();
   private readonly oids: Map<string, number> = new Map();
   private readonly own: Set<number | string> = new Set();
@@ -68,7 +69,7 @@ export class TypeRegistry {
   public constructor(options: ClientOptions) {
     this.undefinedValue = options.transform.undefinedValue;
     for (const [oid, array] of TypeRegistry.arrays)
-      this.elements.set(array, [oid, oid === TypeRegistry.boxOid ? Resources.boxDelimiter : Resources.arrayDelimiter]);
+      this.elements.set(array, new ArrayElement(oid, oid === TypeRegistry.boxOid ? Resources.boxDelimiter : Resources.arrayDelimiter));
     this.register(options.infer ? TypeRegistry.createBuiltIn() : TypeRegistry.createShaped());
     this.parsers.set(1082, DateParser.date);
     this.parsers.set(1114, options.infer ? DateParser.timestamp : DateParser.date);
@@ -173,9 +174,8 @@ export class TypeRegistry {
     if (Object.isUndefined(element))
       return null;
 
-    const [type, delimiter] = element;
-    const parse = this.findParser(type);
-    const parser = (text: string): unknown[] => ArrayParser.parse(text, parse, delimiter);
+    const parse = this.findParser(element.type);
+    const parser = (text: string): unknown[] => ArrayParser.parse(text, parse, element.delimiter);
     this.parsers.set(oid, parser);
     return parser;
   }
@@ -196,10 +196,9 @@ export class TypeRegistry {
     if (Object.isUndefined(element))
       return TypeRegistry.string;
 
-    const [type, delimiter] = element;
-    const serialize = this.findSerializer(type);
+    const serialize = this.findSerializer(element.type);
     const serializer = (value: unknown): string | Uint8Array | null =>
-      Array.isArray(value) ? ArraySerializer.serialize(value, serialize, delimiter, this.undefinedValue) : serialize(value);
+      Array.isArray(value) ? ArraySerializer.serialize(value, serialize, element.delimiter, this.undefinedValue) : serialize(value);
     this.serializers.set(oid, serializer);
     return serializer;
   }
@@ -228,7 +227,7 @@ export class TypeRegistry {
       const array = Number(row.get(Resources.arrayColumn));
       this.oids.set(wantedName, oid);
       if (array && !this.elements.has(array))
-        this.elements.set(array, [oid, String(row.get(Resources.delimiterColumn))]);
+        this.elements.set(array, new ArrayElement(oid, String(row.get(Resources.delimiterColumn))));
     }
 
     if (missing.length > 0)
@@ -253,7 +252,7 @@ export class TypeRegistry {
       if (fields.get(Resources.kindColumn) === Resources.domainKind)
         this.bases.set(oid, Number(fields.get(Resources.baseColumn)));
       else if (element && !this.elements.has(oid))
-        this.elements.set(oid, [element, String(fields.get(Resources.delimiterColumn))]);
+        this.elements.set(oid, new ArrayElement(element, String(fields.get(Resources.delimiterColumn))));
     }
   }
 
@@ -308,7 +307,7 @@ export class TypeRegistry {
       return DateParser.serialize(value);
     if (Array.isArray(value))
       return ArraySerializer.serialize(value, TypeRegistry.string);
-    if (TypeRegistry.isLiteral(value))
+    if (Object.isPlainObject(value))
       return JSON.stringify(value);
 
     return String(value);
@@ -319,18 +318,10 @@ export class TypeRegistry {
     return Resources.byteaPrefix + bytes.toString("hex");
   }
 
-  private static isLiteral(value: unknown): value is object {
-    if (!Object.isObject(value))
-      return false;
-
-    const prototype: unknown = Object.getPrototypeOf(value);
-    return prototype === Object.prototype || Object.isNull(prototype);
-  }
-
   private static rename(value: unknown, rename: (name: string) => string): unknown {
     if (Array.isArray(value))
       return value.map((item: unknown) => TypeRegistry.rename(item, rename));
-    if (!TypeRegistry.isLiteral(value))
+    if (!Object.isPlainObject(value))
       return value;
 
     const renamed = {};

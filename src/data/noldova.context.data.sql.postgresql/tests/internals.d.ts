@@ -140,6 +140,15 @@ declare module "@noldova/context.data.sql.postgresql/exceptions/batch.exception.
   }
 }
 
+declare module "@noldova/context.data.sql.postgresql/exceptions/callbacks-failed.exception.js" {
+  import { DataException } from "@noldova/context.data";
+
+  export class CallbacksFailedException extends DataException {
+    public readonly errors: readonly Error[];
+    public constructor(errors: readonly Error[]);
+  }
+}
+
 declare module "@noldova/context.data.sql.postgresql/exceptions/batch-skipped.exception.js" {
   import { DataException } from "@noldova/context.data";
 
@@ -817,6 +826,14 @@ declare module "@noldova/context.data.sql.postgresql/models/client/pool-queue.js
     public get length(): number;
     public push(item: T): void;
     public peek(): T | undefined;
+    public get(index: number): T | undefined;
+    public unshift(item: T): void;
+    public indexOf(item: T): number;
+    public findIndex(predicate: (item: T) => boolean): number;
+    public find(predicate: (item: T) => boolean): T | undefined;
+    public insertAt(index: number, item: T): void;
+    public removeAt(index: number): void;
+    public toArray(): T[];
     public shift(): T | undefined;
     public take(): T[];
     public remove(predicate: (item: T) => boolean): boolean;
@@ -1242,38 +1259,68 @@ declare module "@noldova/context.data.sql.postgresql/exceptions/transaction-roll
   }
 }
 
-declare module "@noldova/context.data.sql.postgresql/types/host-target.js" {
-  export type HostTarget = readonly [string, number | null];
+declare module "@noldova/context.data.sql.postgresql/models/host-target.js" {
+  export class HostTarget {
+    public readonly host: string;
+    public readonly port: number | null;
+    public constructor(host: string, port: number | null);
+  }
 }
 
 declare module "@noldova/context.data.sql.postgresql/types/query-settings.js" {
-  export type QuerySettings = {
+  export interface QuerySettings {
     readonly simple?: boolean;
     readonly prepare?: boolean;
-  };
+  }
 }
 
 declare module "@noldova/context.data.sql.postgresql/types/transaction-result.js" {
   export type TransactionResult<T> = T extends readonly unknown[] ? { -readonly [K in keyof T]: Awaited<T[K]> } : Awaited<T>;
 }
 
-declare module "@noldova/context.data.sql.postgresql/types/transform-settings.js" {
+declare module "@noldova/context.data.sql.postgresql/types/column-transform.js" {
+  export interface ColumnTransform {
+    readonly from?: (name: string) => string;
+    readonly to?: (name: string) => string;
+  }
+}
+
+declare module "@noldova/context.data.sql.postgresql/types/value-transform.js" {
   import type { Column } from "@noldova/context.data.sql.postgresql/models/column.js";
 
-  export type TransformSettings = {
+  export interface ValueTransform {
+    readonly from?: (value: unknown, column: Column) => unknown;
+    readonly to?: (value: unknown) => unknown;
+  }
+}
+
+declare module "@noldova/context.data.sql.postgresql/types/row-transform.js" {
+  export interface RowTransform {
+    readonly from?: (row: unknown) => unknown;
+    readonly to?: (row: unknown) => unknown;
+  }
+}
+
+declare module "@noldova/context.data.sql.postgresql/types/transform-settings.js" {
+  import type { Column } from "@noldova/context.data.sql.postgresql/models/column.js";
+  import type { ColumnTransform } from "@noldova/context.data.sql.postgresql/types/column-transform.js";
+  import type { RowTransform } from "@noldova/context.data.sql.postgresql/types/row-transform.js";
+  import type { ValueTransform } from "@noldova/context.data.sql.postgresql/types/value-transform.js";
+
+  export interface TransformSettings {
     readonly undefined?: unknown;
     readonly json?: boolean;
-    readonly column?: ((name: string) => string) | { readonly from?: (name: string) => string; readonly to?: (name: string) => string };
-    readonly value?: ((value: unknown, column: Column) => unknown) | { readonly from?: (value: unknown, column: Column) => unknown; readonly to?: (value: unknown) => unknown };
-    readonly row?: ((row: unknown) => unknown) | { readonly from?: (row: unknown) => unknown; readonly to?: (row: unknown) => unknown };
-  };
+    readonly column?: ((name: string) => string) | ColumnTransform;
+    readonly value?: ((value: unknown, column: Column) => unknown) | ValueTransform;
+    readonly row?: ((row: unknown) => unknown) | RowTransform;
+  }
 }
 
 declare module "@noldova/context.data.sql.postgresql/types/client-settings.js" {
   import type { ClientOptions } from "@noldova/context.data.sql.postgresql/models/client-options.js";
   import type { TransformSettings } from "@noldova/context.data.sql.postgresql/types/transform-settings.js";
 
-  export type ClientSettings = Partial<Omit<ClientOptions, "transform">> & {
+  export interface ClientSettings extends Partial<Omit<ClientOptions, "transform">> {
     readonly host?: string | readonly string[];
     readonly port?: number;
     readonly database?: string;
@@ -1286,11 +1333,11 @@ declare module "@noldova/context.data.sql.postgresql/types/client-settings.js" {
     readonly connectTimeout?: number;
     readonly connection?: ReadonlyMap<string, string>;
     readonly transform?: TransformSettings;
-  };
+  }
 }
 
 declare module "@noldova/context.data.sql.postgresql/models/parsed-url.js" {
-  import type { HostTarget } from "@noldova/context.data.sql.postgresql/types/host-target.js";
+  import type { HostTarget } from "@noldova/context.data.sql.postgresql/models/host-target.js";
 
   export class ParsedUrl {
     public readonly username: string;
@@ -1320,7 +1367,7 @@ declare module "@noldova/context.data.sql.postgresql/services/client-options.par
   import type { ParsedUrl } from "@noldova/context.data.sql.postgresql/models/parsed-url.js";
   import type { TransformOptions } from "@noldova/context.data.sql.postgresql/models/transform-options.js";
   import type { ClientSettings } from "@noldova/context.data.sql.postgresql/types/client-settings.js";
-  import type { HostTarget } from "@noldova/context.data.sql.postgresql/types/host-target.js";
+  import type { HostTarget } from "@noldova/context.data.sql.postgresql/models/host-target.js";
   import type { TransformSettings } from "@noldova/context.data.sql.postgresql/types/transform-settings.js";
 
   export class ClientOptionsParser {
@@ -1404,6 +1451,7 @@ declare module "@noldova/context.data.sql.postgresql/models/client/listen-subscr
 
   export class ListenSubscription {
     public get state(): BackendKey | null;
+    public get ended(): Promise<void>;
     public unlistenAsync(): Promise<void>;
   }
 }

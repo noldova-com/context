@@ -6,6 +6,20 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { ClientOptions } from "../models/client-options.js";
-
-export type OptionValues = { -readonly [K in keyof ClientOptions]?: ClientOptions[K] };
+export interface OptionValues {
+  max?: number;
+  min?: number;
+  idleTimeout?: number;
+  queueTimeout?: number;
+  queryTimeout?: number;
+  cancelTimeout?: number;
+  maxLifetime?: number;
+  maxPipeline?: number;
+  backoff?: number;
+  keepAlive?: number;
+  scheduler?: boolean;
+  prepare?: boolean;
+  debug?: boolean;
+  fetchTypes?: boolean;
+  infer?: boolean;
+}

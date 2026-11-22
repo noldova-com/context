@@ -59,26 +59,31 @@ export class ClientListener {
     }
 
     channel.state = state;
-    listener.onlisten?.();
+    try {
+      listener.onlisten?.();
+    }
+    catch (error) {
+      this.endListener(name, channel, listener, error);
+      throw error;
+    }
+
     return new ListenSubscription(this, name, channel, listener);
   }
 
   public async unlistenAsync(name: string, channel: ListenChannel, listener: ChannelListener): Promise<void> {
-    if (!channel.listeners.delete(listener) || channel.listeners.size > 0)
+    if (!channel.listeners.delete(listener))
       return;
 
-    if (this.channels.get(name) === channel)
-      this.channels.delete(name);
-    this.options.timers.clearTimeout(channel.timer);
-    channel.timer = null;
-    if (this.channels.size === 0)
-      this.release();
-    const pool = this.pool;
-    if (!Object.isNull(this.closing) || Object.isNull(pool))
+    listener.ended.resolve();
+    if (channel.listeners.size > 0)
+      return;
+
+    const pool = this.drop(name, channel);
+    if (Object.isNull(pool))
       return;
 
     try {
-      await ClientListener.runStatementAsync(pool, Resources.unlistenPrefix + SqlRunner.quote(name));
+      await ClientListener.stopAsync(pool, name);
     }
     catch (error) {
       if (!(error instanceof ConnectionClosedException || error instanceof ConnectionEndedException))
@@ -88,8 +93,11 @@ export class ClientListener {
 
   public endAsync(): Promise<void> {
     this.release();
-    for (const channel of this.channels.values())
+    for (const channel of this.channels.values()) {
       this.options.timers.clearTimeout(channel.timer);
+      for (const listener of channel.listeners)
+        listener.ended.resolve();
+    }
     this.closing ??= Object.isNull(this.pool) ? Promise.resolve() : this.pool.endAsync(0);
     return this.closing;
   }
@@ -128,8 +136,39 @@ export class ClientListener {
   private handleNotification(name: string, payload: string): void {
     const channel = this.channels.get(name);
     if (!Object.isUndefined(channel))
-      for (const listener of [...channel.listeners])
-        listener.callback(payload);
+      this.runListeners(name, channel, listener => listener.callback(payload));
+  }
+
+  private runListeners(name: string, channel: ListenChannel, action: (listener: ChannelListener) => void): void {
+    for (const listener of [...channel.listeners]) {
+      try {
+        action(listener);
+      }
+      catch (error) {
+        this.endListener(name, channel, listener, error);
+      }
+    }
+  }
+
+  private endListener(name: string, channel: ListenChannel, listener: ChannelListener, error: unknown): void {
+    channel.listeners.delete(listener);
+    listener.ended.reject(error);
+    if (channel.listeners.size > 0)
+      return;
+
+    const pool = this.drop(name, channel);
+    if (!Object.isNull(pool))
+      ClientListener.stopAsync(pool, name).catch(() => undefined);
+  }
+
+  private drop(name: string, channel: ListenChannel): PostgreSQLPool | null {
+    if (this.channels.get(name) === channel)
+      this.channels.delete(name);
+    this.options.timers.clearTimeout(channel.timer);
+    channel.timer = null;
+    if (this.channels.size === 0)
+      this.release();
+    return Object.isNull(this.closing) ? this.pool : null;
   }
 
   private relisten(channel: ListenChannel, name: string, retries: number): void {
@@ -137,8 +176,7 @@ export class ClientListener {
     channel.result = this.start(name);
     channel.result.then(state => {
       channel.state = state;
-      for (const listener of channel.listeners)
-        listener.onlisten?.();
+      this.runListeners(name, channel, listener => listener.onlisten?.());
     }, () => {
       if (this.isCurrent(name, channel))
         this.retry(channel, name, retries + 1);
@@ -147,7 +185,18 @@ export class ClientListener {
 
   private retry(channel: ListenChannel, name: string, retries: number): void {
     const backoff = this.options.backoff;
-    const seconds = Object.isFunction(backoff) ? backoff(retries) : backoff;
+    let seconds: number;
+    try {
+      seconds = Object.isFunction(backoff) ? backoff(retries) : backoff;
+    }
+    catch (error) {
+      for (const listener of channel.listeners)
+        listener.ended.reject(error);
+      channel.listeners.clear();
+      this.drop(name, channel);
+      return;
+    }
+
     channel.timer = this.options.timers.setTimeout(() => {
       if (this.isCurrent(name, channel))
         this.relisten(channel, name, retries);
@@ -172,6 +221,10 @@ export class ClientListener {
   private release(): void {
     this.options.timers.clearTimeout(this.alive);
     this.alive = null;
+  }
+
+  private static async stopAsync(pool: PostgreSQLPool, name: string): Promise<void> {
+    await ClientListener.runStatementAsync(pool, Resources.unlistenPrefix + SqlRunner.quote(name));
   }
 
   private static async runStatementAsync(pool: PostgreSQLPool, text: string): Promise<BackendKey | null> {

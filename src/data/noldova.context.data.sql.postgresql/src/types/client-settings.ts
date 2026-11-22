@@ -9,7 +9,7 @@
 import type { ClientOptions } from "../models/client-options.js";
 import type { TransformSettings } from "./transform-settings.js";
 
-export type ClientSettings = Partial<Omit<ClientOptions, "transform">> & {
+export interface ClientSettings extends Partial<Omit<ClientOptions, "transform">> {
   readonly host?: string | readonly string[];
   readonly port?: number;
   readonly database?: string;
@@ -22,4 +22,4 @@ export type ClientSettings = Partial<Omit<ClientOptions, "transform">> & {
   readonly connectTimeout?: number;
   readonly connection?: ReadonlyMap<string, string>;
   readonly transform?: TransformSettings;
-};
+}

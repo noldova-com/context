@@ -23,6 +23,7 @@ export class Resources {
   public static readonly beginTransaction: string = "BEGIN";
   public static readonly boxDelimiter: string = ";";
   public static readonly byteaPrefix: string = "\\x";
+  public static readonly callbacksFailed: string = "More than one of the client's callbacks threw; errors holds each error, in order.";
   public static readonly channelBindingHeader: string = "p=tls-server-end-point,,";
   public static readonly channelBindingOption: string = "channel_binding";
   public static readonly channelBindingParameterName: string = "channelBinding";
@@ -45,6 +46,7 @@ export class Resources {
   public static readonly copyInProgress: string = "Queries cannot run while a COPY is in progress on the connection.";
   public static readonly copyStreamDestroyed: string = "The COPY stream was destroyed.";
   public static readonly cursorOutlived: string = "The cursor outlived its transaction.";
+  public static readonly dateNotIso: string = "The server sent a date or time that is not in ISO format; set DateStyle to ISO.";
   public static readonly delimiterColumn: string = "delimiter";
   public static readonly detailField: string = "detail";
   public static readonly directNegotiation: string = "direct";

@@ -70,4 +70,51 @@ export class PoolQueueTests {
     Assert.isFalse(queue.remove(item => item === "a"));
     Assert.areEqual("b", queue.peek());
   }
+
+  @TestMethod
+  public putsAnItemBackAtTheHead(): void {
+    const queue = new PoolQueue<string>();
+    queue.unshift("b");
+    queue.push("c");
+    queue.unshift("a");
+    queue.shift();
+    queue.unshift("z");
+
+    Assert.areEqual("z,b,c", queue.toArray().join());
+    Assert.areEqual(3, queue.length);
+  }
+
+  @TestMethod
+  public findsItemsByPositionFromTheHead(): void {
+    const queue = new PoolQueue<string>();
+    for (const item of ["x", "a", "b", "c"])
+      queue.push(item);
+    queue.shift();
+
+    Assert.areEqual("a", queue.get(0));
+    Assert.areEqual("c", queue.get(2));
+    Assert.isUndefined(queue.get(3));
+    Assert.isUndefined(queue.get(-1));
+    Assert.areEqual(1, queue.indexOf("b"));
+    Assert.areEqual(-1, queue.indexOf("x"));
+    Assert.areEqual(2, queue.findIndex(item => item === "c"));
+    Assert.areEqual(-1, queue.findIndex(item => item === "x"));
+    Assert.areEqual("b", queue.find(item => item > "a"));
+    Assert.isUndefined(queue.find(item => item === "x"));
+  }
+
+  @TestMethod
+  public insertsAndRemovesByPositionFromTheHead(): void {
+    const queue = new PoolQueue<string>();
+    for (const item of ["x", "a", "c"])
+      queue.push(item);
+    queue.shift();
+
+    queue.insertAt(1, "b");
+    Assert.areEqual("a,b,c", queue.toArray().join());
+    queue.removeAt(0);
+    Assert.areEqual("b,c", queue.toArray().join());
+    Assert.areEqual("b", queue.peek());
+  }
+
 }

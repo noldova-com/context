@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export type QuerySettings = {
+export interface QuerySettings {
   readonly simple?: boolean;
   readonly prepare?: boolean;
-};
+}

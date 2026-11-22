@@ -26,6 +26,58 @@ export class PoolQueue<T> {
     return this.items[this.head];
   }
 
+  public get(index: number): T | undefined {
+    return index < 0 ? undefined : this.items[this.head + index];
+  }
+
+  public unshift(item: T): void {
+    if (this.head === 0) {
+      this.items.unshift(item);
+      return;
+    }
+
+    this.head -= 1;
+    this.items[this.head] = item;
+  }
+
+  public indexOf(item: T): number {
+    const index = this.items.indexOf(item, this.head);
+    return index < 0 ? -1 : index - this.head;
+  }
+
+  public findIndex(predicate: (item: T) => boolean): number {
+    for (let index = this.head; index < this.items.length; index += 1) {
+      const item = this.items[index];
+      if (!Object.isUndefined(item) && predicate(item))
+        return index - this.head;
+    }
+
+    return -1;
+  }
+
+  public find(predicate: (item: T) => boolean): T | undefined {
+    return this.get(this.findIndex(predicate));
+  }
+
+  public insertAt(index: number, item: T): void {
+    this.items.splice(this.head + index, 0, item);
+  }
+
+  public removeAt(index: number): void {
+    this.items.splice(this.head + index, 1);
+  }
+
+  public toArray(): T[] {
+    const all: T[] = [];
+    for (let index = this.head; index < this.items.length; index += 1) {
+      const item = this.items[index];
+      if (!Object.isUndefined(item))
+        all.push(item);
+    }
+
+    return all;
+  }
+
   public shift(): T | undefined {
     const item = this.items[this.head];
     this.items[this.head] = undefined;
@@ -43,11 +95,7 @@ export class PoolQueue<T> {
   }
 
   public take(): T[] {
-    const all: T[] = [];
-    for (const item of this.items.slice(this.head))
-      if (!Object.isUndefined(item))
-        all.push(item);
-
+    const all = this.toArray();
     this.items = [];
     this.head = 0;
     return all;

@@ -194,6 +194,8 @@ export class TlsOptionsReaderTests {
         Assert.isTrue(key.message.includes(path("junk.key")));
         Assert.areEqual(
           "The certificate files could not be used; check that sslrootcert and sslcert hold PEM certificates and that sslcert matches sslkey.", certificate.message);
+        Assert.isInstanceOf(key.cause, Error);
+        Assert.isInstanceOf(certificate.cause, Error);
         TlsOptionsReaderTests.assertHides(key, [secret, TlsOptionsReaderTests.body(client.key)]);
         TlsOptionsReaderTests.assertHides(certificate, [secret, TlsOptionsReaderTests.body(client.key)]);
       });

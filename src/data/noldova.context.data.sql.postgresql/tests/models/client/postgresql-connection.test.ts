@@ -16,6 +16,7 @@ import { BatchException } from "@noldova/context.data.sql.postgresql/exceptions/
 import { BatchSkippedException } from "@noldova/context.data.sql.postgresql/exceptions/batch-skipped.exception.js";
 import { CancelUnansweredException } from "@noldova/context.data.sql.postgresql/exceptions/cancel-unanswered.exception.js";
 import { ConnectionClosedException } from "@noldova/context.data.sql.postgresql/exceptions/connection-closed.exception.js";
+import { MalformedMessageException } from "@noldova/context.data.sql.postgresql/exceptions/malformed-message.exception.js";
 import { PostgreSQLException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql.exception.js";
 import { QueryCanceledException } from "@noldova/context.data.sql.postgresql/exceptions/query-canceled.exception.js";
 import { UnsafeTransactionException } from "@noldova/context.data.sql.postgresql/exceptions/unsafe-transaction.exception.js";
@@ -331,16 +332,57 @@ export class PostgreSQLConnectionTests {
   }
 
   @TestMethod
-  public ignoresAFailingNoticeHandler(): void {
+  public async failsTheQueryWhoseNoticeHandlerThrowsOnceTheServerEndsItAsync(): Promise<void> {
+    const failure = new DataException("notice");
     const harness = new ConnectionHarness({
       onnotice: () => {
-        throw new DataException("notice");
+        throw failure;
+      }
+    });
+    const query = harness.plain("select 1");
+    harness.connection.sendSimple(query, "select 1");
+    harness.written();
+    const rejected = Assert.throwsAsync(async () => {
+      await query;
+    }, DataException);
+
+    harness.receive(M.notice("hello"), M.commandComplete("SELECT 0"));
+    Assert.isFalse(query.settled);
+    harness.receive(M.readyForQuery());
+
+    Assert.isTrue(await rejected === failure);
+    const next = harness.plain("select 2");
+    harness.connection.sendSimple(next, "select 2");
+    Assert.areEqual("Q", harness.written());
+    harness.receive(M.commandComplete("SELECT 0"), M.readyForQuery());
+    Assert.isInstanceOf(await next, Result);
+    Assert.areEqual(0, harness.events.closes.length);
+  }
+
+  @TestMethod
+  public closesWithTheErrorWhenANoticeHandlerThrowsBetweenQueries(): void {
+    const failure = new DataException("notice");
+    const harness = new ConnectionHarness({
+      onnotice: () => {
+        throw failure;
       }
     });
 
-    harness.receive(M.notice("hello"), M.parameterStatus("a", "b"));
+    harness.receive(M.notice("hello"));
 
-    Assert.areEqual("b", harness.connection.parameters.get("a"));
+    Assert.isTrue(harness.socket.destroyed);
+    Assert.areEqual(1, harness.events.closes.length);
+    Assert.isTrue(harness.events.closes[0]?.cause === failure);
+  }
+
+  @TestMethod
+  public closesOnAMessageTypeItDoesNotKnow(): void {
+    const harness = new ConnectionHarness();
+
+    harness.receive(M.message("x"));
+
+    Assert.isTrue(harness.socket.destroyed);
+    Assert.isInstanceOf(harness.events.closes[0]?.cause, MalformedMessageException);
   }
 
   @TestMethod

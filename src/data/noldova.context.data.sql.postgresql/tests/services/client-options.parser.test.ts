@@ -101,9 +101,9 @@ export class ClientOptionsParserTests {
     const given = ClientOptionsParser.parseHosts(["x", "y"], undefined, url);
     const empty = ClientOptionsParser.parseHosts(undefined, undefined, ClientOptionsParser.parseUrl("postgres://u@/d"));
 
-    Assert.areEqual(JSON.stringify([["a", 1], ["b::2", 3], ["::4", null], ["c", null]]), JSON.stringify(url.targets));
-    Assert.areEqual(JSON.stringify([["x", null], ["y", null]]), JSON.stringify(given));
-    Assert.areEqual(JSON.stringify([["localhost", null]]), JSON.stringify(empty));
+    Assert.areEqual(JSON.stringify([{ host: "a", port: 1 }, { host: "b::2", port: 3 }, { host: "::4", port: null }, { host: "c", port: null }]), JSON.stringify(url.targets));
+    Assert.areEqual(JSON.stringify([{ host: "x", port: null }, { host: "y", port: null }]), JSON.stringify(given));
+    Assert.areEqual(JSON.stringify([{ host: "localhost", port: null }]), JSON.stringify(empty));
   }
 
   @TestMethod

@@ -89,6 +89,39 @@ within the connection string's `cancel_timeout` seconds, 5 by default, the
 client closes the connection and its queries fail with
 `ConnectionClosedException`; `cancel_timeout=0` waits without a limit.
 
+## Callbacks
+
+When one of the client's callbacks throws, the error fails the operation it belongs to; the client never swallows it and never leaves it as an unhandled rejection:
+
+- `onnotice`, `onparameter` or `onnotify` throwing while a query runs: that query fails with the error once the server ends it, and the connection stays open.
+- The same handler between queries: the connection closes with the error, and the pool opens another for the next query.
+- `onparameter` or `maxLifetime` while a connection opens: the connection closes, and the query or reservation waiting for it fails with the error; when none waits, the pool keeps the error, as below.
+- `backoff` after a failed connect: the queries waiting for a connection fail with the error.
+  After a failed type load: the connections whose queries wait for the types close, and those queries fail with `ConnectionClosedException`, whose cause is the error.
+- `onlisten` when the channel first listens: `listenAsync` fails with the error, and the listener is removed.
+- A listener's handler, or its `onlisten` when the channel listens again: that subscription ends, and its `ended` promise rejects with the error; `ended` resolves once the subscription unlistens or the client ends.
+  `backoff` while the channel listens again ends all its subscriptions the same way.
+  A channel left with no subscriptions stops listening; a failure of that `unlisten` is not reported, since the subscriptions have already ended with their error.
+- `onclose`: the close completes.
+  A pool close that caused it fails with the error; otherwise a reserved connection's lease reports it as the reason it closed; otherwise the pool keeps it.
+
+The pool keeps errors in the order they happen and never drops one: the next query or reservation, or the pool's end, fails with the one kept error, or with a `CallbacksFailedException`, a `DataException` whose `errors` holds each kept error in order, and the pool then forgets them.
+
+## Types
+
+Structured values are named classes, and the settings a caller passes are named interfaces.
+One exception: `TransactionResult<T>`, the result of a transaction, stays a type alias, since it is computed from the callback's own result, awaiting each element when the callback returns an array, and describes no value of its own.
+
+## Errors
+
+The client fails on what it can't read rather than guess: a date or time that isn't in ISO format fails with `DataException`, which says to set `DateStyle` to ISO, and a message type it doesn't know closes the connection with `MalformedMessageException`.
+A few fallbacks stay on purpose:
+
+- A user name, password or database name in the location that isn't valid percent-encoding is taken as written, as the source does, so a password with a bare `%` still works.
+- A location the client refuses fails with a message that doesn't name it and without the parser's error as its cause, since the location can hold a password and that error can quote it.
+- A server certificate whose hash the client can't read gets no channel binding, the same as one signed with an algorithm that has no defined hash; `channel_binding=require` still fails.
+- A notice that arrives while a connection starts is dropped, since nothing is there yet to report it to.
+
 ## Source
 
 The client is a port of postgres.js (https://github.com/porsager/postgres)
@@ -111,6 +144,7 @@ from it:
   files, as above, in place of a Node `tls` options object.
 - SCRAM bounds the server's iteration count and derives the key
   asynchronously, as Authentication above says.
+- A callback that throws fails its operation, as Callbacks above says.
 - `build.js`, `subscribe.js`, `large.js`, `cf.js` and `diagnostics.js` are
   left out, and so are the environment variables and the password file.
 - The provider's own parts are new: the location parser, which checks a

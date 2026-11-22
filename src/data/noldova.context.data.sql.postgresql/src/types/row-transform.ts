@@ -6,4 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export type HostTarget = readonly [string, number | null];
+export interface RowTransform {
+  readonly from?: (row: unknown) => unknown;
+  readonly to?: (row: unknown) => unknown;
+}

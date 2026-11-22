@@ -231,6 +231,17 @@ export class SessionStarterTests {
   }
 
   @TestMethod
+  public async refusesAMessageTypeItDoesNotKnowWhileStartingAsync(): Promise<void> {
+    const server = await FakeServer.startAsync();
+    server.onStartup = peer => peer.send(M.notice("starting"), M.message("x"));
+
+    await Assert.throwsAsync(
+      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0), new DerivedKeys()).startAsync(), MalformedMessageException);
+
+    await SessionStarterTests.closeAsync(server);
+  }
+
+  @TestMethod
   public async refusesAnAuthenticationItCannotAnswerAsync(): Promise<void> {
     const server = await FakeServer.startAsync();
     server.onStartup = peer => peer.send(peer.authentication(7), M.readyForQuery());

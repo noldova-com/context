@@ -14,12 +14,12 @@ import { SslMode } from "../enums/ssl-mode.js";
 import { ClientConfiguration } from "../models/client-configuration.js";
 import { ClientOptions } from "../models/client-options.js";
 import { ConnectionOptions } from "../models/connection-options.js";
+import { HostTarget } from "../models/host-target.js";
 import { ParsedUrl } from "../models/parsed-url.js";
 import { SystemCertificates } from "../models/system-certificates.js";
 import { TransformOptions } from "../models/transform-options.js";
 import { Resources } from "../resources.js";
 import type { ClientSettings } from "../types/client-settings.js";
-import type { HostTarget } from "../types/host-target.js";
 import type { OptionValues } from "../types/option-values.js";
 import type { TransformSettings } from "../types/transform-settings.js";
 
@@ -62,14 +62,14 @@ export class ClientOptionsParser {
     if ((sslnegotiation ?? query.get(Resources.sslNegotiationOption)) === Resources.directNegotiation)
       throw new ArgumentException(Resources.directSslUnsupported, Resources.sslNegotiationParameterName);
 
-    const given = port ?? ClientOptionsParser.parseInteger(query.get(Resources.portOption), Resources.portOption) ?? target[1] ?? ClientOptionsParser.defaultPort;
+    const given = port ?? ClientOptionsParser.parseInteger(query.get(Resources.portOption), Resources.portOption) ?? target.port ?? ClientOptionsParser.defaultPort;
     const name = ClientOptionsParser.pickFirst(user, url.username);
     if (Object.isNull(name))
       throw new ArgumentException(Resources.userMissing, Resources.userParameterName);
 
-    const options = new ClientOptions({ ...ClientOptionsParser.fromQuery(query), ...rest, transform: ClientOptionsParser.parseTransform(transform ?? {}) });
+    const options = ClientOptionsParser.createOptions(query, rest, ClientOptionsParser.parseTransform(transform ?? {}));
     return new ClientConfiguration(options, new ConnectionOptions(
-      target[0],
+      target.host,
       given,
       ClientOptionsParser.pickFirst(database, url.pathname.slice(1)) ?? name,
       name,
@@ -108,20 +108,20 @@ export class ClientOptionsParser {
   public static parseHosts(given: string | readonly string[] | undefined, query: string | undefined, url: ParsedUrl): readonly HostTarget[] {
     const named = given ?? query;
     if (Array.isArray(named))
-      return named.map(host => [host, null]);
+      return named.map(host => new HostTarget(host, null));
     if (Object.isString(named) && named.length > 0)
       return ClientOptionsParser.split(named);
-    if (url.targets.some(([host]) => host.length > 0))
+    if (url.targets.some(target => target.host.length > 0))
       return url.targets;
 
-    return [[Resources.localhost, url.targets[0]?.[1] ?? null]];
+    return [new HostTarget(Resources.localhost, url.targets[0]?.port ?? null)];
   }
 
   public static split(text: string, decode: (text: string) => string = value => value): readonly HostTarget[] {
     return text.split(Resources.arrayDelimiter).filter(part => part.length > 0).map(part => {
       const groups = (ClientOptionsParser.bracketed.exec(part) ?? ClientOptionsParser.plain.exec(part))?.groups;
       const port = groups?.[Resources.portOption] ?? String.empty;
-      return [decode(groups?.[Resources.hostOption] ?? part), port.length > 0 ? Number(port) : null];
+      return new HostTarget(decode(groups?.[Resources.hostOption] ?? part), port.length > 0 ? Number(port) : null);
     });
   }
 
@@ -175,7 +175,7 @@ export class ClientOptionsParser {
     const [target, ...others] = targets;
     if (Object.isUndefined(target) || others.length > 0)
       throw new ArgumentException(Resources.severalHostsUnsupported, Resources.hostParameterName);
-    if (target[0].includes(Resources.pathSeparator))
+    if (target.host.includes(Resources.pathSeparator))
       throw new ArgumentException(Resources.socketPathUnsupported, Resources.hostParameterName);
 
     return target;
@@ -193,7 +193,7 @@ export class ClientOptionsParser {
     return query.get(Resources.sslModeOption) ?? query.get(Resources.sslOption) ?? SslMode.Prefer;
   }
 
-  private static fromQuery(query: ReadonlyMap<string, string>): OptionValues {
+  private static createOptions(query: ReadonlyMap<string, string>, rest: Partial<ClientOptions>, transform: TransformOptions): ClientOptions {
     const values: OptionValues = {};
     for (const [name, key] of ClientOptionsParser.integers) {
       const value = ClientOptionsParser.parseInteger(query.get(name), name);
@@ -210,7 +210,7 @@ export class ClientOptionsParser {
     const infer = query.get(Resources.inferOption);
     if (!Object.isUndefined(infer))
       values.infer = infer === String(true);
-    return values;
+    return new ClientOptions({ ...values, ...rest, transform });
   }
 
   private static mergeParameters(connection: ReadonlyMap<string, string> | undefined, query: ReadonlyMap<string, string>): ReadonlyMap<string, string> {

@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { HostTarget } from "../types/host-target.js";
+import type { HostTarget } from "./host-target.js";
 
 export class ParsedUrl {
   public readonly username: string;

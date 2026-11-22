@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { DataException } from "@noldova/context.data";
 import { DateParser } from "@noldova/context.data.sql.postgresql/services/types/date.parser.js";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
@@ -39,17 +40,13 @@ export class DateParserTests {
   }
 
   @TestMethod
-  public returnsAnInvalidDateForUnknownText(): void {
-    const zoned = DateParser.parseTimestamptz("-nope");
-    const date = DateParser.parseDate("nope");
-    const local = DateParser.parseTimestamp("nope");
+  public refusesTextThatIsNotIso(): void {
+    const zoned = Assert.throws(() => DateParser.parseTimestamptz("01/02/2024 10:00:00 UTC"), DataException);
+    const date = Assert.throws(() => DateParser.parseDate("01/02/2024"), DataException);
+    const local = Assert.throws(() => DateParser.parseTimestamp("01.02.2024 10:00:00"), DataException);
 
-    Assert.isInstanceOf(zoned, Date);
-    Assert.isTrue(Number.isNaN(zoned.getTime()));
-    Assert.isInstanceOf(date, Date);
-    Assert.isTrue(Number.isNaN(date.getTime()));
-    Assert.isInstanceOf(local, Date);
-    Assert.isTrue(Number.isNaN(local.getTime()));
+    for (const error of [zoned, date, local])
+      Assert.areEqual("The server sent a date or time that is not in ISO format; set DateStyle to ISO.", error.message);
   }
 
   @TestMethod

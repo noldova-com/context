@@ -7,11 +7,14 @@
  */
 
 import type { Column } from "../models/column.js";
+import type { ColumnTransform } from "./column-transform.js";
+import type { RowTransform } from "./row-transform.js";
+import type { ValueTransform } from "./value-transform.js";
 
-export type TransformSettings = {
+export interface TransformSettings {
   readonly undefined?: unknown;
   readonly json?: boolean;
-  readonly column?: ((name: string) => string) | { readonly from?: (name: string) => string; readonly to?: (name: string) => string };
-  readonly value?: ((value: unknown, column: Column) => unknown) | { readonly from?: (value: unknown, column: Column) => unknown; readonly to?: (value: unknown) => unknown };
-  readonly row?: ((row: unknown) => unknown) | { readonly from?: (row: unknown) => unknown; readonly to?: (row: unknown) => unknown };
-};
+  readonly column?: ((name: string) => string) | ColumnTransform;
+  readonly value?: ((value: unknown, column: Column) => unknown) | ValueTransform;
+  readonly row?: ((row: unknown) => unknown) | RowTransform;
+}
