@@ -25,18 +25,19 @@ import { Resources } from "../../resources.js";
 import { SystemClock } from "../timing/system-clock.js";
 
 export class TestExecutor {
-  private static readonly REJECTION_STORAGE: AsyncLocalStorage<unknown[]> = new AsyncLocalStorage<unknown[]>();
+  private static readonly REJECTION_STORAGE: AsyncLocalStorage<(rejection: unknown) => void> = new AsyncLocalStorage<(rejection: unknown) => void>();
 
   private static readonly ON_UNHANDLED_REJECTION = (t: unknown): void => {
-    const rejections = TestExecutor.REJECTION_STORAGE.getStore();
-    if (Object.isUndefined(rejections))
+    const record = TestExecutor.REJECTION_STORAGE.getStore();
+    if (Object.isUndefined(record))
       throw t;
 
-    rejections.push(t);
+    record(t);
   };
 
   private readonly timeoutMilliseconds: number;
   private readonly clock: IClock;
+  private lateRejection: TestingException | undefined;
 
   public constructor(timeoutMilliseconds: number, clock: IClock = new SystemClock()) {
     ArgumentOutOfRangeException.throwIfNotPositiveInteger(timeoutMilliseconds, Resources.timeoutMillisecondsParameter, Resources.timeoutInvalid);
@@ -45,6 +46,7 @@ export class TestExecutor {
 
     this.timeoutMilliseconds = timeoutMilliseconds;
     this.clock = clock;
+    this.lateRejection = undefined;
   }
 
   public getTimeoutMilliseconds(method: DiscoveredTestMethod): number {
@@ -59,7 +61,6 @@ export class TestExecutor {
 
     try {
       const classResults: TestClassResult[] = [];
-      const finishedRejections: (readonly [TestMethodResult, readonly unknown[], number])[] = [];
       for (const testClass of testClasses) {
         const methodResults: TestMethodResult[] = [];
         for (const method of testClass.methods) {
@@ -67,16 +68,16 @@ export class TestExecutor {
             return classResults;
 
           progressListener?.onMethodStarted?.(testClass, method);
-          const rejections: unknown[] = [];
           const methodResult = stoppedMethods.has(method)
             ? this.createStoppedResult(testClass, method)
-            : await this.executeMethodAsync(testClass, method, rejections);
+            : await this.executeMethodAsync(testClass, method);
           methodResults.push(methodResult);
-          finishedRejections.push([methodResult, rejections, rejections.length]);
           progressListener?.onMethodCompleted?.(methodResult);
         }
 
-        TestExecutor.throwIfRejectedAfterItsTest(finishedRejections);
+        if (!Object.isUndefined(this.lateRejection))
+          throw this.lateRejection;
+
         const classResult = new TestClassResult(testClass.packageName, testClass.className, testClass.filePath, methodResults);
         classResults.push(classResult);
         progressListener?.onClassCompleted(classResult);
@@ -88,15 +89,6 @@ export class TestExecutor {
       if (ownsRejectionListener)
         process.off(Resources.unhandledRejectionEvent, TestExecutor.ON_UNHANDLED_REJECTION);
     }
-  }
-
-  private static throwIfRejectedAfterItsTest(finishedRejections: readonly (readonly [TestMethodResult, readonly unknown[], number])[]): void {
-    const late = finishedRejections.find(([, rejections, reportedCount]) => rejections.length > reportedCount);
-    if (Object.isUndefined(late))
-      return;
-
-    const [methodResult, rejections, reportedCount] = late;
-    throw new TestingException(Resources.formatRejectedAfterItsTest(methodResult.displayName), new ExceptionOptions(rejections[reportedCount]));
   }
 
   private createStoppedResult(testClass: DiscoveredTestClass, method: DiscoveredTestMethod): TestMethodResult {
@@ -112,7 +104,7 @@ export class TestExecutor {
       undefined);
   }
 
-  private async executeMethodAsync(testClass: DiscoveredTestClass, method: DiscoveredTestMethod, unhandledRejections: unknown[]): Promise<TestMethodResult> {
+  private async executeMethodAsync(testClass: DiscoveredTestClass, method: DiscoveredTestMethod): Promise<TestMethodResult> {
     const skipReason = method.skipReason ?? testClass.skipReason;
     if (!Object.isUndefined(skipReason))
       return new TestMethodResult(
@@ -126,12 +118,20 @@ export class TestExecutor {
         undefined,
         skipReason);
 
+    const unhandledRejections: unknown[] = [];
+    let endedAs: string | undefined;
+    const record = (rejection: unknown): void => {
+      if (Object.isUndefined(endedAs))
+        unhandledRejections.push(rejection);
+      else
+        this.lateRejection ??= new TestingException(Resources.formatRejectedAfterItsTest(endedAs), new ExceptionOptions(rejection));
+    };
     const start = this.clock.now();
     let didFail = false;
     let failure: unknown;
 
     try {
-      await TestExecutor.REJECTION_STORAGE.run(unhandledRejections, async () => {
+      await TestExecutor.REJECTION_STORAGE.run(record, async () => {
         try {
           await this.invokeWithTimeoutAsync(testClass, method);
         }
@@ -150,29 +150,18 @@ export class TestExecutor {
       failure = error;
     }
 
-    const durationMilliseconds = this.clock.now() - start;
-    if (didFail)
-      return new TestMethodResult(
-        testClass.packageName,
-        testClass.className,
-        method.methodName,
-        method.testDataIndex,
-        method.testData,
-        TestOutcome.Failed,
-        durationMilliseconds,
-        failure,
-        undefined);
-
-    return new TestMethodResult(
+    const methodResult = new TestMethodResult(
       testClass.packageName,
       testClass.className,
       method.methodName,
       method.testDataIndex,
       method.testData,
-      TestOutcome.Passed,
-      durationMilliseconds,
-      undefined,
+      didFail ? TestOutcome.Failed : TestOutcome.Passed,
+      this.clock.now() - start,
+      failure,
       undefined);
+    endedAs = methodResult.displayName;
+    return methodResult;
   }
 
   private async invokeWithTimeoutAsync(testClass: DiscoveredTestClass, method: DiscoveredTestMethod): Promise<void> {

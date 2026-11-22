@@ -140,6 +140,28 @@ export class TestRunWorkerTests {
   }
 
   @TestMethod
+  public async failsALaterClassDuringWhichAFinishedClassesPromiseRejectsAsync(): Promise<void> {
+    const project = await FixtureTestProject.createAsync(["shared-work-fixture"]);
+    const channel = new MessageChannel();
+    try {
+      const worker = new TestRunWorker(channel.port1, new TestWorkerStart([project.testProject], [], 1000));
+      await worker.startAsync();
+      await worker.runAsync(new TestWorkerRun(0, 0, false));
+
+      const failure = await Assert.throwsAsync(() => worker.runAsync(new TestWorkerRun(1, 0, false)), TestingException);
+
+      Assert.areEqual("LeavesSharedWorkFixtureTests.leavesWorkOnASharedPromise left a promise that rejected after the test ended, unhandled; a test must "
+        + "await or handle what it starts.", failure.message);
+      Assert.isInstanceOf(failure.cause, Error);
+      Assert.areEqual("late", failure.cause.message);
+    }
+    finally {
+      await TestRunWorkerTests.closeAsync(channel);
+      await project.removeAsync();
+    }
+  }
+
+  @TestMethod
   public async completesAClassThatAwaitsItsOwnCloseAsync(): Promise<void> {
     const messages = await this.runAsync(["closing-port-fixture"], t => t.runAsync(new TestWorkerRun(0, 0, false)));
 

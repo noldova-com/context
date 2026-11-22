@@ -156,6 +156,19 @@ export class TestExecutorTests {
   }
 
   @TestMethod
+  public async failsNamingATestWhosePromiseRejectsDuringALaterCallAsync(): Promise<void> {
+    const executor = new TestExecutor(1000);
+    await executor.executeAsync([this.discoveredClass(["leavesALateRejection"], undefined)]);
+
+    const failure = await Assert.throwsAsync(() => executor.executeAsync([this.discoveredClass(["waitsSeveralTurnsAsync"], undefined)]), TestingException);
+
+    Assert.areEqual("ExecutionFixtureTests.leavesALateRejection left a promise that rejected after the test ended, unhandled; a test must await or " +
+      "handle what it starts.", failure.message);
+    Assert.isInstanceOf(failure.cause, Error);
+    Assert.areEqual("late", failure.cause.message);
+  }
+
+  @TestMethod
   public rejectsAnUnhandledRejectionOutsideTestExecution(): void {
     const failure = new Error("outside");
 

@@ -1477,8 +1477,10 @@ export declare class TestExecutor {
    * @returns A promise resolving to one result per supplied class and invocation. Test failures become Failed results, not rejection of this promise.
    *   Empty input returns an empty array; a stopped run returns only the classes that completed before it stopped.
    * @throws TestingException via promise rejection, naming the test, when a promise a test started rejects unhandled after that test ended,
-   *   while its class or a later class of the same call runs; it rejects at the end of that class, the rejection is its cause, and that
-   *   class has no result.
+   *   while its class or a later class this executor runs, in this call or a later one, is running; it rejects at the end of that class, the
+   *   rejection is its cause, and that class has no result. The executor then rejects the same way at the end of every class it runs after that.
+   *   A rejection that lands while no executor runs a class, such as between two calls, isn't attributed: it fails through the runtime's own
+   *   unhandled-rejection handling, with the rejection and without the test's name.
    * @throws Error via promise rejection with the listener's own exception when the listener throws; the executor's unhandled-rejection listener is
    *   removed either way.
    * @example
