@@ -4,13 +4,6 @@
  *
  * This source code is licensed under the license found in the
  * LICENSE file in the root directory of this source tree.
- *
- * This script builds CONTEXT.
- *
- * @example
- * npm run build - builds all projects.
- * npm run build project1 project2 ... - builds specified projects.
- * npm run build --silent -- --list-copies - builds nothing and prints each file the build copies into a package: its source, the package's name and its path inside the package, separated by tabs; the last line is "end of copies".
  */
 
 import path from "node:path";

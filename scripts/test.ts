@@ -4,20 +4,6 @@
  *
  * This source code is licensed under the license found in the
  * LICENSE file in the root directory of this source tree.
- *
- * This script compiles every test project against the installed packages,
- * runs the complete suite through noldova.context.testing in a child process
- * measured by V8 coverage, and enforces complete production coverage. Each
- * test class's results print as soon as the class finishes; in a terminal, an
- * animated progress line shows until the totals print. The slowest tests then
- * print with their times, failing nothing: npm run test:timing is the timing
- * check.
- *
- * @example
- * npm run test - runs the complete suite and the coverage gate.
- * npm run test -- <filter...> - runs tests matching any package, file, class, ClassName.methodName substring, or exact category:name identity; a filtered run skips the coverage gate.
- * npm run test -- --skip-test-details - hides passing per-test lines; failures, skips, and totals always print.
- * npm run test -- --skip-coverage-details - hides fully covered file rows; incomplete files and the overall row always print.
  */
 
 import { join } from "node:path";

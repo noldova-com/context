@@ -98,9 +98,11 @@ npm test
 
 `npm run build` installs the two locked development packages, TypeScript and Node.js's type declarations, without running their install scripts; then it builds, packs and installs every CONTEXT package into `_build/` and `_packages/`, at the version `version.json` holds; before it builds a package that needs an archive not yet installed, and once at the end, it installs every archive packed so far with `npm install --no-save`, so each package builds against them and none enters `package.json` or `package-lock.json`.
 It writes `Building "<package>"...` for each and ends the line with ` Done.` or ` Failed.`.
+`npm run build <package>...` builds only the packages it names, such as `noldova.context.core`; a name that isn't one of CONTEXT's packages, or appears twice, fails the build.
 The build writes the checkout's head commit into every package's `package.json` as `gitHead`, so each published version names the commit it was built from; it fails before building when git can't read the commit.
 `npm run build --silent -- --list-copies` builds nothing and prints each file the build copies into a package, one per line, with tabs between its source, the package's name and its path inside the package, and then `end of copies`.
 `npm test` runs the whole suite, including the vendored conformance cases, and then prints its ten slowest tests with their times, which fail nothing; `npm run test:timing`, after `npm test`, is the timing check the Checks section describes.
+Each test class's results print as soon as the class finishes, and in a terminal a progress line shows until the totals print.
 The entry points live in `scripts/`.
 Two options shorten its output, as the CI run uses them:
 

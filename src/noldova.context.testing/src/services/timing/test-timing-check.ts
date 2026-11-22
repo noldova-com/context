@@ -13,8 +13,6 @@ import { TestFileTiming } from "../../models/timing/test-file-timing.js";
 import type { TestTimeRecord } from "../../models/timing/test-time-record.js";
 import { Resources } from "../../resources.js";
 
-// Judges test files by their time over several runs: each run's time for a file is the sum of its tests' durations, a file's time is the
-// median of its runs, and a file fails when that median exceeds its limit, the budget or the time the listed files give it, plus the margin.
 export class TestTimingCheck {
   private readonly budgetMilliseconds: number;
   private readonly margin: number;

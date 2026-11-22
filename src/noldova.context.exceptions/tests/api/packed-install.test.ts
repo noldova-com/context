@@ -19,8 +19,6 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { PackedArchives } from "../fixtures/packed-archives.fixture.js";
 
-// The tests that load core in a child process: exceptions sharing one core in its peer range, npm refusing a core outside it, and core
-// refusing to load beside a second copy, loaded first or installed by npm. Exceptions' tests hold them since core's tests use no Node API.
 @TestClass
 export class PackedInstallTests {
   private static readonly CORE_NAME: string = "@noldova/context.core";
@@ -115,21 +113,18 @@ export class PackedInstallTests {
     return `try {\n  ${first}\n  ${second}\n}\ncatch (error) {\n  process.stdout.write(error.message);\n}\n`;
   }
 
-  // A core version inside the range the installed exceptions takes core in, a patch above its lower bound.
   private static async readCoreVersionInRangeAsync(): Promise<string> {
     const range = await PackedInstallTests.readCoreRangeAsync();
 
     return `${range[1]}.${range[2]}.${Number(range[3]) + 1}`;
   }
 
-  // The first core version past that range: its upper bound.
   private static async readCoreVersionPastRangeAsync(): Promise<string> {
     const range = await PackedInstallTests.readCoreRangeAsync();
 
     return String(range[4]);
   }
 
-  // The installed exceptions' peer range of core, from its manifest: the lower bound's three numbers, then the upper bound.
   private static async readCoreRangeAsync(): Promise<RegExpExecArray> {
     const manifest = await readFile(join(PackedInstallTests.EXCEPTIONS_FOLDER, "package.json"), "utf8");
     const range = PackedInstallTests.CORE_RANGE.exec(manifest);
@@ -138,7 +133,6 @@ export class PackedInstallTests {
     return range;
   }
 
-  // An app that installs exceptions and a copy of core at the version given, each from a tarball.
   private static async createExceptionsAppAsync(directory: string, coreVersion: string): Promise<string> {
     const core = join(directory, "core");
     await cp(PackedInstallTests.CORE_FOLDER, core, { recursive: true });
@@ -160,7 +154,6 @@ export class PackedInstallTests {
     return app;
   }
 
-  // Packs the two package folders into the directory in one npm call and returns their archives' names, in the same order.
   private static async packAsync(directory: string, first: string, second: string): Promise<PackedArchives> {
     const packed = await PackedInstallTests.runNpmAsync(["pack", "--silent", "--pack-destination", directory, first, second], directory, directory);
     const [firstArchive, secondArchive, ...others] = packed.trim().split(/\s+/u);
@@ -183,7 +176,8 @@ export class PackedInstallTests {
   }
 
   private static async runAsync(scriptPath: string, directory: string, root: string): Promise<string> {
-    const { stdout } = await promisify(execFile)(process.execPath, [scriptPath], { cwd: directory, env: PackedInstallTests.environment(root), windowsHide: true });
+    const { stdout } = await promisify(execFile)(process.execPath, [scriptPath],
+      { cwd: directory, env: PackedInstallTests.environmentWithItsOwnTemporaryFolder(root), windowsHide: true });
 
     return stdout;
   }
@@ -191,14 +185,13 @@ export class PackedInstallTests {
   private static async runNpmAsync(values: readonly string[], directory: string, root: string): Promise<string> {
     const npmPath = process.env["npm_execpath"];
     Assert.isDefined(npmPath, "The suite runs through npm, which names its own path in npm_execpath.");
-    const { stdout } = await promisify(execFile)(process.execPath, [npmPath, ...values], { cwd: directory, env: PackedInstallTests.environment(root), windowsHide: true });
+    const { stdout } = await promisify(execFile)(process.execPath, [npmPath, ...values],
+      { cwd: directory, env: PackedInstallTests.environmentWithItsOwnTemporaryFolder(root), windowsHide: true });
 
     return stdout;
   }
 
-  // The children's environment, with a temporary folder of their own under the test's folder, which the test removes: npm turns on Node's
-  // compile cache, which would otherwise write into the run's temporary folder, and the suite requires that folder left clean.
-  private static environment(root: string): NodeJS.ProcessEnv {
+  private static environmentWithItsOwnTemporaryFolder(root: string): NodeJS.ProcessEnv {
     const temporary = join(root, PackedInstallTests.TEMPORARY_FOLDER);
 
     return { ...process.env, TMPDIR: temporary, TMP: temporary, TEMP: temporary };

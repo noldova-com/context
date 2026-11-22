@@ -4,20 +4,6 @@
  *
  * This source code is licensed under the license found in the
  * LICENSE file in the root directory of this source tree.
- *
- * The timing check, kept apart from npm test since its pass condition is a
- * time: it runs the compiled suite three times without coverage, takes each
- * test file's median time, the sum of its tests' durations, and fails a file
- * whose median exceeds 2 seconds that README's list of slower test files
- * doesn't name, or a listed file whose median exceeds the time the list gives
- * it, each with a margin of 50%, since a busy machine slows every file and the
- * median of three runs drops one slow run but not a slower machine. It names
- * a listed file within the budget as stale, failing nothing. The list's
- * reading and the output's lines come from @noldova/context.testing. Run it
- * after npm test, which builds the test projects.
- *
- * @example
- * npm run test:timing - runs the suite three times and judges each test file's median time.
  */
 
 import CommandFailedException from "./command-failed.exception.ts";

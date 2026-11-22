@@ -16,6 +16,7 @@ The durable contract is the authoring model, assertion behavior, test and data-r
 When the CONTEXT compiler, Runtime, and SDK own filesystem discovery, module loading, descriptor inspection, process handling, console output, rejection attribution, timers, and coverage intake, their providers replace the host surface; Node APIs, V8 formats, and generated-JavaScript assumptions are not preserved.
 A temporary provider does not relax coding standards or justify a public API added only for that provider.
 Only files known to need changes when Node is replaced carry a short, plain-language comment below the license, such as: "This file uses Node APIs and will change when we replace Node." Do not mark portable code merely because it currently runs on Node or might change in a future redesign.
+Core's tests use no Node API, as their test project's empty `types` enforces, so the tests that check Core through Node, such as loading it in a child process, live in Exceptions' tests.
 
 ## 2. Discovery
 
@@ -70,6 +71,7 @@ A worker that still has not ended, or processes the run cannot list, make the ru
 Node writes the run's coverage profile as the run kills its own process, so the run takes no profile of its own first: a second profile written in the same millisecond would have the same name and replace the first, with only the counts since it.
 When no class is left, the main thread tells each worker, which closes its port so its thread ends by itself and writes its coverage; a worker that fails or ends with an exit code other than 0 meanwhile, or has not ended within five seconds, fails the run, since its coverage would be incomplete.
 Each run makes one temporary folder and points `TMPDIR`, `TEMP` and `TMP` at it, so its workers' temporary files go there; anything a test leaves there fails the run, and the run removes the folder at the end; a folder it cannot remove fails the run as well.
+A test whose child process runs npm gives that child a temporary folder of its own under the test's folder, which the test removes, since npm turns on Node's compile cache, which writes into the temporary folder.
 A test class that leaves a timer, handle or request open in its worker fails the run, naming the class and what it left.
 An app runs tests in parallel workers the same way through the exported `ParallelTestRunner`, which returns the result objects `TestRunner` returns: test data, assertion values and thrown values that cannot cross between threads arrive as values that print as the originals did, and an error other than an `AssertFailedException` or a `TestTimeoutException` arrives as an `Error` with the original's name, message and stack.
 It never calls a listener's `onMethodStarted`, because only its workers load the test modules, and it leaves the process's environment, temporary folder included, to the app.

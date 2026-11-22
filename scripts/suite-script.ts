@@ -4,11 +4,6 @@
  *
  * This source code is licensed under the license found in the
  * LICENSE file in the root directory of this source tree.
- *
- * The base of the scripts that run the compiled test suite: it lists the test
- * projects and runs them through noldova.context.testing in a child process,
- * under the suite's hang limit and beside a PostgreSQL server for the data
- * tests, unless NOLDOVA_CONTEXT_POSTGRESQL_URL names one.
  */
 
 import CommandFailedException from "./command-failed.exception.ts";
@@ -18,8 +13,6 @@ import PostgreSQLServer from "./postgresql-server.ts";
 import Script from "./script.ts";
 
 export default abstract class SuiteScript extends Script {
-  // The suite's one hang limit: at least three times its slowest test on any target, as the runs print it under "Slowest tests"; README's
-  // Checks gives the measurement. A test that reaches it is a bug to fix, never a reason to raise it.
   protected static readonly HANG_LIMIT_MILLISECONDS: number = 60_000;
   protected static readonly FILTERS_VARIABLE: string = "CONTEXT_TEST_FILTERS";
   protected static readonly RESULTS_FILE_VARIABLE: string = "CONTEXT_TEST_RESULTS_FILE";
