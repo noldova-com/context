@@ -77,6 +77,11 @@ The accepted direct library dependencies are:
 | Data.Sql | Core, Exceptions, Data |
 | Data.Sql.SQLite | Core, Exceptions, Data, Data.Sql |
 | Data.Sql.PostgreSQL | Core, Exceptions, Data, Data.Sql |
+| Testing | Core, Exceptions, Collections, Text |
+| Diagnostics | Core, Exceptions |
+| Parsers | Core, Exceptions, Collections, Text, Diagnostics |
+| Parsers.Regex | Core, Exceptions, Text, Diagnostics, Parsers |
+| Parsers.TypeScript | Core, Collections, Text, Diagnostics, Parsers, Parsers.Regex |
 
 `PACKAGE-CONTRACT.md` owns graph validation and source-import permissions.
 During partial stage-zero implementation, a package declares only the dependencies its implemented slice uses.

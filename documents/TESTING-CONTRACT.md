@@ -9,7 +9,7 @@ Noldova's [testing standard](https://github.com/noldova-com/.github/blob/main/st
 
 `noldova.context.testing` owns the test model, discovery, execution, assertion vocabulary, result reporting, and coverage enforcement.
 It is repository verification tooling: no Runtime distribution includes it, and SDK inclusion is a separate composition decision.
-It consumes the Core global surface, Text-owned line terminators, and the Exceptions base through ordinary dependencies and never reimplements library behavior locally.
+It consumes the Core global surface, the Collections binary search, Text-owned line terminators, and the Exceptions base through ordinary dependencies and never reimplements library behavior locally.
 
 Node, npm, TypeScript-emitted JavaScript and source maps, and V8 are temporary bootstrap providers; they do not define the Testing architecture.
 The durable contract is the authoring model, assertion behavior, test and data-row identity, categories, skips, deterministic selection and execution, result accounting, reporting semantics, and the complete-coverage gate.
