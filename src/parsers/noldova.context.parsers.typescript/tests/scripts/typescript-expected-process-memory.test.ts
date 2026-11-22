@@ -26,7 +26,6 @@ export class TypeScriptExpectedProcessMemoryTests {
       const bytes = await memory.readTreeBytesAsync(root.pid);
       root.kill();
       await memory.closeAsync();
-      console.error("tree bytes " + bytes);
       console.log("tree at least grown: " + (bytes >= grownBytes));
     `);
 
@@ -45,7 +44,6 @@ export class TypeScriptExpectedProcessMemoryTests {
       root.kill();
       other.kill();
       await memory.closeAsync();
-      console.error("root bytes " + rootBytes + ", other bytes " + otherBytes);
       console.log("root below: " + (rootBytes < grownBytes) + ", other at least grown: " + (otherBytes >= grownBytes));
     `);
 
