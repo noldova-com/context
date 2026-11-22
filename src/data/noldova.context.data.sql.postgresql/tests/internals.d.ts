@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// This file uses Node APIs and will change when we replace Node.
+
 /**
  * Supplies test-local types for the installed package's internal modules.
  * These declarations must stay synchronized with their implementations;
@@ -592,7 +594,6 @@ declare module "@noldova/context.data.sql.postgresql/models/client/connection-so
     public onDrain: () => void;
     public onClose: (error: Error | null) => void;
     public abstract get isClosed(): boolean;
-    public abstract get isShared(): boolean;
     public abstract write(data: Buffer): boolean;
     public abstract end(data: Buffer): void;
     public abstract destroy(error?: Error | null): void;
@@ -1058,11 +1059,9 @@ declare module "@noldova/context.data.sql.postgresql/services/protocol/frame.rea
   import type { Buffer } from "node:buffer";
 
   export class FrameReader {
-    public constructor(onFrame: (type: number, data: Buffer, start: number, end: number) => void, onError: (error: Error) => void, shared?: boolean);
+    public constructor(onFrame: (type: number, data: Buffer, start: number, end: number) => void, onError: (error: Error) => void);
     public get isPaused(): boolean;
     public push(chunk: Buffer): void;
-    public isOwning(data: Buffer): boolean;
-    public setOwning(owning: boolean): void;
     public pause(): void;
     public resume(): void;
     public takeRemainder(): Buffer;
@@ -1161,7 +1160,6 @@ declare module "@noldova/context.data.sql.postgresql/models/postgresql-socket.js
   export class PostgreSQLSocket extends ConnectionSocket {
     public static connectAsync(host: string, port: number, signal: AbortSignal): Promise<PostgreSQLSocket>;
     public override get isClosed(): boolean;
-    public override get isShared(): boolean;
     public get isSecure(): boolean;
     public override write(data: Buffer): boolean;
     public override end(data: Buffer): void;

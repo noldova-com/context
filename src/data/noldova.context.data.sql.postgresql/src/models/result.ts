@@ -14,11 +14,12 @@ import type { Column } from "./column.js";
 import { StatementDescription } from "./statement-description.js";
 
 export class Result extends Array<unknown> {
+  private source: Exchange | StatementDescription | null = null;
+
   public count: number | null = null;
   public state: BackendKey | null = null;
   public command: string | null = null;
   public columns: readonly Column[] | null = null;
-  private source: Exchange | StatementDescription | null = null;
 
   public constructor() {
     super();

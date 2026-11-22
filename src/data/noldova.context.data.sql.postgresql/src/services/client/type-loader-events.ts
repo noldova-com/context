@@ -16,6 +16,7 @@ export class TypeLoaderEvents extends ConnectionEvents {
 
   public constructor(events: ConnectionEvents) {
     super();
+
     this.events = events;
   }
 

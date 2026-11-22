@@ -30,13 +30,15 @@ import { SqlRunner } from "../../services/client/sql-runner.js";
 import { TransactionScope } from "./transaction-scope.js";
 
 export class PostgreSQLClient extends SqlRunner implements AsyncDisposable {
-  public readonly options: ClientOptions;
-  public readonly connection: ConnectionOptions;
   private readonly pool: PostgreSQLPool;
   private readonly listener: ClientListener;
 
+  public readonly options: ClientOptions;
+  public readonly connection: ConnectionOptions;
+
   private constructor(options: ClientOptions, connection: ConnectionOptions, types: TypeRegistry) {
     super(types);
+
     this.options = options;
     this.connection = connection;
     this.pool = new PostgreSQLPool(options, connection, types, (values, keys) => new SessionStarter(values, keys, options.cancelTimeout, options.timers));

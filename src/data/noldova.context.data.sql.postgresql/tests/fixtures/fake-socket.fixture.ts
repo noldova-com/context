@@ -22,20 +22,10 @@ export class FakeSocket extends ConnectionSocket {
   public paused: boolean = true;
   public referenced: boolean = true;
   public accepts: boolean = true;
-  private readonly shared: boolean;
   private closed: boolean = false;
-
-  public constructor(shared: boolean = false) {
-    super();
-    this.shared = shared;
-  }
 
   public override get isClosed(): boolean {
     return this.closed;
-  }
-
-  public override get isShared(): boolean {
-    return this.shared;
   }
 
   public override write(data: Buffer): boolean {

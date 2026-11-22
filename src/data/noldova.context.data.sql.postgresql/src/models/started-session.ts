@@ -15,6 +15,8 @@ import type { SessionStarter } from "../services/session-starter.js";
 import type { BackendKey } from "./backend-key.js";
 
 export class StartedSession {
+  private readonly starter: SessionStarter;
+
   public readonly socket: ConnectionSocket;
   public readonly rest: Buffer;
   public readonly parameters: ReadonlyMap<string, string>;
@@ -22,7 +24,6 @@ export class StartedSession {
   public readonly status: string;
   public readonly host: string;
   public readonly port: number;
-  private readonly starter: SessionStarter;
 
   public constructor(
     socket: ConnectionSocket, rest: Buffer, parameters: ReadonlyMap<string, string>, backend: BackendKey, status: string, host: string, port: number,

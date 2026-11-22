@@ -97,7 +97,7 @@ export class Authenticator {
   }
 
   private async proceedAsync(body: Buffer): Promise<Buffer> {
-    const fields = new Map(body.toString("utf8").split(",").map(t => [t.slice(0, 1), t.slice(2)] as const));
+    const fields = Authenticator.readFields(body.toString("utf8"));
     const serverNonce = fields.get("r") ?? "";
     const salt = fields.get("s") ?? "";
     const iterations = fields.get("i") ?? "";
@@ -135,6 +135,13 @@ export class Authenticator {
 
     this.authenticated = true;
     return null;
+  }
+
+  private static readFields(text: string): Map<string, string> {
+    const fields = new Map<string, string>();
+    for (const field of text.split(","))
+      fields.set(field.slice(0, 1), field.slice(2));
+    return fields;
   }
 
   private static computeMd5Hex(data: Buffer): string {

@@ -15,13 +15,15 @@ import type { CopyHost } from "../../services/client/copy-host.js";
 import type { Exchange } from "./exchange.js";
 
 export class CopyInStream extends Writable {
-  public count: number | null = null;
-  public command: string | null = null;
   private readonly host: CopyHost;
   private readonly exchange: Exchange;
 
+  public count: number | null = null;
+  public command: string | null = null;
+
   public constructor(host: CopyHost, exchange: Exchange) {
     super({ autoDestroy: true });
+
     this.host = host;
     this.exchange = exchange;
   }

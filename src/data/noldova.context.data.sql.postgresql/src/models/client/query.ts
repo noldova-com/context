@@ -32,6 +32,11 @@ import type { PostgreSQLConnection } from "./postgresql-connection.js";
 import type { QueryHandler } from "../../services/client/query-handler.js";
 
 export class Query implements PromiseLike<QueryOutcome> {
+  private readonly deferred: Deferred<QueryOutcome> = new Deferred<QueryOutcome>();
+  private resolver: ((value: QueryOutcome) => void) | null = null;
+  private rejecter: ((error: Error) => void) | null = null;
+  private aborts: (() => void) | null = null;
+
   public readonly built: BuiltQuery;
   public readonly handler: QueryHandler;
   public readonly options: QueryOptions;
@@ -58,10 +63,6 @@ export class Query implements PromiseLike<QueryOutcome> {
   public aborted: Error | null = null;
   public onwrite: (() => void) | null = null;
   public connection: PostgreSQLConnection | null = null;
-  private readonly deferred: Deferred<QueryOutcome> = new Deferred<QueryOutcome>();
-  private resolver: ((value: QueryOutcome) => void) | null = null;
-  private rejecter: ((error: Error) => void) | null = null;
-  private aborts: (() => void) | null = null;
 
   public constructor(built: BuiltQuery, handler: QueryHandler, options: QueryOptions = new QueryOptions()) {
     this.built = built;

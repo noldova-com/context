@@ -26,6 +26,16 @@ import { BinaryReaders } from "../services/types/binary-readers.js";
 import { DateParser } from "../services/types/date.parser.js";
 
 export class TypeRegistry {
+  public static readonly number: ValueParser = (text: string): number => Number(text);
+  public static readonly boolean: ValueParser = (text: string): boolean => text === Resources.trueLiteral;
+  public static readonly json: ValueParser = (text: string): unknown => JSON.parse(text);
+  public static readonly bytea: ValueParser = (text: string): Buffer => Buffer.from(text.slice(2), "hex");
+  public static readonly string: ValueSerializer = (value: unknown): string => TypeRegistry.serializeString(value);
+  public static readonly jsonSerializer: ValueSerializer = (value: unknown): string => JSON.stringify(value);
+  public static readonly booleanSerializer: ValueSerializer = (value: unknown): string => value === true ? Resources.trueLiteral : Resources.falseLiteral;
+  public static readonly dateSerializer: ValueSerializer = (value: unknown): string => DateParser.serialize(value);
+  public static readonly byteaSerializer: ValueSerializer = (value: unknown): string => TypeRegistry.serializeBytea(value);
+
   private static readonly arrays: ReadonlyMap<number, number> = new Map([
     [16, 1000], [17, 1001], [18, 1002], [19, 1003], [20, 1016], [21, 1005], [22, 1006], [23, 1007], [24, 1008],
     [25, 1009], [26, 1028], [27, 1010], [28, 1011], [29, 1012], [30, 1013], [114, 199], [142, 143], [600, 1017],
@@ -44,17 +54,6 @@ export class TypeRegistry {
   private static readonly bigintOid: number = 20;
   private static readonly byteaOid: number = 17;
   private static readonly jsonOids: readonly number[] = [114, 3802];
-
-  public static readonly number: ValueParser = (text: string): number => Number(text);
-  public static readonly boolean: ValueParser = (text: string): boolean => text === Resources.trueLiteral;
-  public static readonly json: ValueParser = (text: string): unknown => JSON.parse(text);
-  public static readonly bytea: ValueParser = (text: string): Buffer => Buffer.from(text.slice(2), "hex");
-
-  public static readonly string: ValueSerializer = (value: unknown): string => TypeRegistry.serializeString(value);
-  public static readonly jsonSerializer: ValueSerializer = (value: unknown): string => JSON.stringify(value);
-  public static readonly booleanSerializer: ValueSerializer = (value: unknown): string => value === true ? Resources.trueLiteral : Resources.falseLiteral;
-  public static readonly dateSerializer: ValueSerializer = (value: unknown): string => DateParser.serialize(value);
-  public static readonly byteaSerializer: ValueSerializer = (value: unknown): string => TypeRegistry.serializeBytea(value);
 
   private readonly parsers: Map<number, ValueParser> = new Map();
   private readonly serializers: Map<number, ValueSerializer> = new Map();

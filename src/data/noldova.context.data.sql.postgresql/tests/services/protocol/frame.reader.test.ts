@@ -57,54 +57,6 @@ export class FrameReaderTests {
   }
 
   @TestMethod
-  public ownsEveryFrameWhenNotShared(): void {
-    const owned: boolean[] = [];
-    const reader: FrameReader = new FrameReader((_type, data) => owned.push(reader.isOwning(data)), () => undefined);
-
-    reader.push(M.parseComplete());
-
-    Assert.areEqual("true", owned.join(","));
-  }
-
-  @TestMethod
-  public copiesASharedBufferItKeeps(): void {
-    const owned: boolean[] = [];
-    const reader: FrameReader = new FrameReader((_type, data) => {
-      owned.push(reader.isOwning(data));
-      if (owned.length === 1)
-        reader.pause();
-    }, () => undefined, true);
-    const shared = Buffer.concat([M.parseComplete(), M.bindComplete()]);
-
-    reader.push(shared);
-    shared.fill(0);
-    reader.push(M.noData());
-    reader.resume();
-
-    Assert.areEqual("false,true,true", owned.join(","));
-  }
-
-  @TestMethod
-  public copiesEveryChunkWhileOwning(): void {
-    const frames: string[] = [];
-    const owned: boolean[] = [];
-    const reader: FrameReader = new FrameReader((type, data) => {
-      frames.push(String.fromCharCode(type));
-      owned.push(reader.isOwning(data));
-    }, () => undefined, true);
-    const stream = Buffer.concat([M.parseComplete(), M.bindComplete()]);
-
-    reader.setOwning(true);
-    reader.push(stream.subarray(0, 7));
-    reader.setOwning(false);
-    reader.push(stream.subarray(7));
-    reader.push(M.noData());
-
-    Assert.areEqual("1,2,n", frames.join(","));
-    Assert.areEqual("true,true,false", owned.join(","));
-  }
-
-  @TestMethod
   public queuesAChunkPushedWhileAFrameIsHandled(): void {
     const frames: string[] = [];
     const reader: FrameReader = new FrameReader(type => {
@@ -119,27 +71,40 @@ export class FrameReaderTests {
   }
 
   @TestMethod
-  public copiesQueuedSharedChunksWhenItPauses(): void {
+  public readsAFrameWithNoBodyWhoseHeaderIsSplitAcrossChunks(): void {
     const frames: string[] = [];
-    const owned: boolean[] = [];
-    const queued = M.commandComplete("SELECT 1");
-    const reader: FrameReader = new FrameReader((type, data, start, end) => {
-      frames.push(type === 67 ? Backend.readCommandComplete(data, start, end).command : String.fromCharCode(type));
-      owned.push(reader.isOwning(data));
-      if (frames.length === 1) {
-        reader.push(queued);
-        reader.pause();
-      }
-    }, () => undefined, true);
+    const reader = new FrameReader(type => frames.push(String.fromCharCode(type)), () => undefined);
+    const stream = Buffer.concat([M.parseComplete(), M.bindComplete()]);
+
+    reader.push(stream.subarray(0, 7));
+    reader.push(stream.subarray(7));
+    reader.push(M.noData());
+
+    Assert.areEqual("1,2,n", frames.join(","));
+  }
+
+  @TestMethod
+  public keepsAChunkQueuedBehindTheOneItPausedIn(): void {
+    const frames: string[] = [];
+    const reader: FrameReader = FrameReaderTests.pausingAfterTheFirstFrame(frames);
 
     reader.push(M.parseComplete());
     reader.push(M.noData());
-    reader.pause();
-    queued.fill(0);
     reader.resume();
 
     Assert.areEqual("1,SELECT,n", frames.join(","));
-    Assert.areEqual("false,true,true", owned.join(","));
+  }
+
+  @TestMethod
+  public givesAChunkQueuedBehindTheOneItPausedInAsItsRemainder(): void {
+    const frames: string[] = [];
+    const reader: FrameReader = FrameReaderTests.pausingAfterTheFirstFrame(frames);
+
+    reader.push(M.parseComplete());
+    reader.push(M.noData());
+
+    Assert.areEqual("1", frames.join(","));
+    Assert.areEqual(Buffer.concat([M.commandComplete("SELECT 1"), M.noData()]).toString("hex"), reader.takeRemainder().toString("hex"));
   }
 
   @TestMethod
@@ -168,5 +133,16 @@ export class FrameReaderTests {
     Assert.areEqual(0, frames.length);
     Assert.areEqual(1, errors.length);
     Assert.isInstanceOf(errors[0], DataException);
+  }
+
+  private static pausingAfterTheFirstFrame(frames: string[]): FrameReader {
+    const reader: FrameReader = new FrameReader((type, data, start, end) => {
+      frames.push(type === 67 ? Backend.readCommandComplete(data, start, end).command : String.fromCharCode(type));
+      if (frames.length === 1) {
+        reader.push(M.commandComplete("SELECT 1"));
+        reader.pause();
+      }
+    }, () => undefined);
+    return reader;
   }
 }

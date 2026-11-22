@@ -20,10 +20,9 @@ export class FrameReader {
   private static readonly largest: number = 0x40000000;
 
   private readonly chunks: Buffer[] = [];
-  private readonly owned: WeakSet<Buffer> = new WeakSet();
-  private readonly shared: boolean;
   private readonly onFrame: (type: number, data: Buffer, start: number, end: number) => void;
   private readonly onError: (error: DataException) => void;
+  private head: number = 0;
   private data: Buffer | null = null;
   private at: number = 0;
   private part: Buffer | null = null;
@@ -31,13 +30,10 @@ export class FrameReader {
   private running: boolean = false;
   private broken: boolean = false;
   private paused: boolean = false;
-  private owning: boolean = false;
 
-  public constructor(
-    onFrame: (type: number, data: Buffer, start: number, end: number) => void, onError: (error: DataException) => void, shared: boolean = false) {
+  public constructor(onFrame: (type: number, data: Buffer, start: number, end: number) => void, onError: (error: DataException) => void) {
     this.onFrame = onFrame;
     this.onError = onError;
-    this.shared = shared;
   }
 
   public get isPaused(): boolean {
@@ -48,23 +44,14 @@ export class FrameReader {
     if (this.broken)
       return;
 
-    this.chunks.push(this.shared && (this.paused || this.owning) ? this.copy(chunk) : chunk);
+    this.chunks.push(chunk);
     this.run();
-  }
-
-  public isOwning(data: Buffer): boolean {
-    return !this.shared || this.owned.has(data);
-  }
-
-  public setOwning(owning: boolean): void {
-    this.owning = owning;
-    if (owning)
-      this.settle();
   }
 
   public pause(): void {
     this.paused = true;
-    this.settle();
+    this.chunks.splice(0, this.head);
+    this.head = 0;
   }
 
   public resume(): void {
@@ -73,33 +60,14 @@ export class FrameReader {
   }
 
   public takeRemainder(): Buffer {
-    const remainder = this.chunks.splice(0);
+    const remainder = this.chunks.splice(this.head);
+    this.chunks.length = 0;
+    this.head = 0;
     if (!Object.isNull(this.data))
       remainder.unshift(this.data.subarray(this.at));
     this.data = null;
     this.at = 0;
     return Buffer.concat(remainder);
-  }
-
-  private copy(data: Buffer): Buffer {
-    const copy = Buffer.from(data);
-    this.owned.add(copy);
-    return copy;
-  }
-
-  private settle(): void {
-    if (!this.shared)
-      return;
-
-    if (!Object.isNull(this.data) && this.at < this.data.length && !this.owned.has(this.data)) {
-      this.data = this.copy(this.data.subarray(this.at));
-      this.at = 0;
-    }
-    for (let index = 0; index < this.chunks.length; index += 1) {
-      const chunk = this.chunks[index];
-      if (!Object.isUndefined(chunk) && !this.owned.has(chunk))
-        this.chunks[index] = this.copy(chunk);
-    }
   }
 
   private run(): void {
@@ -128,8 +96,13 @@ export class FrameReader {
     if (!Object.isNull(this.data) && this.at < this.data.length)
       return this.data;
 
-    this.data = this.chunks.shift() ?? null;
+    this.data = this.chunks[this.head] ?? null;
     this.at = 0;
+    this.head += 1;
+    if (Object.isNull(this.data)) {
+      this.chunks.length = 0;
+      this.head = 0;
+    }
     return this.data;
   }
 
@@ -139,6 +112,7 @@ export class FrameReader {
 
     this.broken = true;
     this.chunks.length = 0;
+    this.head = 0;
     this.data = null;
     this.part = null;
     this.at = 0;
@@ -171,8 +145,6 @@ export class FrameReader {
 
   private startPart(data: Buffer, length: number): void {
     const part = Buffer.allocUnsafe(length);
-    if (this.shared)
-      this.owned.add(part);
     this.filled = data.copy(part, 0, this.at);
     this.part = part;
     this.at = data.length;
@@ -191,8 +163,6 @@ export class FrameReader {
         return;
 
       const whole = Buffer.allocUnsafe(1 + length);
-      if (this.shared)
-        this.owned.add(whole);
       this.filled = part.copy(whole);
       this.part = whole;
       if (this.filled === whole.length)

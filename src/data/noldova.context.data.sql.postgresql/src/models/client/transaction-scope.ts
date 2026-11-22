@@ -35,6 +35,7 @@ export class TransactionScope extends SqlRunner implements QueryHandler {
 
   public constructor(types: TypeRegistry, state: TransactionState, name: string | null, inside: boolean, above: () => boolean) {
     super(types);
+
     this.state = state;
     this.name = name;
     this.inside = inside;

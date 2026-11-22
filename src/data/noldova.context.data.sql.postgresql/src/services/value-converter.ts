@@ -20,7 +20,9 @@ export class ValueConverter {
     if (!Array.isArray(row))
       throw new DataException(Resources.unsupportedValue);
 
-    return new DataRecord(new Map(columns.map((column, index) => [column.name, ValueConverter.read(column.type, row[index])])));
+    const values = new Map<string, DataValue>();
+    columns.forEach((column, index) => values.set(column.name, ValueConverter.read(column.type, row[index])));
+    return new DataRecord(values);
   }
 
   public static read(type: number, text: unknown): DataValue {

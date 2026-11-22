@@ -48,13 +48,7 @@ export class ArrayParser {
       if (this.readCode() === ArrayParser.openBrace)
         values.push(this.parseLevel(dimension + 1));
       else if (this.readCode() === ArrayParser.quote) {
-        let value = "";
-        for (this.at += 1; this.at < length && this.readCode() !== ArrayParser.quote; this.at += 1) {
-          if (this.readCode() === ArrayParser.backslash)
-            this.at += 1;
-          value += this.text.charAt(this.at);
-        }
-        this.at += 1;
+        const value = this.readQuoted();
         values.push(Object.isNull(this.parse) ? value : this.parse(value));
       }
       else {
@@ -69,6 +63,22 @@ export class ArrayParser {
     }
     this.at += 1;
     return values;
+  }
+
+  private readQuoted(): string {
+    const length = this.text.length;
+    let value = "";
+    let run = this.at + 1;
+    for (this.at = run; this.at < length && this.readCode() !== ArrayParser.quote; this.at += 1) {
+      if (this.readCode() === ArrayParser.backslash) {
+        value += this.text.slice(run, this.at);
+        this.at += 1;
+        run = this.at;
+      }
+    }
+    value += this.text.slice(run, this.at);
+    this.at += 1;
+    return value;
   }
 
   private readCode(): number {

@@ -18,6 +18,7 @@ export class ReservedClient extends SqlRunner implements AsyncDisposable, Dispos
 
   public constructor(types: TypeRegistry, lease: PoolLease) {
     super(types);
+
     this.lease = lease;
   }
 

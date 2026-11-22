@@ -13,12 +13,12 @@ import { Resources } from "../../resources.js";
 import type { ValueParser } from "../../types/value-parser.js";
 
 export class DateParser {
-  private static readonly timestampPattern: RegExp =
-    /^(\d{4,})-(\d\d)-(\d\d)(?: (\d\d):(\d\d):(\d\d)(?:\.(\d+))?)?(?:([+-])(\d\d)(?::(\d\d))?(?::(\d\d))?)?( BC)?$/;
-
   public static readonly timestamptz: ValueParser = (text: string): Date | number => DateParser.parseTimestamptz(text);
   public static readonly date: ValueParser = (text: string): Date | number => DateParser.parseDate(text);
   public static readonly timestamp: ValueParser = (text: string): Date | number => DateParser.parseTimestamp(text);
+
+  private static readonly timestampPattern: RegExp =
+    /^(\d{4,})-(\d\d)-(\d\d)(?: (\d\d):(\d\d):(\d\d)(?:\.(\d+))?)?(?:([+-])(\d\d)(?::(\d\d))?(?::(\d\d))?)?( BC)?$/;
 
   public static parseTimestamptz(text: string): Date | number {
     if (DateParser.isPlain(text))

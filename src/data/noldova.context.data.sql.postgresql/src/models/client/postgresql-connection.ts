@@ -75,24 +75,6 @@ export class PostgreSQLConnection implements CopyHost {
   private static readonly flushLength: number = 65536;
   private static ids: number = 1;
 
-  public readonly id: number;
-  public readonly host: string;
-  public readonly port: number;
-  public readonly backend: BackendKey;
-  public readonly parameters: Map<string, string>;
-  public readonly prepared: Map<string, PreparedStatement> = new Map();
-  public lease: ConnectionLease | null = null;
-  public fatal: Error | null = null;
-  public uncertain: boolean = false;
-  public releasing: boolean = false;
-  public retiring: boolean = false;
-  public loading: boolean = false;
-  public typing: Query | null = null;
-  public idleTimer: number | null = null;
-  public lifeTimer: number | null = null;
-  public idleSince: number = 0;
-  public readonly retired: (() => void)[] = [];
-
   private readonly session: StartedSession;
   private readonly options: ClientOptions;
   private readonly events: ConnectionEvents;
@@ -123,6 +105,24 @@ export class PostgreSQLConnection implements CopyHost {
   private headSince: number = 0;
   private notables: number = 0;
 
+  public readonly id: number;
+  public readonly host: string;
+  public readonly port: number;
+  public readonly backend: BackendKey;
+  public readonly parameters: Map<string, string>;
+  public readonly prepared: Map<string, PreparedStatement> = new Map();
+  public lease: ConnectionLease | null = null;
+  public fatal: Error | null = null;
+  public uncertain: boolean = false;
+  public releasing: boolean = false;
+  public retiring: boolean = false;
+  public loading: boolean = false;
+  public typing: Query | null = null;
+  public idleTimer: number | null = null;
+  public lifeTimer: number | null = null;
+  public idleSince: number = 0;
+  public readonly retired: (() => void)[] = [];
+
   public constructor(session: StartedSession, options: ClientOptions, events: ConnectionEvents) {
     this.session = session;
     this.options = options;
@@ -140,7 +140,7 @@ export class PostgreSQLConnection implements CopyHost {
     this.frames = new FrameReader((type, data, start, end) => this.dispatch(type, data, start, end), error => {
       this.fatal = error;
       this.socket.destroy();
-    }, this.socket.isShared);
+    });
 
     this.socket.onData = data => {
       this.heard = this.timers.readTime();
@@ -1443,7 +1443,6 @@ export class PostgreSQLConnection implements CopyHost {
 
   private handleReadyForQuery(data: Buffer, start: number, end: number): void {
     this.currentStatus = Backend.readReadyForQuery(data, start, end);
-    this.frames.setOwning(false);
     const exchange = this.sent.shift();
     if (Object.isUndefined(exchange))
       throw new DataException(Resources.unexpectedMessage);
@@ -1734,7 +1733,6 @@ export class PostgreSQLConnection implements CopyHost {
     const stream = new CopyOutStream(this, exchange);
     exchange.stream = stream;
     exchange.open = false;
-    this.frames.setOwning(true);
     PostgreSQLConnection.queryOf(exchange).resolve(stream);
   }
 
@@ -1742,7 +1740,6 @@ export class PostgreSQLConnection implements CopyHost {
     const exchange = this.peekHead();
     const stream = new CopyBothStream(this, exchange);
     exchange.stream = stream;
-    this.frames.setOwning(true);
     PostgreSQLConnection.queryOf(exchange).resolve(stream);
   }
 
@@ -1760,7 +1757,6 @@ export class PostgreSQLConnection implements CopyHost {
   }
 
   private copyDone(): void {
-    this.frames.setOwning(false);
     const exchange = this.peekHead();
     if (exchange.stream instanceof Readable)
       exchange.stream.push(null);

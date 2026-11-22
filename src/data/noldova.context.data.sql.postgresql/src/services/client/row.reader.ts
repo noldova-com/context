@@ -15,19 +15,10 @@ import "@noldova/context.core";
 import { RowMode } from "../../enums/row-mode.js";
 import { MalformedMessageException } from "../../exceptions/malformed-message.exception.js";
 import type { Column } from "../../models/column.js";
+import { ParserVariant } from "../../models/parser-variant.js";
 import { Resources } from "../../resources.js";
 import type { ValueParser } from "../../types/value-parser.js";
 import { Backend } from "../protocol/backend.js";
-
-class ParserVariant {
-  public readonly parsers: readonly (ValueParser | null)[];
-  public readonly columns: readonly Column[];
-
-  public constructor(parsers: readonly (ValueParser | null)[], columns: readonly Column[]) {
-    this.parsers = parsers;
-    this.columns = columns;
-  }
-}
 
 export class RowReader {
   private static readonly variety: number = 16;
@@ -63,6 +54,7 @@ export class RowReader {
       throw new MalformedMessageException();
 
     const values: unknown[] = [];
+    const row: Record<string, unknown> | null = mode === RowMode.Object ? {} : null;
     let at = start + 7;
     for (const column of columns) {
       const length = Backend.readFieldLength(data, at, end);
@@ -74,21 +66,20 @@ export class RowReader {
       }
       if (!Object.isNull(from))
         value = from(value, column);
-      values.push(value);
+      if (Object.isNull(row))
+        values.push(value);
+      else
+        RowReader.setField(row, column.name, value);
     }
 
-    if (mode !== RowMode.Object)
-      return values;
+    return row ?? values;
+  }
 
-    const row: Record<string, unknown> = {};
-    columns.forEach((column, index) => {
-      const value = values[index];
-      if (column.name === Resources.prototypeKey)
-        Object.defineProperty(row, column.name, { value, writable: true, enumerable: true, configurable: true });
-      else
-        row[column.name] = value;
-    });
-    return row;
+  private static setField(row: Record<string, unknown>, name: string, value: unknown): void {
+    if (name === Resources.prototypeKey)
+      Object.defineProperty(row, name, { value, writable: true, enumerable: true, configurable: true });
+    else
+      row[name] = value;
   }
 
   private static readValue(data: Buffer, start: number, end: number, column: Column, mode: RowMode): unknown {

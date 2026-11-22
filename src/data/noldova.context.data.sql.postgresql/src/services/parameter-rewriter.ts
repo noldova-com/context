@@ -14,10 +14,14 @@ import { Resources } from "../resources.js";
 
 export class ParameterRewriter {
   private static readonly digit: RegExp = /^[0-9]$/u;
+  private static readonly wordCharacter: RegExp = /^[\p{L}\p{N}_$]$/u;
+  private static readonly dollarTag: RegExp = /^(?:[\p{L}_][\p{L}\p{N}_]*)?$/u;
+  private static readonly whitespace: RegExp = /^\s$/u;
 
   private readonly text: string;
   private readonly output: string[] = [];
   private position: number = 0;
+  private copied: number = 0;
   private placeholders: number = 0;
   private previous: TokenKind = TokenKind.None;
 
@@ -31,6 +35,7 @@ export class ParameterRewriter {
     if (rewriter.placeholders !== parameters)
       throw new DataException(Resources.formatParameterCount(rewriter.placeholders, parameters));
 
+    rewriter.output.push(text.slice(rewriter.copied));
     return rewriter.output.join("");
   }
 
@@ -61,7 +66,7 @@ export class ParameterRewriter {
 
   private skipLineComment(): void {
     const end = this.text.indexOf(Resources.lineEnd, this.position);
-    this.copyTo(end < 0 ? this.text.length : end);
+    this.moveTo(end < 0 ? this.text.length : end);
   }
 
   private skipBlockComment(): void {
@@ -82,7 +87,7 @@ export class ParameterRewriter {
         index += 1;
     }
 
-    this.copyTo(index);
+    this.moveTo(index);
   }
 
   private skipString(escapes: boolean): void {
@@ -99,7 +104,7 @@ export class ParameterRewriter {
         index += 1;
     }
 
-    this.copyTo(Math.min(index + 1, this.text.length));
+    this.moveTo(Math.min(index + 1, this.text.length));
     this.previous = TokenKind.Operand;
   }
 
@@ -114,7 +119,7 @@ export class ParameterRewriter {
         index += 1;
     }
 
-    this.copyTo(Math.min(index + 1, this.text.length));
+    this.moveTo(Math.min(index + 1, this.text.length));
     this.previous = TokenKind.Operand;
   }
 
@@ -128,7 +133,7 @@ export class ParameterRewriter {
       return false;
 
     const end = this.text.indexOf(tag, tagEnd + 1);
-    this.copyTo(end < 0 ? this.text.length : end + tag.length);
+    this.moveTo(end < 0 ? this.text.length : end + tag.length);
     return true;
   }
 
@@ -140,8 +145,9 @@ export class ParameterRewriter {
       throw new DataException(Resources.formatQuestionMarkOperator(this.position));
 
     this.placeholders += 1;
-    this.output.push(Resources.parameterPrefix + this.placeholders.toString());
+    this.output.push(this.text.slice(this.copied, this.position), Resources.parameterPrefix + this.placeholders.toString());
     this.position += 1;
+    this.copied = this.position;
     this.previous = TokenKind.Operand;
   }
 
@@ -149,35 +155,34 @@ export class ParameterRewriter {
     let end = this.position;
     while (end < this.text.length && ParameterRewriter.isWordCharacter(this.text.charAt(end)))
       end += 1;
-    const word = this.text.slice(this.position, end);
-    if (word.toLowerCase() === Resources.escapeStringPrefix && this.text.charAt(end) === Resources.stringQuote) {
-      this.copyTo(end);
+    const word = this.text.slice(this.position, end).toLowerCase();
+    if (word === Resources.escapeStringPrefix && this.text.charAt(end) === Resources.stringQuote) {
+      this.moveTo(end);
       this.skipString(true);
       return;
     }
 
-    this.copyTo(end);
-    this.previous = Resources.parameterKeywords.has(word.toLowerCase()) ? TokenKind.Keyword : TokenKind.Operand;
+    this.moveTo(end);
+    this.previous = Resources.parameterKeywords.has(word) ? TokenKind.Keyword : TokenKind.Operand;
   }
 
   private scanOther(character: string): void {
-    this.copyTo(this.position + 1);
+    this.moveTo(this.position + 1);
     if (character === Resources.closingParenthesis || character === Resources.closingBracket)
       this.previous = TokenKind.Operand;
-    else if (character.trim().length > 0)
+    else if (!ParameterRewriter.whitespace.test(character))
       this.previous = TokenKind.Other;
   }
 
-  private copyTo(end: number): void {
-    this.output.push(this.text.slice(this.position, end));
+  private moveTo(end: number): void {
     this.position = end;
   }
 
   private static isWordCharacter(character: string): boolean {
-    return /^[\p{L}\p{N}_$]$/u.test(character);
+    return ParameterRewriter.wordCharacter.test(character);
   }
 
   private static isDollarTag(tag: string): boolean {
-    return /^(?:[\p{L}_][\p{L}\p{N}_]*)?$/u.test(tag);
+    return ParameterRewriter.dollarTag.test(tag);
   }
 }

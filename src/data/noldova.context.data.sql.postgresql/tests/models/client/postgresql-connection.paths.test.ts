@@ -30,7 +30,6 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 import { BackendMessages as M } from "../../fixtures/backend-messages.fixture.js";
 import { ConnectionHarness } from "../../fixtures/connection-harness.fixture.js";
 import { FakeLease } from "../../fixtures/fake-lease.fixture.js";
-import { FakeSocket } from "../../fixtures/fake-socket.fixture.js";
 
 @TestClass
 export class PostgreSQLConnectionPathTests {
@@ -630,25 +629,6 @@ export class PostgreSQLConnectionPathTests {
     Assert.areEqual("a", chunks.join(""));
     Assert.isFalse(harness.socket.paused);
     Assert.areEqual(0, harness.connection.inflight);
-  }
-
-  @TestMethod
-  public async copiesCopyDataOutOfASharedBufferAsync(): Promise<void> {
-    const harness = new ConnectionHarness({}, Buffer.alloc(0), new FakeSocket(true));
-    const query = harness.plain("copy t to stdout");
-    query.streaming = true;
-    harness.connection.sendSimple(query, "copy t to stdout");
-    harness.written();
-
-    harness.receive(M.copyOut(), M.copyData("a"), M.copyData("b"), M.copyDone(), M.commandComplete("COPY 2"), M.readyForQuery());
-    const stream = await query;
-    if (!(stream instanceof Readable))
-      throw new TypeError("No readable stream.");
-    const chunks: string[] = [];
-    for await (const chunk of stream)
-      chunks.push(String(chunk));
-
-    Assert.areEqual("ab", chunks.join(""));
   }
 
   @TestMethod

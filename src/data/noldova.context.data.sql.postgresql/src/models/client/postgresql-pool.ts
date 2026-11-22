@@ -50,8 +50,6 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
   private static readonly window: number = 2000;
   private static readonly retypeDelay: number = 1000;
 
-  public readonly parameters: Map<string, string> = new Map();
-
   private readonly clientOptions: ClientOptions;
   private readonly connection: ConnectionOptions;
   private readonly types: TypeRegistry;
@@ -91,8 +89,11 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
   private typeRetries: number = 0;
   private typesFailing: number | null = null;
 
+  public readonly parameters: Map<string, string> = new Map();
+
   public constructor(options: ClientOptions, connection: ConnectionOptions, types: TypeRegistry, starter: (options: ConnectionOptions, keys: DerivedKeys) => SessionStarter) {
     super();
+
     this.clientOptions = options;
     this.connection = connection;
     this.types = types;

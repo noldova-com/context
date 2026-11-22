@@ -21,6 +21,7 @@ export class FileQueryHandler extends QueryHandler {
 
   public constructor(path: string, inner: QueryHandler) {
     super();
+
     this.path = path;
     this.inner = inner;
   }

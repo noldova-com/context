@@ -28,6 +28,7 @@ export class ArrayParserTests {
   public parsesQuotedValuesWithEscapes(): void {
     Assert.areEqual("[\"a\\\"b\",\"c,d\",\"NULL\"]", JSON.stringify(ArrayParser.parse("{\"a\\\"b\",\"c,d\",\"NULL\"}", null)));
     Assert.areEqual("[1]", JSON.stringify(ArrayParser.parse("{\"1\"}", Number)));
+    Assert.areEqual(["a\\b\"c", "\\"].join("|"), ArrayParser.parse("{\"a\\\\b\\\"c\",\"\\\\\"}", null).join("|"));
   }
 
   @TestMethod

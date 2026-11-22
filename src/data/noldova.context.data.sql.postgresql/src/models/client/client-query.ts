@@ -27,6 +27,7 @@ export class ClientQuery extends Query {
 
   public constructor(source: string, args: readonly unknown[], handler: QueryHandler, options: QueryOptions, types: TypeRegistry) {
     super(new BuiltQuery(source, [], []), handler, options);
+
     this.sql = source;
     this.args = args;
     this.types = types;

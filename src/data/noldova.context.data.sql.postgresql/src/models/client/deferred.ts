@@ -7,9 +7,10 @@
  */
 
 export class Deferred<T> {
-  public readonly promise: Promise<T>;
   private readonly resolver: (value: T) => void;
   private readonly rejecter: (error: unknown) => void;
+
+  public readonly promise: Promise<T>;
 
   public constructor() {
     const { promise, resolve, reject } = Promise.withResolvers<T>();

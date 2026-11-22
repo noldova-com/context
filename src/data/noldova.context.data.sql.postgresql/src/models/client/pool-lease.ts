@@ -21,16 +21,18 @@ import type { Query } from "./query.js";
 import type { QueryHandler } from "../../services/client/query-handler.js";
 
 export class PoolLease extends ConnectionLease implements QueryHandler {
-  public readonly connection: PostgreSQLConnection;
-  public error: Error | null = null;
   private readonly pool: PostgreSQLPool;
   private readonly leaseKind: LeaseKind;
   private readonly lost: Deferred<void> = new Deferred<void>();
   private chain: Promise<void> = Promise.resolve();
   private isReleased: boolean = false;
 
+  public readonly connection: PostgreSQLConnection;
+  public error: Error | null = null;
+
   public constructor(pool: PostgreSQLPool, connection: PostgreSQLConnection, kind: LeaseKind) {
     super();
+
     this.pool = pool;
     this.connection = connection;
     this.leaseKind = kind;

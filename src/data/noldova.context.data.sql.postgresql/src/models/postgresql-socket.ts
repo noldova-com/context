@@ -20,9 +20,28 @@ export class PostgreSQLSocket extends ConnectionSocket {
   private closed: boolean = false;
   private failure: Error | null = null;
   private secure: boolean = false;
+  private readonly data = (data: Buffer): void => {
+    this.onData(data);
+  };
+  private readonly drain = (): void => {
+    this.onDrain();
+  };
+  private readonly error = (error: Error): void => {
+    this.failure ??= error;
+    this.socket.destroy();
+    this.close();
+  };
+  private readonly close = (): void => {
+    if (this.closed)
+      return;
+
+    this.closed = true;
+    this.onClose(this.failure);
+  };
 
   private constructor(socket: Socket, host: string) {
     super();
+
     this.socket = socket;
     this.host = host;
     this.listen();
@@ -43,10 +62,6 @@ export class PostgreSQLSocket extends ConnectionSocket {
 
   public override get isClosed(): boolean {
     return this.closed;
-  }
-
-  public override get isShared(): boolean {
-    return false;
   }
 
   public get isSecure(): boolean {
@@ -118,28 +133,6 @@ export class PostgreSQLSocket extends ConnectionSocket {
       secure.once("error", fail);
     });
   }
-
-  private readonly data = (data: Buffer): void => {
-    this.onData(data);
-  };
-
-  private readonly drain = (): void => {
-    this.onDrain();
-  };
-
-  private readonly error = (error: Error): void => {
-    this.failure ??= error;
-    this.socket.destroy();
-    this.close();
-  };
-
-  private readonly close = (): void => {
-    if (this.closed)
-      return;
-
-    this.closed = true;
-    this.onClose(this.failure);
-  };
 
   private listen(): void {
     this.socket.on("data", this.data);

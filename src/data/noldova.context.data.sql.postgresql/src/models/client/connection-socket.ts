@@ -17,8 +17,6 @@ export abstract class ConnectionSocket {
 
   public abstract get isClosed(): boolean;
 
-  public abstract get isShared(): boolean;
-
   public abstract write(data: Buffer): boolean;
 
   public abstract end(data: Buffer): void;

@@ -39,7 +39,6 @@ export class PostgreSQLSocketTests {
     socket.write(frontend.createSslRequest());
     Assert.areEqual("N", (await answer).toString("utf8"));
     Assert.isFalse(socket.isSecure);
-    Assert.isFalse(socket.isShared);
     Assert.isNull(socket.readPeerCertificate());
 
     socket.keepAlive(60);

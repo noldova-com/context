@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// This file uses Node APIs and will change when we replace Node.
+
 import type { Buffer } from "node:buffer";
 
 import { LeaseKind } from "@noldova/context.data.sql.postgresql/enums/lease-kind.js";
