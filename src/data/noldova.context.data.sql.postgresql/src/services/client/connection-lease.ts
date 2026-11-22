@@ -12,4 +12,6 @@ export abstract class ConnectionLease {
   public abstract get kind(): LeaseKind;
 
   public abstract onClose(error: Error): void;
+
+  public abstract onReleased(): void;
 }

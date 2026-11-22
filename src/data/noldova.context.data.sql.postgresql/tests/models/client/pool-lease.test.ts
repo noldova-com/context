@@ -48,6 +48,7 @@ export class PoolLeaseTests {
     lease.release();
     lease.release();
 
+    await lease.closed;
     Assert.isTrue(lease.released);
     Assert.areEqual(0, harness.pool.stats.leased);
     Assert.areEqual(1, harness.pool.stats.idle);
@@ -66,15 +67,37 @@ export class PoolLeaseTests {
     Assert.areEqual("P,D,B,E,S,P,D,B,E,S", await harness.writtenAsync(0));
 
     lease.release();
+    let ended = false;
+    void lease.closed.then(() => {
+      ended = true;
+    });
     harness.answer(0, ...PoolHarness.prepared());
     await first;
-    Assert.isTrue(lease.connection.releasing);
+    Assert.isTrue(lease.connection.releasing === lease);
+    Assert.isFalse(ended);
     harness.answer(0, ...PoolHarness.prepared());
     await second;
+    await lease.closed;
 
-    Assert.isFalse(lease.connection.releasing);
+    Assert.isNull(lease.connection.releasing);
     Assert.areEqual(1, harness.pool.stats.idle);
     Assert.isNull(harness.socket(0).ended);
+  }
+
+  @TestMethod
+  public async rejectsClosedWhenTheConnectionIsLostAfterTheReleaseAsync(): Promise<void> {
+    const harness = new PoolHarness();
+    const lease = await harness.pool.acquireLeaseAsync(LeaseKind.Reserve);
+    const query = harness.leased(lease, "select 1");
+    harness.pool.query(query, lease);
+    Assert.areEqual("P,D,B,E,S", await harness.writtenAsync(0));
+
+    lease.release();
+    harness.socket(0).close(null);
+
+    const closed = await Assert.throwsAsync(() => query.promise, ConnectionClosedException);
+    Assert.isTrue(await Assert.throwsAsync(() => lease.closed, ConnectionClosedException) === closed);
+    Assert.areEqual(0, harness.pool.stats.connections);
   }
 
   @TestMethod
@@ -88,7 +111,49 @@ export class PoolLeaseTests {
 
     lease.release();
 
+    await lease.closed;
     Assert.isNotNull(harness.socket(0).ended);
+    Assert.areEqual(0, harness.pool.stats.connections);
+  }
+
+  @TestMethod
+  public async resolvesClosedOnlyOnceTheCloseOfAReleaseEndsAsync(): Promise<void> {
+    const harness = new PoolHarness();
+    const lease = await harness.pool.acquireLeaseAsync(LeaseKind.Transaction);
+    const query = harness.leased(lease, "begin").execute();
+    Assert.areEqual("P,D,B,E,S", await harness.writtenAsync(0));
+    harness.answer(0, M.parseComplete(), M.parameterDescription([]), M.noData(), M.bindComplete(), M.commandComplete("BEGIN"), M.readyForQuery("T"));
+    await query;
+    harness.socket(0).holdsEnd = true;
+
+    lease.release();
+    let ended = false;
+    void lease.closed.then(() => {
+      ended = true;
+    });
+    Assert.isNotNull(harness.socket(0).ended);
+    Assert.isFalse(await harness.socket(0).waitForAsync(() => ended));
+    harness.socket(0).close(null);
+
+    await lease.closed;
+    Assert.areEqual(0, harness.pool.stats.connections);
+  }
+
+  @TestMethod
+  public async rejectsClosedWhenTheCloseOfAReleaseFailsAsync(): Promise<void> {
+    const harness = new PoolHarness();
+    const lease = await harness.pool.acquireLeaseAsync(LeaseKind.Transaction);
+    const query = harness.leased(lease, "begin").execute();
+    Assert.areEqual("P,D,B,E,S", await harness.writtenAsync(0));
+    harness.answer(0, M.parseComplete(), M.parameterDescription([]), M.noData(), M.bindComplete(), M.commandComplete("BEGIN"), M.readyForQuery("T"));
+    await query;
+    const failure = new Error("reset");
+    harness.socket(0).endFailure = failure;
+
+    lease.release();
+
+    const closed = await Assert.throwsAsync(() => lease.closed, ConnectionClosedException);
+    Assert.isTrue(closed.cause === failure);
     Assert.areEqual(0, harness.pool.stats.connections);
   }
 
@@ -179,6 +244,7 @@ export class PoolLeaseTests {
     }, ConnectionClosedException);
     lease.release();
     Assert.isTrue(lease.released);
+    Assert.isTrue(await Assert.throwsAsync(() => lease.closed, ConnectionClosedException) === closed);
   }
 
   @TestMethod

@@ -22,6 +22,8 @@ export class FakeSocket extends ConnectionSocket {
   public paused: boolean = true;
   public referenced: boolean = true;
   public accepts: boolean = true;
+  public holdsEnd: boolean = false;
+  public endFailure: Error | null = null;
   private closed: boolean = false;
 
   public override get isClosed(): boolean {
@@ -35,7 +37,8 @@ export class FakeSocket extends ConnectionSocket {
 
   public override end(data: Buffer): void {
     this.ended = data;
-    this.close(null);
+    if (!this.holdsEnd)
+      this.close(this.endFailure);
   }
 
   public override destroy(error: Error | null = null): void {

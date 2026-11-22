@@ -307,15 +307,18 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
   }
 
   public override onReady(connection: PostgreSQLConnection): void {
-    if (connection.releasing) {
+    const releasing = connection.releasing;
+    if (!Object.isNull(releasing)) {
       if (connection.inflight > 0)
         return;
 
-      connection.releasing = false;
       if (connection.status !== TransactionStatus.Idle) {
         connection.closeAsync();
         return;
       }
+
+      connection.releasing = null;
+      releasing.onReleased();
     }
 
     if (connection.inflight === 0 && Object.isNull(connection.lease)
@@ -353,6 +356,14 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
       lease.onClose(Object.isNull(failure) || claimed ? PostgreSQLPool.createLostError(connection, error) : failure);
     else if (!Object.isNull(failure) && !claimed)
       this.kept.push(failure);
+    const releasing = connection.releasing;
+    connection.releasing = null;
+    if (!Object.isNull(releasing)) {
+      if (error.destroyed && Object.isNullOrUndefined(error.cause))
+        releasing.onReleased();
+      else
+        releasing.onClose(error.destroyed ? error : PostgreSQLPool.createLostError(connection, error));
+    }
     if (this.connections.size === 0 && this.opening === 0)
       this.statements.clear();
     this.drain();
@@ -554,7 +565,7 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
   }
 
   private isUsable(connection: PostgreSQLConnection): boolean {
-    return Object.isNull(connection.closed) && !connection.closing && Object.isNull(connection.lease) && !connection.releasing && !connection.retiring
+    return Object.isNull(connection.closed) && !connection.closing && Object.isNull(connection.lease) && Object.isNull(connection.releasing) && !connection.retiring
       && !connection.exclusive && !connection.loading;
   }
 

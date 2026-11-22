@@ -115,7 +115,7 @@ export class PostgreSQLConnection implements CopyHost {
   public lease: ConnectionLease | null = null;
   public fatal: Error | null = null;
   public uncertain: boolean = false;
-  public releasing: boolean = false;
+  public releasing: ConnectionLease | null = null;
   public retiring: boolean = false;
   public closeCalled: boolean = false;
   public callbackError: Error | null = null;

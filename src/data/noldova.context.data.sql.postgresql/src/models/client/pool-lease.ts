@@ -9,7 +9,6 @@
 import "@noldova/context.core";
 
 import type { LeaseKind } from "../../enums/lease-kind.js";
-import { TransactionStatus } from "../../enums/transaction-status.js";
 import { UnsafeTransactionException } from "../../exceptions/unsafe-transaction.exception.js";
 import type { ClientOptions } from "../client-options.js";
 import { Resources } from "../../resources.js";
@@ -23,7 +22,7 @@ import type { QueryHandler } from "../../services/client/query-handler.js";
 export class PoolLease extends ConnectionLease implements QueryHandler {
   private readonly pool: PostgreSQLPool;
   private readonly leaseKind: LeaseKind;
-  private readonly lost: Deferred<void> = new Deferred<void>();
+  private readonly ended: Deferred<void> = new Deferred<void>();
   private chain: Promise<void> = Promise.resolve();
   private isReleased: boolean = false;
 
@@ -36,7 +35,7 @@ export class PoolLease extends ConnectionLease implements QueryHandler {
     this.pool = pool;
     this.connection = connection;
     this.leaseKind = kind;
-    this.lost.promise.catch(() => undefined);
+    this.ended.promise.catch(() => undefined);
   }
 
   public override get kind(): LeaseKind {
@@ -48,7 +47,7 @@ export class PoolLease extends ConnectionLease implements QueryHandler {
   }
 
   public get closed(): Promise<void> {
-    return this.lost.promise;
+    return this.ended.promise;
   }
 
   public get released(): boolean {
@@ -92,15 +91,8 @@ export class PoolLease extends ConnectionLease implements QueryHandler {
     if (!Object.isNull(this.connection.closed))
       return;
 
-    if (this.connection.inflight > 0) {
-      this.connection.releasing = true;
-      return;
-    }
-
-    if (this.connection.status === TransactionStatus.Idle)
-      this.pool.onReady(this.connection);
-    else
-      this.connection.closeAsync();
+    this.connection.releasing = this;
+    this.pool.onReady(this.connection);
   }
 
   public createEndedError(): UnsafeTransactionException {
@@ -109,6 +101,10 @@ export class PoolLease extends ConnectionLease implements QueryHandler {
 
   public override onClose(error: Error): void {
     this.error = error;
-    this.lost.reject(error);
+    this.ended.reject(error);
+  }
+
+  public override onReleased(): void {
+    this.ended.resolve();
   }
 }

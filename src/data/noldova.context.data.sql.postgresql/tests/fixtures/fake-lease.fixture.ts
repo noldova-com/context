@@ -25,4 +25,6 @@ export class FakeLease extends ConnectionLease {
   public override onClose(error: Error): void {
     this.closes.push(error);
   }
+
+  public override onReleased(): void { }
 }

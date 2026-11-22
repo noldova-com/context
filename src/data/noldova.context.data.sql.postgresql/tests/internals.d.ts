@@ -592,6 +592,7 @@ declare module "@noldova/context.data.sql.postgresql/services/client/connection-
   export abstract class ConnectionLease {
     public abstract get kind(): LeaseKind;
     public abstract onClose(error: Error): void;
+    public abstract onReleased(): void;
   }
 }
 
@@ -789,7 +790,7 @@ declare module "@noldova/context.data.sql.postgresql/models/client/postgresql-co
     public lease: ConnectionLease | null;
     public fatal: Error | null;
     public uncertain: boolean;
-    public releasing: boolean;
+    public releasing: ConnectionLease | null;
     public retiring: boolean;
     public loading: boolean;
     public typing: Query | null;
@@ -904,6 +905,7 @@ declare module "@noldova/context.data.sql.postgresql/models/client/pool-lease.js
     public release(): void;
     public createEndedError(): UnsafeTransactionException;
     public override onClose(error: Error): void;
+    public override onReleased(): void;
   }
 }
 
