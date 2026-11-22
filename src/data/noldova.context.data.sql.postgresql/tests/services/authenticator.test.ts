@@ -24,6 +24,7 @@ export class AuthenticatorTests {
   private static readonly password: string = "pencil";
   private static readonly salt: string = Buffer.from("salt-for-tests").toString("base64");
   private static readonly iterations: number = 4096;
+  private static readonly microtaskTurns: number = 1000;
   private static readonly both: string = "SCRAM-SHA-256\0SCRAM-SHA-256-PLUS\0\0";
   private static readonly certificate: Buffer = Der.certificate(Der.algorithm("2a8648ce3d040302"));
 
@@ -174,15 +175,21 @@ export class AuthenticatorTests {
   }
 
   @TestMethod
-  public async derivesTheKeyWithoutHoldingTheEventLoop(): Promise<void> {
+  public async derivesTheKeyOutsideTheCallingTask(): Promise<void> {
     const authenticator = new Authenticator("app", AuthenticatorTests.password, "prefer", null, new Frontend(), new DerivedKeys());
     const nonce = AuthenticatorTests.saslInitial(await AuthenticatorTests.respondAsync(authenticator, 10, "SCRAM-SHA-256\0\0")).slice("n,,n=*,r=".length);
     const salt = Buffer.from("salt-for-the-event-loop").toString("base64");
 
-    const reply = authenticator.respondAsync(11, Buffer.from(`r=${nonce}server,s=${salt},i=200000`));
-    const first = await Promise.race([reply, new Promise<string>(resolve => setImmediate(() => resolve("event loop turned")))]);
+    const reply = authenticator.respondAsync(11, Buffer.from(`r=${nonce}server,s=${salt},i=${AuthenticatorTests.iterations.toString()}`));
+    let settled = false;
+    const settle = (): void => {
+      settled = true;
+    };
+    void reply.then(settle, settle);
+    for (let turn = 0; turn < AuthenticatorTests.microtaskTurns; turn += 1)
+      await Promise.resolve();
 
-    Assert.areEqual("event loop turned", first);
+    Assert.isFalse(settled);
     Assert.isNotNull(await reply);
   }
 
