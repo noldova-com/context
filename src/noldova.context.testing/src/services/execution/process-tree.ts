@@ -8,7 +8,7 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
-import { type ChildProcessByStdio, execFile, spawn } from "node:child_process";
+import { type ChildProcess, type ChildProcessByStdio, execFile, spawn } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { Socket } from "node:net";
@@ -16,6 +16,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 import type { Readable, Writable } from "node:stream";
+import { setImmediate } from "node:timers/promises";
 
 import "@noldova/context.core";
 import { ExceptionOptions } from "@noldova/context.exceptions";
@@ -33,7 +34,7 @@ export class ProcessTree {
   private readonly listing: ProcessListing | undefined;
   private readonly clock: IClock;
   private lister: ChildProcessByStdio<Writable, Readable, null> | undefined;
-  private listerClosed: Promise<void>;
+  private readonly openListers: Map<Promise<void>, string>;
   private warmingValue: Promise<boolean>;
   private isListerUsable: boolean;
   private answer: ((lines: string[] | undefined) => void) | undefined;
@@ -46,7 +47,7 @@ export class ProcessTree {
     this.listing = listings.get(platform);
     this.clock = clock;
     this.lister = undefined;
-    this.listerClosed = Promise.resolve();
+    this.openListers = new Map();
     this.warmingValue = Promise.resolve(false);
     this.isListerUsable = false;
     this.answer = undefined;
@@ -84,7 +85,7 @@ export class ProcessTree {
 
     const warmed = Promise.withResolvers<boolean>();
     this.warmingValue = warmed.promise;
-    this.listerClosed = new Promise<void>(resolve => lister.once(Resources.closeEvent, () => resolve()));
+    this.trackClose(lister, this.listing.warmFile);
     const lose = (): void => {
       this.isListerUsable = false;
       warmed.resolve(false);
@@ -107,25 +108,56 @@ export class ProcessTree {
   }
 
   public async listDescendantsAsync(rootProcessId: number): Promise<ProcessDescendants> {
-    const warmStart = this.clock.now();
-    const warmRows = await this.listWarmRowsAsync();
-    const start = Object.isUndefined(warmRows) ? this.clock.now() : warmStart;
-    const rows = warmRows ?? await this.listRowsAsync();
-    const rowsById = new Map(rows.map(t => [t.processId, t]));
-    const processIds: number[] = [];
-    ProcessTree.collectLeavesFirst(rows, rowsById, rootProcessId, processIds);
-    return new ProcessDescendants(processIds, !Object.isUndefined(warmRows), Math.round(this.clock.now() - start), rows.length, rowsById.has(rootProcessId),
-      ProcessTree.findBrokenChains(rows, rowsById, rootProcessId));
+    const deadline = this.clock.now() + Resources.warmListingMilliseconds + Resources.oneOffListingMilliseconds;
+    const incompleteListings: string[] = [];
+    for (;;) {
+      const warmStart = this.clock.now();
+      const warmRows = await this.listWarmRowsAsync(deadline);
+      const isWarm = !Object.isUndefined(warmRows);
+      if (!isWarm && this.clock.now() >= deadline)
+        throw new TestingException(Resources.processListingIncomplete(rootProcessId, incompleteListings));
+
+      const start = isWarm ? warmStart : this.clock.now();
+      const rows = warmRows ?? await this.listRowsAsync(deadline);
+      const milliseconds = Math.round(this.clock.now() - start);
+      const rowsById = new Map(rows.map(t => [t.processId, t]));
+      if (rowsById.has(rootProcessId)) {
+        const processIds: number[] = [];
+        ProcessTree.collectLeavesFirst(rows, rowsById, rootProcessId, processIds);
+        return new ProcessDescendants(processIds, isWarm, milliseconds, rows.length, ProcessTree.findBrokenChains(rows, rowsById, rootProcessId),
+          incompleteListings);
+      }
+
+      incompleteListings.push(Resources.processListingNamed(isWarm ? Resources.warmListingKind : Resources.oneOffListingKind, milliseconds, rows.length));
+      if (incompleteListings.length === Resources.listingTries || this.clock.now() + Resources.listingPauseMilliseconds >= deadline)
+        throw new TestingException(Resources.processListingIncomplete(rootProcessId, incompleteListings));
+
+      await new Promise<void>(resolve => this.clock.setTimeout(resolve, Resources.listingPauseMilliseconds));
+    }
   }
 
-  public async closeAsync(): Promise<void> {
+  public async closeAsync(limitMilliseconds: number, reportFailure: (error: TestingException) => void): Promise<boolean> {
     this.isListerUsable = false;
     this.lister?.ref();
     this.lister?.stdin.end();
     this.lister?.kill();
-    await this.listerClosed;
+    if (!await this.waitForListersAsync(limitMilliseconds)) {
+      reportFailure(new TestingException(Resources.processListersNotEnded([...this.openListers.values()], limitMilliseconds)));
+      return false;
+    }
+
+    await ProcessTree.waitForClosingHandlesAsync();
     if (!Object.isUndefined(this.scriptDirectory))
       await rm(this.scriptDirectory, { recursive: true, force: true, maxRetries: Resources.temporaryRemovalRetries });
+
+    return true;
+  }
+
+  // A child's handle closes at the end of the event loop's turn in which the child closed, after its close event, so the second turn's
+  // immediate is the first that no longer sees it.
+  private static async waitForClosingHandlesAsync(): Promise<void> {
+    await setImmediate();
+    await setImmediate();
   }
 
   private static tryEnd(processId: number): boolean {
@@ -198,6 +230,24 @@ export class ProcessTree {
     return arguments_.map(t => t === Resources.listingScriptArgument ? scriptPath : t);
   }
 
+  private trackClose(child: ChildProcess, file: string): void {
+    const closed = new Promise<void>(resolve => child.once(Resources.closeEvent, () => {
+      this.openListers.delete(closed);
+      resolve();
+    }));
+    this.openListers.set(closed, file);
+  }
+
+  private waitForListersAsync(limitMilliseconds: number): Promise<boolean> {
+    return new Promise<boolean>(resolve => {
+      const timer = this.clock.setTimeout(() => resolve(false), limitMilliseconds);
+      void Promise.all(this.openListers.keys()).then(() => {
+        this.clock.clearTimeout(timer);
+        resolve(true);
+      });
+    });
+  }
+
   private settleAnswer(lines: string[] | undefined): void {
     const answer = this.answer;
     this.answer = undefined;
@@ -205,7 +255,7 @@ export class ProcessTree {
     answer?.(lines);
   }
 
-  private listWarmRowsAsync(): Promise<ProcessRow[] | undefined> {
+  private listWarmRowsAsync(deadline: number): Promise<ProcessRow[] | undefined> {
     const lister = this.lister;
     if (!this.isListerUsable || Object.isUndefined(lister))
       return Promise.resolve(undefined);
@@ -214,7 +264,7 @@ export class ProcessTree {
       const timer = this.clock.setTimeout(() => {
         this.isListerUsable = false;
         this.settleAnswer(undefined);
-      }, Resources.warmListingMilliseconds);
+      }, Math.min(Resources.warmListingMilliseconds, deadline - this.clock.now()));
       this.answer = lines => {
         this.clock.clearTimeout(timer);
         resolve(Object.isUndefined(lines) ? undefined : ProcessTree.parseRows(lines, [lister.pid]));
@@ -223,7 +273,7 @@ export class ProcessTree {
     });
   }
 
-  private listRowsAsync(): Promise<ProcessRow[]> {
+  private listRowsAsync(deadline: number): Promise<ProcessRow[]> {
     const listing = this.listing;
     if (Object.isUndefined(listing))
       return Promise.reject(new TestingException(Resources.processListingUnsupported(this.platform)));
@@ -236,6 +286,7 @@ export class ProcessTree {
       return Promise.reject(new TestingException(Resources.processListingFailed(listing.file), new ExceptionOptions(error)));
     }
 
+    const limitMilliseconds = Math.min(Resources.oneOffListingMilliseconds, deadline - this.clock.now());
     return new Promise<ProcessRow[]>((resolve, reject) => {
       const lister = execFile(listing.file, arguments_, { encoding: Resources.textEncoding, windowsHide: true }, (error, output) => {
         this.clock.clearTimeout(timer);
@@ -248,10 +299,11 @@ export class ProcessTree {
         else
           resolve(ProcessTree.parseRows(lines.slice(0, endIndex), [lister.pid, this.lister?.pid]));
       });
+      this.trackClose(lister, listing.file);
       const timer = this.clock.setTimeout(() => {
-        reject(new TestingException(Resources.processListingTimedOut(listing.file, Resources.oneOffListingMilliseconds)));
+        reject(new TestingException(Resources.processListingTimedOut(listing.file, limitMilliseconds)));
         lister.kill(Resources.killSignal);
-      }, Resources.oneOffListingMilliseconds);
+      }, limitMilliseconds);
     });
   }
 }

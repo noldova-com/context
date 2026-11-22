@@ -46,8 +46,8 @@ export class Resources {
   public static readonly listingScriptArgument: string = "<listing script>";
   public static readonly warmListingKind: string = "warm";
   public static readonly oneOffListingKind: string = "one-off";
-  public static readonly rootListed: string = "the run's own process among them";
-  public static readonly rootNotListed: string = "but not the run's own process";
+  public static readonly listingTries: number = 3;
+  public static readonly listingPauseMilliseconds: number = 1_000;
   public static readonly noStartTimes: string = "it gives no start times to find the processes started after the run under a parent that has gone";
   public static readonly noBrokenChains: string = "it shows no process started after the run under a parent that has gone";
   public static readonly listingScriptDirectoryPrefix: string = "noldova-process-listing-";
@@ -301,8 +301,8 @@ export class Resources {
     return `Processes the run ended that were still running under it: ${processCount}.`;
   }
 
-  public static processListingDescribed(kind: string, milliseconds: number, listedCount: number, root: string, chains: string): string {
-    return `Its ${kind} listing took ${milliseconds} ms and held ${listedCount} processes, ${root}, and ${chains}.`;
+  public static processListingDescribed(kind: string, milliseconds: number, listedCount: number, chains: string): string {
+    return `Its ${kind} listing took ${milliseconds} ms and held ${listedCount} processes, and ${chains}.`;
   }
 
   public static brokenProcessChain(processIds: readonly number[], parentId: number): string {
@@ -323,6 +323,23 @@ export class Resources {
 
   public static processListingUnfinished(file: string, answer: string): string {
     return `The run could not list the processes running under it with ${file}, which ended without finishing its listing and wrote: "${answer}".`;
+  }
+
+  public static processListingNamed(kind: string, milliseconds: number, listedCount: number): string {
+    return `${kind}, ${milliseconds} ms, ${listedCount} listed`;
+  }
+
+  public static processListingsRetried(listings: readonly string[]): string {
+    return `Listings before it that left out the run's own process: ${listings.length} (${listings.join("; ")}).`;
+  }
+
+  public static processListingIncomplete(processId: number, listings: readonly string[]): string {
+    return `The run's process listings left out process ${processId}, whose descendants they were to list, so each was incomplete; ` +
+      `listings made: ${listings.length} (${listings.join("; ")}).`;
+  }
+
+  public static processListersNotEnded(files: readonly string[], limitMilliseconds: number): string {
+    return `The run could not end its process listings within ${limitMilliseconds} milliseconds of stopping them; still open: ${files.join(", ")}.`;
   }
 
   public static processListingTimedOut(file: string, limitMilliseconds: number): string {

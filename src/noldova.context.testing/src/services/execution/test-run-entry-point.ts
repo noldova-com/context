@@ -33,6 +33,7 @@ export class TestRunEntryPoint {
     const reporter = new TestConsoleReporter(t => process.stdout.write(t), process.stdout.isTTY === true, skipPassingDetails);
     const temporaryDirectory = await this.isolateTemporaryFilesAsync();
     const processTree = new ProcessTree(process.platform);
+    const stopLimitMilliseconds = TestRunSupervisor.readStopLimitMilliseconds(process.env[Resources.stopLimitVariable]);
     let supervisor: TestRunSupervisor | undefined;
 
     try {
@@ -49,7 +50,6 @@ export class TestRunEntryPoint {
       }
 
       const timeoutMilliseconds = TestRunSupervisor.readTimeoutMilliseconds(process.env[Resources.timeoutVariable]);
-      const stopLimitMilliseconds = TestRunSupervisor.readStopLimitMilliseconds(process.env[Resources.stopLimitVariable]);
       supervisor = new TestRunSupervisor(timeoutMilliseconds, testProjects, filters, reporter, TestRunSupervisor.readCoverageDirectory(), undefined, undefined,
         undefined, undefined, undefined, stopLimitMilliseconds);
       supervisor.whenWorkerLeftBehind(() => processTree.warm());
@@ -71,12 +71,13 @@ export class TestRunEntryPoint {
     }
 
     const isAbandonedWorkEnded = await this.endAbandonedWorkAsync(supervisor, processTree);
+    let isProcessTreeClosed = true;
     try {
-      await processTree.closeAsync();
+      isProcessTreeClosed = await processTree.closeAsync(stopLimitMilliseconds, this.writeError.bind(this));
     }
     finally {
       await this.removeTemporaryFilesAsync(temporaryDirectory);
-      if (!isAbandonedWorkEnded)
+      if (!isAbandonedWorkEnded || !isProcessTreeClosed)
         await this.endOwnProcessAsync();
     }
   }
