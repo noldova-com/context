@@ -31,6 +31,7 @@ import type { TestMethodResult } from "../../models/results/test-method-result.j
 import { TestRunResult } from "../../models/results/test-run-result.js";
 import { TestSelection } from "../../models/results/test-selection.js";
 import { Resources } from "../../resources.js";
+import { TestReportWriter } from "../reporting/test-report-writer.js";
 import { SystemClock } from "../timing/system-clock.js";
 
 export class TestRunSupervisor {
@@ -53,6 +54,7 @@ export class TestRunSupervisor {
   private readonly methodResults: Map<number, TestMethodResult[]>;
   private readonly finishedClassResults: Map<number, TestClassResult>;
   private readonly classResults: TestClassResult[];
+  private readonly reportWriter: TestReportWriter;
   private isQueued: boolean;
   private isFailed: boolean;
   private classCount: number;
@@ -91,6 +93,7 @@ export class TestRunSupervisor {
     this.methodResults = new Map();
     this.finishedClassResults = new Map();
     this.classResults = [];
+    this.reportWriter = new TestReportWriter();
     this.isQueued = false;
     this.isFailed = false;
     this.classCount = 0;
@@ -202,6 +205,7 @@ export class TestRunSupervisor {
     const startLimitMilliseconds = Math.max(this.timeoutMilliseconds + Resources.testWorkerGraceMilliseconds, this.startLimitMilliseconds);
     let started: TestWorkerMessage | undefined;
     let imported: string | undefined;
+    let lastClass: string | undefined;
     let watchdog: number | undefined;
     let isStopping = false;
     const stopAsync = async (): Promise<boolean> => {
@@ -240,10 +244,10 @@ export class TestRunSupervisor {
           finish();
         }
         else
-          fail(new TestingException(Resources.testWorkerEndedAfterItsLastClass(code)));
+          fail(new TestingException(Resources.testWorkerEndedAfterItsLastClass(code, lastClass)));
       });
       this.clock.clearTimeout(watchdog);
-      watchdog = this.clock.setTimeout(() => fail(new TestingException(Resources.testWorkerDidNotEnd(Resources.testWorkerEndMilliseconds))),
+      watchdog = this.clock.setTimeout(() => fail(new TestingException(Resources.testWorkerDidNotEnd(Resources.testWorkerEndMilliseconds, lastClass))),
         Resources.testWorkerEndMilliseconds);
       worker.postMessage(undefined);
     };
@@ -303,7 +307,7 @@ export class TestRunSupervisor {
           arm();
         }
         else if (message.kind === TestWorkerMessageKind.ClassCompleted) {
-          this.completeClass(message.classIndex, message.filePath);
+          lastClass = this.reportWriter.formatClassHeading(this.completeClass(message.classIndex, message.filePath));
           started = undefined;
           runNext();
         }
@@ -365,20 +369,23 @@ export class TestRunSupervisor {
     this.progressListener?.onMethodCompleted?.(message.result.methodResult);
   }
 
-  private completeClass(classIndex: number, filePath: string): void {
+  private completeClass(classIndex: number, filePath: string): TestClassResult {
     const methodResults = this.getMethodResults(classIndex);
     const [firstResult] = methodResults;
     if (Object.isUndefined(firstResult))
       throw new TestingException(Resources.testWorkerDataInvalid);
 
-    this.finishedClassResults.set(classIndex, new TestClassResult(firstResult.packageName, firstResult.className, filePath, methodResults));
+    const classResult = new TestClassResult(firstResult.packageName, firstResult.className, filePath, methodResults);
+    this.finishedClassResults.set(classIndex, classResult);
     this.methodResults.delete(classIndex);
-    for (let classResult = this.finishedClassResults.get(this.classResults.length); !Object.isUndefined(classResult);
-      classResult = this.finishedClassResults.get(this.classResults.length)) {
+    for (let finished = this.finishedClassResults.get(this.classResults.length); !Object.isUndefined(finished);
+      finished = this.finishedClassResults.get(this.classResults.length)) {
       this.finishedClassResults.delete(this.classResults.length);
-      this.classResults.push(classResult);
-      this.progressListener?.onClassCompleted(classResult);
+      this.classResults.push(finished);
+      this.progressListener?.onClassCompleted(finished);
     }
+
+    return classResult;
   }
 
   private getMethodResults(classIndex: number): TestMethodResult[] {

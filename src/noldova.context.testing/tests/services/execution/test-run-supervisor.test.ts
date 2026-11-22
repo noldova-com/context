@@ -437,7 +437,7 @@ export class TestRunSupervisorTests {
       const error = await Assert.throwsAsync(() => running, Error);
 
       Assert.isUndefined(messageBeforeTheLimit);
-      Assert.areEqual("The test worker did not end within 5000 milliseconds after its last class, so its coverage is incomplete.", error.message);
+      Assert.areEqual("The test worker did not end within 5000 milliseconds after its last class, FixturePackage/PassingFixtureTests.test.js — PassingFixtureTests, so its coverage is incomplete.", error.message);
       Assert.areEqual("Test workers that could not be ended within 5000 milliseconds of being stopped: 1.", supervisor.unendedWorkersMessage);
     }
     finally {
@@ -545,7 +545,26 @@ export class TestRunSupervisorTests {
 
     Assert.areEqual(0, terminateCountBeforeTheLimit);
     Assert.areEqual(1, worker.terminateCount);
-    Assert.areEqual("The test worker did not end within 5000 milliseconds after its last class, so its coverage is incomplete.", error.message);
+    Assert.areEqual("The test worker did not end within 5000 milliseconds after its last class, FixturePackage/PassingFixtureTests.test.js — PassingFixtureTests, so its coverage is incomplete.", error.message);
+  }
+
+  @TestMethod
+  public async failsTheRunWhenAWorkerThatRanNoClassDoesNotEndWithinTheLimitAsync(): Promise<void> {
+    const clock = new FakeClock();
+    const release = Promise.withResolvers<void>();
+    const worker = new ScriptedWorker(() => undefined, release.promise);
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
+      undefined, () => worker, clock).runAsync();
+    worker.send(TestWorkerMessage.ready(0, 0, 0));
+    await worker.ending;
+
+    clock.advance(5_000);
+    release.resolve();
+    const error = await Assert.throwsAsync(() => running, Error);
+
+    Assert.areEqual(0, worker.runs.length);
+    Assert.areEqual("The test worker, which ran no class, did not end within 5000 milliseconds of being told to end, so its coverage is incomplete.",
+      error.message);
   }
 
   @TestMethod
@@ -561,7 +580,24 @@ export class TestRunSupervisorTests {
     release.resolve();
     const error = await Assert.throwsAsync(() => running, Error);
 
-    Assert.areEqual("The test worker ended with exit code 3 after its last class.", error.message);
+    Assert.areEqual("The test worker ended with exit code 3 after its last class, FixturePackage/PassingFixtureTests.test.js — PassingFixtureTests.", error.message);
+  }
+
+  @TestMethod
+  public async failsTheRunWhenAWorkerThatRanNoClassEndsWithAnExitCodeAsync(): Promise<void> {
+    const release = Promise.withResolvers<void>();
+    const worker = new ScriptedWorker(() => undefined, release.promise);
+    const running = new TestRunSupervisor(TestRunSupervisorTests.TIMEOUT_MILLISECONDS, [], [], TestRunSupervisorTests.reporter([]), null, undefined, 1,
+      undefined, () => worker, new FakeClock()).runAsync();
+    worker.send(TestWorkerMessage.ready(0, 0, 0));
+    await worker.ending;
+
+    worker.emit("exit", 3);
+    release.resolve();
+    const error = await Assert.throwsAsync(() => running, Error);
+
+    Assert.areEqual(0, worker.runs.length);
+    Assert.areEqual("The test worker, which ran no class, ended with exit code 3 after it was told to end.", error.message);
   }
 
   @TestMethod

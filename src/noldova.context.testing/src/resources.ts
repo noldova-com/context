@@ -284,12 +284,16 @@ export class Resources {
     return `${owner}, which wrote ${profiles.join(", ")}`;
   }
 
-  public static testWorkerEndedAfterItsLastClass(exitCode: number): string {
-    return `The test worker ended with exit code ${exitCode} after its last class.`;
+  public static testWorkerEndedAfterItsLastClass(exitCode: number, lastClass: string | undefined): string {
+    return Object.isUndefined(lastClass)
+      ? `The test worker, which ran no class, ended with exit code ${exitCode} after it was told to end.`
+      : `The test worker ended with exit code ${exitCode} after its last class, ${lastClass}.`;
   }
 
-  public static testWorkerDidNotEnd(limitMilliseconds: number): string {
-    return `The test worker did not end within ${limitMilliseconds} milliseconds after its last class, so its coverage is incomplete.`;
+  public static testWorkerDidNotEnd(limitMilliseconds: number, lastClass: string | undefined): string {
+    return Object.isUndefined(lastClass)
+      ? `The test worker, which ran no class, did not end within ${limitMilliseconds} milliseconds of being told to end, so its coverage is incomplete.`
+      : `The test worker did not end within ${limitMilliseconds} milliseconds after its last class, ${lastClass}, so its coverage is incomplete.`;
   }
 
   public static testWorkersNotEnded(workerCount: number, limitMilliseconds: number, testNames: readonly string[]): string {
