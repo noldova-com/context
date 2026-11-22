@@ -11,6 +11,7 @@
 import { Buffer } from "node:buffer";
 
 import "@noldova/context.core";
+import { MalformedMessageException } from "@noldova/context.data.sql.postgresql/exceptions/malformed-message.exception.js";
 import { BinaryReaders } from "@noldova/context.data.sql.postgresql/services/types/binary-readers.js";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
@@ -81,6 +82,28 @@ export class BinaryReadersTests {
     Assert.areEqual("[true]", JSON.stringify(BinaryReaders.arrays.get(16)?.(booleans, 0, booleans.length)));
     Assert.areEqual("[\"9007199254740993\"]", JSON.stringify(BinaryReaders.arrays.get(20)?.(bigints, 0, bigints.length)));
     Assert.areEqual("[]", JSON.stringify(BinaryReaders.arrays.get(23)?.(BinaryReadersTests.array(23, [], []), 0, 12)));
+  }
+
+  @TestMethod
+  public refusesAMalformedBinaryArray(): void {
+    const decode = BinaryReaders.arrays.get(23) ?? BinaryReaders.bytes;
+    const negative = Buffer.alloc(12);
+    negative.writeInt32BE(-1, 0);
+    const deep = BinaryReadersTests.array(23, [1, 1, 1, 1, 1, 1, 1], [BinaryReadersTests.int32(1)]);
+    const flat = BinaryReadersTests.array(23, [1, 1], [BinaryReadersTests.int32(1)]);
+    const empty = BinaryReadersTests.array(23, [0], []);
+    const huge = BinaryReadersTests.array(23, [1_000_000_000], []);
+    const narrow = BinaryReadersTests.array(23, [1], [BinaryReadersTests.int16(1)]);
+    const cut = BinaryReadersTests.array(23, [2], [BinaryReadersTests.int32(7), BinaryReadersTests.int32(8)]);
+
+    Assert.throws(() => decode(Buffer.alloc(8), 0, 8), MalformedMessageException);
+    Assert.throws(() => decode(negative, 0, negative.length), MalformedMessageException);
+    Assert.throws(() => decode(deep, 0, deep.length), MalformedMessageException);
+    Assert.throws(() => decode(flat, 0, 20), MalformedMessageException);
+    Assert.throws(() => decode(empty, 0, empty.length), MalformedMessageException);
+    Assert.throws(() => decode(huge, 0, huge.length), MalformedMessageException);
+    Assert.throws(() => decode(narrow, 0, narrow.length), MalformedMessageException);
+    Assert.throws(() => decode(cut, 0, cut.length - 2), MalformedMessageException);
   }
 
   private static array(type: number, sizes: readonly number[], values: readonly (Buffer | null)[]): Buffer {

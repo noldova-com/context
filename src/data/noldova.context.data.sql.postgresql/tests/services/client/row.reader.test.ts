@@ -10,6 +10,7 @@
 
 import { Buffer } from "node:buffer";
 
+import { MalformedMessageException } from "@noldova/context.data.sql.postgresql/exceptions/malformed-message.exception.js";
 import { RowMode } from "@noldova/context.data.sql.postgresql/enums/row-mode.js";
 import { Column } from "@noldova/context.data.sql.postgresql/models/column.js";
 import { RowReader } from "@noldova/context.data.sql.postgresql/services/client/row.reader.js";
@@ -84,7 +85,7 @@ export class RowReaderTests {
     ];
     const data = M.dataRow(["7", null, "ab", "own"]);
 
-    const row = RowReader.read(data, 0, columns, RowMode.Object, null);
+    const row = RowReader.read(data, 0, data.length, columns, RowMode.Object, null);
 
     Assert.isInstanceOf(row, Object);
     Assert.areEqual(7, Object.isObject(row) && "id" in row ? row.id : undefined);
@@ -99,7 +100,7 @@ export class RowReaderTests {
     const columns = [new Column("id", RowReaderTests.number, null, 0, 1, 23), new Column("note", null, null, 0, 2, 25)];
     const data = Buffer.concat([Buffer.from("pad"), M.dataRow(["7", null])]);
 
-    const row = RowReader.read(data, 3, columns, RowMode.Values, (value, column) => `${column.name}=${String(value)}`);
+    const row = RowReader.read(data, 3, data.length, columns, RowMode.Values, (value, column) => `${column.name}=${String(value)}`);
 
     Assert.isTrue(Array.isArray(row));
     Assert.areEqual("id=7,note=null", Array.isArray(row) ? row.join(",") : "");
@@ -110,7 +111,7 @@ export class RowReaderTests {
     const columns = [new Column("id", RowReaderTests.number, null, 0, 1, 23), new Column("note", null, null, 0, 2, 25)];
     const data = M.dataRow(["7", null]);
 
-    const row = RowReader.read(data, 0, columns, RowMode.Raw, null);
+    const row = RowReader.read(data, 0, data.length, columns, RowMode.Raw, null);
     data.fill(0);
 
     Assert.isTrue(Array.isArray(row));
@@ -118,5 +119,15 @@ export class RowReaderTests {
     Assert.isInstanceOf(first, Buffer);
     Assert.areEqual("7", first.toString("utf8"));
     Assert.isNull(Array.isArray(row) ? row[1] : undefined);
+  }
+
+  @TestMethod
+  public refusesARowThatDoesNotMatchItsColumnsOrItsLength(): void {
+    const columns = [new Column("id", RowReaderTests.number, null, 0, 1, 23), new Column("note", null, null, 0, 2, 25)];
+    const short = M.dataRow(["7"]);
+    const full = M.dataRow(["7", "ab"]);
+
+    Assert.throws(() => RowReader.read(short, 0, short.length, columns, RowMode.Values, null), MalformedMessageException);
+    Assert.throws(() => RowReader.read(full, 0, full.length - 1, columns, RowMode.Values, null), MalformedMessageException);
   }
 }

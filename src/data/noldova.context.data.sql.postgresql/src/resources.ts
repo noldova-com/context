@@ -80,6 +80,7 @@ export class Resources {
   public static readonly localSeverityField: string = "severity_local";
   public static readonly localhost: string = "localhost";
   public static readonly locationParameterName: string = "location";
+  public static readonly malformedMessage: string = "The server sent a malformed message.";
   public static readonly md5Prefix: string = "md5";
   public static readonly messageField: string = "message";
   public static readonly minusSign: string = "-";
@@ -181,7 +182,6 @@ export class Resources {
   public static readonly unsafeTransaction: string = "Run transaction statements only in a transaction or on a reserved connection, or set max to 1.";
   public static readonly unsupportedOutcome: string = "The statement gave no single result, as a COPY does; the connection runs only statements that give one.";
   public static readonly unsupportedValue: string = "The row holds a value that is neither text nor null.";
-  public static readonly unterminatedErrorField: string = "The server sent an error whose field has no terminator.";
   public static readonly userInfoSeparator: string = "@";
   public static readonly userMissing: string = "No user was given; give one in the connection string or in the user setting.";
   public static readonly userParameterName: string = "user";

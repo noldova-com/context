@@ -19,6 +19,7 @@ import { CursorAction } from "@noldova/context.data.sql.postgresql/enums/cursor-
 import { BatchException } from "@noldova/context.data.sql.postgresql/exceptions/batch.exception.js";
 import { CancelUnansweredException } from "@noldova/context.data.sql.postgresql/exceptions/cancel-unanswered.exception.js";
 import { ConnectionClosedException } from "@noldova/context.data.sql.postgresql/exceptions/connection-closed.exception.js";
+import { MalformedMessageException } from "@noldova/context.data.sql.postgresql/exceptions/malformed-message.exception.js";
 import { PostgreSQLException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql.exception.js";
 import { QueryCanceledException } from "@noldova/context.data.sql.postgresql/exceptions/query-canceled.exception.js";
 import { QueryCost } from "@noldova/context.data.sql.postgresql/models/query-cost.js";
@@ -1586,6 +1587,44 @@ export class PostgreSQLConnectionPathTests {
     await rejected;
     Assert.areEqual(0, early);
     Assert.areEqual(1, harness.starter.cancelled.length);
+  }
+
+  @TestMethod
+  public async closesOnAMalformedDescriptionWhileTypesAreUnknownAsync(): Promise<void> {
+    const harness = new ConnectionHarness();
+    harness.events.isTyped = false;
+    harness.events.unknownTypes = true;
+    const query = harness.unnamed("select $1::int as x", [1], [23]);
+    harness.connection.send(query);
+    harness.written();
+    const rejected = Assert.throwsAsync(async () => {
+      await query;
+    }, ConnectionClosedException);
+
+    harness.receive(M.parseComplete(), M.message("t", Buffer.from("0005" + "00000017", "hex")));
+
+    const error = await rejected;
+    Assert.isTrue(harness.socket.destroyed);
+    Assert.isInstanceOf(error.cause, MalformedMessageException);
+  }
+
+  @TestMethod
+  public async closesOnAMalformedReadyForQueryAndRejectsTheQueriesBehindItAsync(): Promise<void> {
+    const harness = new ConnectionHarness();
+    const first = harness.unnamed("select 1");
+    const second = harness.unnamed("select 2");
+    harness.connection.send(first);
+    harness.connection.send(second);
+    harness.written();
+    const rejected = Promise.all([first, second].map(query => Assert.throwsAsync(async () => {
+      await query;
+    }, ConnectionClosedException)));
+
+    harness.receive(M.parseComplete(), M.parameterDescription([]), M.noData(), M.bindComplete(), M.commandComplete("SELECT 0"), M.message("Z"));
+
+    const errors = await rejected;
+    Assert.isTrue(harness.socket.destroyed);
+    Assert.isTrue(errors.every(error => error.cause instanceof MalformedMessageException));
   }
 
   private static count(outcome: unknown): number {

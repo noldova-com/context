@@ -11,11 +11,12 @@
 import type { Buffer } from "node:buffer";
 
 import "@noldova/context.core";
-import { DataException } from "@noldova/context.data";
 
+import { MalformedMessageException } from "../../exceptions/malformed-message.exception.js";
 import { BackendKey } from "../../models/backend-key.js";
 import { CommandResult } from "../../models/command-result.js";
 import { Notification } from "../../models/notification.js";
+import { ParameterStatus } from "../../models/parameter-status.js";
 import { RowColumn } from "../../models/row-column.js";
 import { Resources } from "../../resources.js";
 
@@ -50,7 +51,7 @@ export class Backend {
     for (let index = start + 5; index < end - 1;) {
       const zero = data.indexOf(0, index + 1);
       if (zero === -1 || zero >= end)
-        throw new DataException(Resources.unterminatedErrorField);
+        throw new MalformedMessageException();
 
       const code = data.readUInt8(index);
       fields.set(Backend.errorFields.get(code) ?? String.fromCharCode(code), data.toString("utf8", index + 1, zero));
@@ -63,23 +64,30 @@ export class Backend {
     return fields;
   }
 
-  public static readRowDescription(data: Buffer, start: number): readonly RowColumn[] {
-    const count = data.readUInt16BE(start + 5);
-    const columns: RowColumn[] = [];
-    for (let index = start + 7; columns.length < count;) {
-      const zero = data.indexOf(0, index);
-      columns.push(new RowColumn(Backend.readText(data, index, zero), data.readUInt32BE(zero + 7)));
-      index = zero + 19;
-    }
-
-    return columns;
+  public static readFieldCount(data: Buffer, start: number, end: number): number {
+    Backend.checkWithin(start + 7, end);
+    return data.readUInt16BE(start + 5);
   }
 
-  public static readColumns<T>(data: Buffer, start: number, make: (name: string, table: number, number: number, type: number) => T): T[] {
-    const count = data.readUInt16BE(start + 5);
+  public static readFieldLength(data: Buffer, at: number, end: number): number {
+    Backend.checkWithin(at + 4, end);
+    const length = data.readInt32BE(at);
+    if (length < -1 || at + 4 + length > end)
+      throw new MalformedMessageException();
+
+    return length;
+  }
+
+  public static readRowDescription(data: Buffer, start: number, end: number): readonly RowColumn[] {
+    return Backend.readColumns(data, start, end, (name, _table, _number, type) => new RowColumn(name, type));
+  }
+
+  public static readColumns<T>(data: Buffer, start: number, end: number, make: (name: string, table: number, number: number, type: number) => T): T[] {
+    const count = Backend.readFieldCount(data, start, end);
     const columns: T[] = [];
     for (let index = start + 7; columns.length < count;) {
-      const zero = data.indexOf(0, index);
+      const zero = Backend.findTerminator(data, index, end);
+      Backend.checkWithin(zero + 19, end);
       columns.push(make(Backend.readText(data, index, zero), data.readUInt32BE(zero + 1), data.readUInt16BE(zero + 5), data.readUInt32BE(zero + 7)));
       index = zero + 19;
     }
@@ -87,12 +95,13 @@ export class Backend {
     return columns;
   }
 
-  public static readColumnTypes(data: Buffer, start: number): number[] {
-    return Backend.readColumns(data, start, (_name, _table, _number, type) => type);
+  public static readColumnTypes(data: Buffer, start: number, end: number): number[] {
+    return Backend.readColumns(data, start, end, (_name, _table, _number, type) => type);
   }
 
-  public static readParameterDescription(data: Buffer, start: number): number[] {
-    const count = data.readUInt16BE(start + 5);
+  public static readParameterDescription(data: Buffer, start: number, end: number): number[] {
+    const count = Backend.readFieldCount(data, start, end);
+    Backend.checkWithin(start + 7 + count * 4, end);
     const oids: number[] = [];
     for (let index = 0; index < count; index += 1)
       oids.push(data.readUInt32BE(start + 7 + index * 4));
@@ -100,11 +109,11 @@ export class Backend {
     return oids;
   }
 
-  public static readDataRow(data: Buffer, start: number): readonly (string | null)[] {
-    const count = data.readUInt16BE(start + 5);
+  public static readDataRow(data: Buffer, start: number, end: number): readonly (string | null)[] {
+    const count = Backend.readFieldCount(data, start, end);
     const values: (string | null)[] = [];
     for (let index = start + 7; values.length < count;) {
-      const length = data.readInt32BE(index);
+      const length = Backend.readFieldLength(data, index, end);
       index += 4;
       if (length === -1)
         values.push(null);
@@ -134,26 +143,43 @@ export class Backend {
     return new CommandResult(Backend.readText(data, first, last), count);
   }
 
-  public static readReadyForQuery(data: Buffer, start: number): string {
+  public static readReadyForQuery(data: Buffer, start: number, end: number): string {
+    Backend.checkWithin(start + 6, end);
     return String.fromCharCode(data.readUInt8(start + 5));
   }
 
-  public static readParameterStatus(data: Buffer, start: number): readonly [string, string] {
-    const zero = data.indexOf(0, start + 5);
-    return [data.toString("utf8", start + 5, zero), data.toString("utf8", zero + 1, data.indexOf(0, zero + 1))];
+  public static readParameterStatus(data: Buffer, start: number, end: number): ParameterStatus {
+    const zero = Backend.findTerminator(data, start + 5, end);
+    return new ParameterStatus(data.toString("utf8", start + 5, zero), data.toString("utf8", zero + 1, Backend.findTerminator(data, zero + 1, end)));
   }
 
-  public static readNotification(data: Buffer, start: number): Notification {
-    const zero = data.indexOf(0, start + 9);
-    return new Notification(data.readInt32BE(start + 5), data.toString("utf8", start + 9, zero), data.toString("utf8", zero + 1, data.indexOf(0, zero + 1)));
+  public static readNotification(data: Buffer, start: number, end: number): Notification {
+    Backend.checkWithin(start + 9, end);
+    const zero = Backend.findTerminator(data, start + 9, end);
+    return new Notification(data.readInt32BE(start + 5), data.toString("utf8", start + 9, zero), data.toString("utf8", zero + 1, Backend.findTerminator(data, zero + 1, end)));
   }
 
-  public static readBackendKeyData(data: Buffer, start: number): BackendKey {
+  public static readBackendKeyData(data: Buffer, start: number, end: number): BackendKey {
+    Backend.checkWithin(start + 13, end);
     return new BackendKey(data.readInt32BE(start + 5), data.readInt32BE(start + 9));
   }
 
-  public static readAuthenticationType(data: Buffer, start: number): number {
+  public static readAuthenticationType(data: Buffer, start: number, end: number): number {
+    Backend.checkWithin(start + 9, end);
     return data.readInt32BE(start + 5);
+  }
+
+  private static checkWithin(position: number, end: number): void {
+    if (position > end)
+      throw new MalformedMessageException();
+  }
+
+  private static findTerminator(data: Buffer, start: number, end: number): number {
+    const zero = data.indexOf(0, start);
+    if (zero === -1 || zero >= end)
+      throw new MalformedMessageException();
+
+    return zero;
   }
 
   private static isDigit(code: number): boolean {

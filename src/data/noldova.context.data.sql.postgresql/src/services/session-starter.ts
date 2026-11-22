@@ -145,7 +145,7 @@ export class SessionStarter {
         try {
           if (type === BackendMessage.Authentication) {
             const body = Buffer.from(data.subarray(start + 9, end));
-            const authType = Backend.readAuthenticationType(data, start);
+            const authType = Backend.readAuthenticationType(data, start, end);
             authenticating = authenticating.then(async () => {
               const reply = await authenticator.respondAsync(authType, body);
               if (!Object.isNull(reply))
@@ -154,16 +154,16 @@ export class SessionStarter {
             authenticating.catch(fail);
           }
           else if (type === BackendMessage.ParameterStatus) {
-            const [name, value] = Backend.readParameterStatus(data, start);
-            parameters.set(name, value);
+            const status = Backend.readParameterStatus(data, start, end);
+            parameters.set(status.name, status.value);
           }
           else if (type === BackendMessage.BackendKeyData)
-            backend = Backend.readBackendKeyData(data, start);
+            backend = Backend.readBackendKeyData(data, start, end);
           else if (type === BackendMessage.ErrorResponse)
             fail(new PostgreSQLException(Backend.readError(data, start, end)));
           else if (type === BackendMessage.ReadyForQuery) {
             const rest = Buffer.from(data.subarray(end));
-            const status = Backend.readReadyForQuery(data, start);
+            const status = Backend.readReadyForQuery(data, start, end);
             authenticating.then(() => {
               if (!authenticator.isAuthenticated) {
                 fail(new DataException(Resources.authenticationIncomplete));

@@ -12,22 +12,50 @@ import { Buffer } from "node:buffer";
 
 import "@noldova/context.core";
 
+import { MalformedMessageException } from "../../exceptions/malformed-message.exception.js";
 import type { BinaryDecoder } from "../../types/binary-decoder.js";
+import { Backend } from "../protocol/backend.js";
 import { DateParser } from "./date.parser.js";
 
 class BinaryArrayReader {
+  private static readonly HEADER_LENGTH: number = 12;
+  private static readonly DIMENSION_LENGTH: number = 8;
+  private static readonly ELEMENT_LENGTH_SIZE: number = 4;
+  private static readonly MAX_DIMENSIONS: number = 6;
+
   private readonly data: Buffer;
+  private readonly end: number;
+  private readonly width: number;
   private readonly read: (data: Buffer, at: number) => unknown;
   private readonly sizes: number[] = [];
   private at: number;
 
-  public constructor(data: Buffer, start: number, read: (data: Buffer, at: number) => unknown) {
-    this.data = data;
-    this.read = read;
+  public constructor(data: Buffer, start: number, end: number, width: number, read: (data: Buffer, at: number) => unknown) {
+    if (start + BinaryArrayReader.HEADER_LENGTH > end)
+      throw new MalformedMessageException();
+
     const dimensions = data.readInt32BE(start);
-    for (let dimension = 0; dimension < dimensions; dimension += 1)
-      this.sizes.push(data.readInt32BE(start + 12 + dimension * 8));
-    this.at = start + 12 + dimensions * 8;
+    const first = start + BinaryArrayReader.HEADER_LENGTH + dimensions * BinaryArrayReader.DIMENSION_LENGTH;
+    if (dimensions < 0 || dimensions > BinaryArrayReader.MAX_DIMENSIONS || first > end)
+      throw new MalformedMessageException();
+
+    let elements = dimensions === 0 ? 0 : 1;
+    for (let dimension = 0; dimension < dimensions; dimension += 1) {
+      const size = data.readInt32BE(start + BinaryArrayReader.HEADER_LENGTH + dimension * BinaryArrayReader.DIMENSION_LENGTH);
+      if (size < 1)
+        throw new MalformedMessageException();
+
+      this.sizes.push(size);
+      elements *= size;
+    }
+    if (elements * BinaryArrayReader.ELEMENT_LENGTH_SIZE > end - first)
+      throw new MalformedMessageException();
+
+    this.data = data;
+    this.end = end;
+    this.width = width;
+    this.read = read;
+    this.at = first;
   }
 
   public readValues(): unknown[] {
@@ -42,8 +70,11 @@ class BinaryArrayReader {
   private readElements(count: number): unknown[] {
     const values: unknown[] = [];
     for (let index = 0; index < count; index += 1) {
-      const length = this.data.readInt32BE(this.at);
-      this.at += 4;
+      const length = Backend.readFieldLength(this.data, this.at, this.end);
+      if (length !== -1 && length !== this.width)
+        throw new MalformedMessageException();
+
+      this.at += BinaryArrayReader.ELEMENT_LENGTH_SIZE;
       if (length === -1)
         values.push(null);
       else {
@@ -63,10 +94,10 @@ export class BinaryReaders {
   public static readonly timestamptz: BinaryDecoder = (data: Buffer, start: number, end: number): Date | number => BinaryReaders.readTimestamptz(data, start, end);
   public static readonly utcStamp: BinaryDecoder = (data: Buffer, start: number, end: number): Date | number => BinaryReaders.readUtcStamp(data, start, end);
   public static readonly arrays: ReadonlyMap<number, BinaryDecoder> = new Map([
-    [16, BinaryReaders.createArrayDecoder((data, at) => BinaryReaders.readByte(data, at) === 1)],
-    [21, BinaryReaders.createArrayDecoder((data, at) => data.readInt16BE(at))],
-    [23, BinaryReaders.createArrayDecoder((data, at) => data.readInt32BE(at))],
-    [20, BinaryReaders.createArrayDecoder((data, at) => data.readBigInt64BE(at).toString())]
+    [16, BinaryReaders.createArrayDecoder(1, (data, at) => BinaryReaders.readByte(data, at) === 1)],
+    [21, BinaryReaders.createArrayDecoder(2, (data, at) => data.readInt16BE(at))],
+    [23, BinaryReaders.createArrayDecoder(4, (data, at) => data.readInt32BE(at))],
+    [20, BinaryReaders.createArrayDecoder(8, (data, at) => data.readBigInt64BE(at).toString())]
   ]);
 
   public static readClock(data: Buffer, start: number, end: number, zoned: boolean): number {
@@ -119,8 +150,8 @@ export class BinaryReaders {
     return Date.UTC(year, month - 1, day, hour, minute, second, milliseconds) - offset * 60000;
   }
 
-  private static createArrayDecoder(read: (data: Buffer, at: number) => unknown): BinaryDecoder {
-    return (data: Buffer, start: number): unknown[] => new BinaryArrayReader(data, start, read).readValues();
+  private static createArrayDecoder(width: number, read: (data: Buffer, at: number) => unknown): BinaryDecoder {
+    return (data: Buffer, start: number, end: number): unknown[] => new BinaryArrayReader(data, start, end, width, read).readValues();
   }
 
   private static readInteger(data: Buffer, start: number, end: number): number {

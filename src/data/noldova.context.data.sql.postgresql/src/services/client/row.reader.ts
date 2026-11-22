@@ -13,6 +13,7 @@ import { Buffer } from "node:buffer";
 import "@noldova/context.core";
 
 import { RowMode } from "../../enums/row-mode.js";
+import { MalformedMessageException } from "../../exceptions/malformed-message.exception.js";
 import type { Column } from "../../models/column.js";
 import { Resources } from "../../resources.js";
 import type { ValueParser } from "../../types/value-parser.js";
@@ -57,11 +58,14 @@ export class RowReader {
     return variant.columns;
   }
 
-  public static read(data: Buffer, start: number, columns: readonly Column[], mode: RowMode, from: ((value: unknown, column: Column) => unknown) | null): unknown {
+  public static read(data: Buffer, start: number, end: number, columns: readonly Column[], mode: RowMode, from: ((value: unknown, column: Column) => unknown) | null): unknown {
+    if (Backend.readFieldCount(data, start, end) !== columns.length)
+      throw new MalformedMessageException();
+
     const values: unknown[] = [];
     let at = start + 7;
     for (const column of columns) {
-      const length = data.readInt32BE(at);
+      const length = Backend.readFieldLength(data, at, end);
       at += 4;
       let value: unknown = null;
       if (length !== -1) {

@@ -16,6 +16,7 @@ import { DataException } from "@noldova/context.data";
 import { ChannelBinding } from "@noldova/context.data.sql.postgresql/enums/channel-binding.js";
 import { SslMode } from "@noldova/context.data.sql.postgresql/enums/ssl-mode.js";
 import { ConnectionClosedException } from "@noldova/context.data.sql.postgresql/exceptions/connection-closed.exception.js";
+import { MalformedMessageException } from "@noldova/context.data.sql.postgresql/exceptions/malformed-message.exception.js";
 import { PostgreSQLException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql.exception.js";
 import { BackendKey } from "@noldova/context.data.sql.postgresql/models/backend-key.js";
 import { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
@@ -361,9 +362,9 @@ export class SessionStarterTests {
     server.onStartup = peer => peer.send(M.message("R"));
 
     const error = await Assert.throwsAsync(
-      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0), new DerivedKeys()).startAsync(), RangeError);
+      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0), new DerivedKeys()).startAsync(), MalformedMessageException);
 
-    Assert.isTrue(error.message.length > 0);
+    Assert.areEqual("The server sent a malformed message.", error.message);
     await SessionStarterTests.closeAsync(server);
   }
 

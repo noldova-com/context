@@ -147,6 +147,14 @@ declare module "@noldova/context.data.sql.postgresql/exceptions/batch-skipped.ex
   }
 }
 
+declare module "@noldova/context.data.sql.postgresql/exceptions/malformed-message.exception.js" {
+  import { DataException } from "@noldova/context.data";
+
+  export class MalformedMessageException extends DataException {
+    public constructor();
+  }
+}
+
 declare module "@noldova/context.data.sql.postgresql/exceptions/cancel-unanswered.exception.js" {
   import { DataException } from "@noldova/context.data";
 
@@ -270,6 +278,14 @@ declare module "@noldova/context.data.sql.postgresql/models/notification.js" {
     public readonly channel: string;
     public readonly payload: string;
     public constructor(pid: number, channel: string, payload: string);
+  }
+}
+
+declare module "@noldova/context.data.sql.postgresql/models/parameter-status.js" {
+  export class ParameterStatus {
+    public readonly name: string;
+    public readonly value: string;
+    public constructor(name: string, value: string);
   }
 }
 
@@ -1020,20 +1036,23 @@ declare module "@noldova/context.data.sql.postgresql/services/protocol/backend.j
 
   import type { BackendKey } from "@noldova/context.data.sql.postgresql/models/backend-key.js";
   import type { Notification } from "@noldova/context.data.sql.postgresql/models/notification.js";
+  import type { ParameterStatus } from "@noldova/context.data.sql.postgresql/models/parameter-status.js";
 
   export class Backend {
+    public static readFieldCount(data: Buffer, start: number, end: number): number;
+    public static readFieldLength(data: Buffer, at: number, end: number): number;
     public static readError(data: Buffer, start: number, end: number): ReadonlyMap<string, string>;
-    public static readRowDescription(data: Buffer, start: number): readonly { readonly name: string; readonly type: number }[];
-    public static readColumns<T>(data: Buffer, start: number, make: (name: string, table: number, number: number, type: number) => T): T[];
-    public static readColumnTypes(data: Buffer, start: number): number[];
-    public static readParameterDescription(data: Buffer, start: number): number[];
-    public static readDataRow(data: Buffer, start: number): readonly (string | null)[];
+    public static readRowDescription(data: Buffer, start: number, end: number): readonly { readonly name: string; readonly type: number }[];
+    public static readColumns<T>(data: Buffer, start: number, end: number, make: (name: string, table: number, number: number, type: number) => T): T[];
+    public static readColumnTypes(data: Buffer, start: number, end: number): number[];
+    public static readParameterDescription(data: Buffer, start: number, end: number): number[];
+    public static readDataRow(data: Buffer, start: number, end: number): readonly (string | null)[];
     public static readCommandComplete(data: Buffer, start: number, end: number): { readonly command: string; readonly count: number | null };
-    public static readReadyForQuery(data: Buffer, start: number): string;
-    public static readParameterStatus(data: Buffer, start: number): readonly [string, string];
-    public static readNotification(data: Buffer, start: number): Notification;
-    public static readBackendKeyData(data: Buffer, start: number): BackendKey;
-    public static readAuthenticationType(data: Buffer, start: number): number;
+    public static readReadyForQuery(data: Buffer, start: number, end: number): string;
+    public static readParameterStatus(data: Buffer, start: number, end: number): ParameterStatus;
+    public static readNotification(data: Buffer, start: number, end: number): Notification;
+    public static readBackendKeyData(data: Buffer, start: number, end: number): BackendKey;
+    public static readAuthenticationType(data: Buffer, start: number, end: number): number;
   }
 }
 
@@ -1214,7 +1233,7 @@ declare module "@noldova/context.data.sql.postgresql/services/client/row.reader.
 
   export class RowReader {
     public static readColumns(columns: readonly Column[], parsers: ((column: Column) => ValueParser | null) | ReadonlyMap<number, ValueParser | null>): readonly Column[];
-    public static read(data: Buffer, start: number, columns: readonly Column[], mode: RowMode, from: ((value: unknown, column: Column) => unknown) | null): unknown;
+    public static read(data: Buffer, start: number, end: number, columns: readonly Column[], mode: RowMode, from: ((value: unknown, column: Column) => unknown) | null): unknown;
   }
 }
 

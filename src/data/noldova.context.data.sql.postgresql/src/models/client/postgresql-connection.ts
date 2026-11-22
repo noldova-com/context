@@ -28,6 +28,7 @@ import { BatchException } from "../../exceptions/batch.exception.js";
 import { BatchSkippedException } from "../../exceptions/batch-skipped.exception.js";
 import { CancelUnansweredException } from "../../exceptions/cancel-unanswered.exception.js";
 import { ConnectionClosedException } from "../../exceptions/connection-closed.exception.js";
+import { MalformedMessageException } from "../../exceptions/malformed-message.exception.js";
 import { PostgreSQLException } from "../../exceptions/postgresql.exception.js";
 import { QueryCanceledException } from "../../exceptions/query-canceled.exception.js";
 import { StrayCancelException } from "../../exceptions/stray-cancel.exception.js";
@@ -136,7 +137,7 @@ export class PostgreSQLConnection implements CopyHost {
     this.parameters = new Map(session.parameters);
     this.currentStatus = session.status;
     this.heard = this.timers.readTime();
-    this.frames = new FrameReader((type, data, start, end) => this.handleFrame(type, data, start, end), error => {
+    this.frames = new FrameReader((type, data, start, end) => this.dispatch(type, data, start, end), error => {
       this.fatal = error;
       this.socket.destroy();
     }, this.socket.isShared);
@@ -1119,24 +1120,33 @@ export class PostgreSQLConnection implements CopyHost {
       debug(this.id, text, values, oids);
   }
 
-  private handleFrame(type: number, data: Buffer, start: number, end: number): void {
-    if (!this.events.typed && Object.isNull(this.stashData) && (type === BackendMessage.RowDescription || type === BackendMessage.ParameterDescription)
-      && this.events.hasUnknownTypes(type === BackendMessage.RowDescription ? Backend.readColumnTypes(data, start) : Backend.readParameterDescription(data, start))) {
-      this.stashType = type;
-      this.stashData = Buffer.from(data.subarray(start, end));
-      this.frames.pause();
-      this.events.requestTypes(this);
-      return;
-    }
+  private tryStashUntilTyped(type: number, data: Buffer, start: number, end: number): boolean {
+    if (this.events.typed || !Object.isNull(this.stashData) || (type !== BackendMessage.RowDescription && type !== BackendMessage.ParameterDescription)
+      || !this.events.hasUnknownTypes(type === BackendMessage.RowDescription ? Backend.readColumnTypes(data, start, end) : Backend.readParameterDescription(data, start, end)))
+      return false;
 
-    this.dispatch(type, data, start, end);
+    this.stashType = type;
+    this.stashData = Buffer.from(data.subarray(start, end));
+    this.frames.pause();
+    this.events.requestTypes(this);
+    return true;
   }
 
   private dispatch(type: number, data: Buffer, start: number, end: number): void {
     try {
+      if (this.tryStashUntilTyped(type, data, start, end))
+        return;
+
       this.handleMessage(type, data, start, end);
     }
     catch (error) {
+      if (error instanceof MalformedMessageException) {
+        this.fatal = error;
+        this.frames.pause();
+        this.socket.destroy();
+        return;
+      }
+
       const head = this.sent[0];
       if (Object.isUndefined(head))
         this.destroy(PostgreSQLConnection.toError(error));
@@ -1155,13 +1165,13 @@ export class PostgreSQLConnection implements CopyHost {
   private handleMessage(type: number, data: Buffer, start: number, end: number): void {
     switch (type) {
       case BackendMessage.DataRow:
-        this.handleDataRow(data, start);
+        this.handleDataRow(data, start, end);
         break;
       case BackendMessage.CopyData:
         this.copyData(data, start, end);
         break;
       case BackendMessage.ReadyForQuery:
-        this.handleReadyForQuery(data, start);
+        this.handleReadyForQuery(data, start, end);
         break;
       case BackendMessage.CommandComplete:
         this.handleCommandComplete(data, start, end);
@@ -1173,10 +1183,10 @@ export class PostgreSQLConnection implements CopyHost {
         this.parseComplete();
         break;
       case BackendMessage.ParameterDescription:
-        this.handleParameterDescription(data, start);
+        this.handleParameterDescription(data, start, end);
         break;
       case BackendMessage.RowDescription:
-        this.receiveColumns(this.peekHead(), Backend.readColumns(data, start, (name, table, number, oid) => this.createColumn(name, table, number, oid)));
+        this.receiveColumns(this.peekHead(), Backend.readColumns(data, start, end, (name, table, number, oid) => this.createColumn(name, table, number, oid)));
         break;
       case BackendMessage.NoData:
         this.receiveColumns(this.peekHead(), []);
@@ -1191,13 +1201,13 @@ export class PostgreSQLConnection implements CopyHost {
         this.handleEmptyQueryResponse();
         break;
       case BackendMessage.NotificationResponse:
-        this.handleNotificationResponse(data, start);
+        this.handleNotificationResponse(data, start, end);
         break;
       case BackendMessage.NoticeResponse:
         this.handleNoticeResponse(data, start, end);
         break;
       case BackendMessage.ParameterStatus:
-        this.handleParameterStatus(data, start);
+        this.handleParameterStatus(data, start, end);
         break;
       case BackendMessage.CopyInResponse:
         this.copyInResponse();
@@ -1254,9 +1264,9 @@ export class PostgreSQLConnection implements CopyHost {
     }
   }
 
-  private handleParameterDescription(data: Buffer, start: number): void {
+  private handleParameterDescription(data: Buffer, start: number, end: number): void {
     const exchange = this.peekHead();
-    const params = Backend.readParameterDescription(data, start);
+    const params = Backend.readParameterDescription(data, start, end);
     exchange.params = params;
     const entry = exchange.entry;
     if (exchange.loose && !Object.isNull(entry) && entry.owner === exchange && Object.isNull(entry.oids))
@@ -1285,7 +1295,7 @@ export class PostgreSQLConnection implements CopyHost {
     return new Column(Object.isNull(columnFrom) ? name : columnFrom(name), parser, this.events.findDecoder(type, parser), table, number, type);
   }
 
-  private handleDataRow(data: Buffer, start: number): void {
+  private handleDataRow(data: Buffer, start: number, end: number): void {
     const exchange = this.peekHead();
     const query = PostgreSQLConnection.queryOf(exchange);
     const mode = query.rowMode;
@@ -1296,7 +1306,7 @@ export class PostgreSQLConnection implements CopyHost {
       exchange.reader = !Object.isNull(query.ownParsers) && mode !== RowMode.Raw ? RowReader.readColumns(columns, query.ownParsers) : columns;
     }
 
-    const row = RowReader.read(data, start, exchange.reader, mode, mode === RowMode.Raw ? null : transform.valueFrom);
+    const row = RowReader.read(data, start, end, exchange.reader, mode, mode === RowMode.Raw ? null : transform.valueFrom);
     const output = Object.isNull(transform.rowFrom) ? row : transform.rowFrom(row);
     if (Object.isNull(query.forEachFn))
       exchange.result.push(output);
@@ -1431,8 +1441,8 @@ export class PostgreSQLConnection implements CopyHost {
     this.fail(exchange, error);
   }
 
-  private handleReadyForQuery(data: Buffer, start: number): void {
-    this.currentStatus = Backend.readReadyForQuery(data, start);
+  private handleReadyForQuery(data: Buffer, start: number, end: number): void {
+    this.currentStatus = Backend.readReadyForQuery(data, start, end);
     this.frames.setOwning(false);
     const exchange = this.sent.shift();
     if (Object.isUndefined(exchange))
@@ -1692,8 +1702,8 @@ export class PostgreSQLConnection implements CopyHost {
     query.resolve(results.length > 1 ? results : results[0] ?? exchange.result);
   }
 
-  private handleNotificationResponse(data: Buffer, start: number): void {
-    const notification = Backend.readNotification(data, start);
+  private handleNotificationResponse(data: Buffer, start: number, end: number): void {
+    const notification = Backend.readNotification(data, start, end);
     PostgreSQLConnection.guard(() => this.events.onNotify(notification.channel, notification.payload, notification.pid));
   }
 
@@ -1706,10 +1716,10 @@ export class PostgreSQLConnection implements CopyHost {
       PostgreSQLConnection.guard(() => onnotice(notice));
   }
 
-  private handleParameterStatus(data: Buffer, start: number): void {
-    const [name, value] = Backend.readParameterStatus(data, start);
-    this.parameters.set(name, value);
-    PostgreSQLConnection.guard(() => this.events.onParameter(name, value));
+  private handleParameterStatus(data: Buffer, start: number, end: number): void {
+    const status = Backend.readParameterStatus(data, start, end);
+    this.parameters.set(status.name, status.value);
+    PostgreSQLConnection.guard(() => this.events.onParameter(status.name, status.value));
   }
 
   private copyInResponse(): void {

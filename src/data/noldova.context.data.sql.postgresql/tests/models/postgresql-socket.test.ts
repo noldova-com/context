@@ -51,7 +51,7 @@ export class PostgreSQLSocketTests {
     const first = frames[0] ?? Buffer.alloc(9);
 
     Assert.areEqual("R", String.fromCharCode(first.readUInt8(0)));
-    Assert.areEqual(0, Backend.readAuthenticationType(first, 0));
+    Assert.areEqual(0, Backend.readAuthenticationType(first, 0, first.length));
     Assert.isTrue(frames.some(t => t.readUInt8(0) === 75));
 
     socket.pause();
