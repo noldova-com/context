@@ -68,8 +68,11 @@ export class StartedTree {
     const closed = once(root, StartedTree.CLOSE_EVENT);
     const rootProcessId = root.pid;
     Assert.isDefined(rootProcessId, "The tree's root did not start.");
-    const [line] = await once(createInterface({ input: root.stdout }), StartedTree.LINE_EVENT);
-    const processIds: number[] = JSON.parse(String(line));
+    const [line]: unknown[] = await once(createInterface({ input: root.stdout }), StartedTree.LINE_EVENT);
+    const processIds: unknown = JSON.parse(String(line));
+    if (!StartedTree.isProcessIds(processIds))
+      Assert.fail(`The tree's root printed "${String(line)}" in place of its process ids.`);
+
     const identity = await ProcessIdentity.readAsync(rootProcessId);
     Assert.isDefined(identity);
     return new StartedTree(root, identity, processIds, closed);
@@ -95,6 +98,10 @@ export class StartedTree {
 
   public static async areGoneAsync(processIds: readonly number[]): Promise<boolean> {
     return !StartedTree.listsAny(await ProcessLister.useAsync(StartedTree.GONE_LIMIT_MILLISECONDS, t => t.listAsync()), processIds);
+  }
+
+  private static isProcessIds(value: unknown): value is readonly number[] {
+    return Array.isArray(value) && value.every((t: unknown) => Object.isNumber(t) && Number.isInteger(t));
   }
 
   private static listsAny(entries: readonly ProcessEntry[], processIds: readonly number[]): boolean {
