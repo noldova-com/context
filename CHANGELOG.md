@@ -6,6 +6,24 @@ Each version's section is written by the pull request that changes the version, 
 Every package moves to each version together, as [VERSIONING-AND-COMPATIBILITY.md](documents/VERSIONING-AND-COMPATIBILITY.md) says.
 Versions before 0.0.6 are described in their version pull requests.
 
+## 0.0.11
+
+CONTEXT gets collections and queries: a collections library, expression trees for queries and the queries built on them, and its PostgreSQL provider, migrations, core and test runner get fixes.
+
+- `@noldova/context.query` (new): `Queryable<T>` builds a query as an expression tree with `where`, `select`, `orderBy`, `orderByDescending`, `thenBy`, `thenByDescending`, `skip` and `take`, and runs it only when a result is asked for, through `toArrayAsync`, `firstAsync`, `firstOrDefaultAsync`, `singleAsync`, `singleOrDefaultAsync`, `anyAsync`, `countAsync` or `for await`; `QueryProvider` is the contract a provider implements, and `InMemoryQueryProvider` runs a query over an `Enumerable` (#197).
+- `@noldova/context.query.expressions` (new): immutable expression trees that describe a query's code as data, built with `Expression.constant`, `parameter`, `member`, `unary`, `binary`, `conditional`, `call`, `object`, `property` and `lambda`; `toString` writes an expression as TypeScript source, and `replace` puts one expression in place of another throughout a tree (#193).
+- `@noldova/context.collections`: `Enumerable.from(iterable)` gives any iterable the query operators, and `List`, `Dictionary`, `HashSet`, `Queue` and `Stack` are enumerables with read-only views; `IEqualityComparer`, `DefaultEqualityComparer`, `EqualityComparers.by`, `Comparer.compare` and `KeyValuePair` compare and pair their elements; the package now takes `@noldova/context.core` and `@noldova/context.exceptions` as peers (#191).
+- `@noldova/context.exceptions`: `InvalidOperationException`, `KeyNotFoundException` and two `ArgumentOutOfRangeException` guards, which the collections throw (#191).
+- `@noldova/context.data.sql.postgresql`:
+  - a connection closes when the server sends a message whose fields, lengths, terminators or array elements pass its end or don't match its columns, and each query waiting on it fails with a `ConnectionClosedException` whose `cause` is the new `MalformedMessageException`; a malformed message while the session starts fails the start with `MalformedMessageException` (GHSA-h83m-787c-32mg);
+  - a pool keeps the keys it derives for SCRAM-SHA-256 sign-in to itself and forgets them once it ends, in place of one cache for the whole process (#202).
+- `@noldova/context.data.sql`: `createUniqueIndex` names its index `UX_<table>_<columns>`, so it no longer shares a name with a plain index on the same columns, and a migration whose builder would create two indexes of the same name throws `InvalidOperationException` before anything runs (#196).
+- `@noldova/context.core`: `String.isNullOrWhitespace` no longer builds a trimmed copy of the string, with the same results (#200).
+- `@noldova/context.testing`:
+  - `CONTEXT_TEST_STOP_LIMIT_MILLISECONDS` sets how long the runner waits for a stopped worker, for the runner's own tests; it keeps 5000 ms when unset (#181);
+  - the source-map decoder's VLQ constants, `Resources.sourceMapBase64Alphabet`, `sourceMapValueMask` and `sourceMapContinuationBit`, are private constants of `SourceMap`, with no change in behavior (#198).
+- No other package's source changes.
+
 ## 0.0.10
 
 CONTEXT's text package orders strings by Unicode code point, and its data packages, PostgreSQL provider and test runner get fixes.
