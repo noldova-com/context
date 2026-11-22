@@ -6,6 +6,14 @@ Each version's section is written by the pull request that changes the version, 
 Every package moves to each version together, as [VERSIONING-AND-COMPATIBILITY.md](documents/VERSIONING-AND-COMPATIBILITY.md) says.
 Versions before 0.0.6 are described in their version pull requests.
 
+## 0.0.12
+
+Every CONTEXT package is published again at one version, including the seven that 0.0.11's release left out.
+
+- `@noldova/context.query` and `@noldova/context.query.expressions` reach npm for the first time, with what 0.0.11 describes (#197, #193).
+- `@noldova/context.parsers`, `@noldova/context.parsers.regex`, `@noldova/context.parsers.typescript`, `@noldova/context.testing` and `@noldova/context.text` reach npm at this version; npm had them at 0.0.10, since 0.0.11's release stopped at the first package npm didn't have yet (#206).
+- No package's source changes from 0.0.11.
+
 ## 0.0.11
 
 CONTEXT gets collections and queries: a collections library, expression trees for queries and the queries built on them, and its PostgreSQL provider, migrations, core and test runner get fixes.
