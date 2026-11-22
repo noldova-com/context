@@ -276,6 +276,87 @@ export class TestDiscoveryTests {
   }
 
   @TestMethod
+  public rejectsAMethodWithADefaultParameterWithoutTestData(): void {
+    class DefaultParameterTests {
+      public sample(_value: number = 3): void { }
+    }
+    TestClass(DefaultParameterTests);
+    TestMethod(DefaultParameterTests.prototype.sample);
+
+    const failure = Assert.throws(() => {
+      new TestDiscovery().discoverModuleExports({ DefaultParameterTests }, "inline://default-parameter", "TestPackage");
+    }, TestingException);
+
+    Assert.areEqual("Test method \"sample\" of \"DefaultParameterTests\" in \"inline://default-parameter\" declares parameters but carries no @TestData.",
+      failure.message);
+  }
+
+  @TestMethod
+  public rejectsAMethodWithARestParameterWithoutTestData(): void {
+    class RestParameterTests {
+      public sample(..._values: number[]): void { }
+    }
+    TestClass(RestParameterTests);
+    TestMethod(RestParameterTests.prototype.sample);
+
+    const failure = Assert.throws(() => {
+      new TestDiscovery().discoverModuleExports({ RestParameterTests }, "inline://rest-parameter", "TestPackage");
+    }, TestingException);
+
+    Assert.areEqual("Test method \"sample\" of \"RestParameterTests\" in \"inline://rest-parameter\" declares parameters but carries no @TestData.",
+      failure.message);
+  }
+
+  @TestMethod
+  public discoversAMethodWhoseEmptyParameterListHoldsAComment(): void {
+    class CommentedParametersTests {
+      public sample(/* none */): void { }
+    }
+    TestClass(CommentedParametersTests);
+    TestMethod(CommentedParametersTests.prototype.sample);
+
+    const discovered = new TestDiscovery().discoverModuleExports({ CommentedParametersTests }, "inline://commented-parameters", "TestPackage");
+
+    Assert.areEqual(1, discovered[0]?.methods.length);
+  }
+
+  @TestMethod
+  public rejectsAClassThatInheritsAMarkedMethod(): void {
+    class MarkedBase {
+      public inherited(): void { }
+    }
+    TestMethod(MarkedBase.prototype.inherited);
+    class InheritingTests extends MarkedBase {
+      public own(): void { }
+    }
+    TestClass(InheritingTests);
+    TestMethod(InheritingTests.prototype.own);
+
+    const failure = Assert.throws(() => {
+      new TestDiscovery().discoverModuleExports({ InheritingTests }, "inline://inheriting", "TestPackage");
+    }, TestingException);
+
+    Assert.areEqual("\"InheritingTests\" in \"inline://inheriting\" inherits the marked member \"inherited\" from a base class; marks must be the test " +
+      "class's own.", failure.message);
+  }
+
+  @TestMethod
+  public discoversAClassWhoseBaseHasNoMarks(): void {
+    class UnmarkedBase {
+      public helper(): void { }
+    }
+    class PlainBaseTests extends UnmarkedBase {
+      public own(): void { }
+    }
+    TestClass(PlainBaseTests);
+    TestMethod(PlainBaseTests.prototype.own);
+
+    const discovered = new TestDiscovery().discoverModuleExports({ PlainBaseTests }, "inline://plain-base", "TestPackage");
+
+    Assert.areEqual(1, discovered[0]?.methods.length);
+  }
+
+  @TestMethod
   public rejectsTestDataWithTheWrongValueCount(): void {
     class MismatchedDataTests {
       public sample(_first: string, _second: number): void { }

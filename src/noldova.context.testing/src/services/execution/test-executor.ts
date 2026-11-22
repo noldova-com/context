@@ -22,22 +22,36 @@ import type { DiscoveredTestMethod } from "../../models/discovery/discovered-tes
 import { TestClassResult } from "../../models/results/test-class-result.js";
 import { TestMethodResult } from "../../models/results/test-method-result.js";
 import { Resources } from "../../resources.js";
+import type { StrayFailureRecorder } from "../../types/stray-failure-recorder.js";
 import { SystemClock } from "../timing/system-clock.js";
 
 export class TestExecutor {
-  private static readonly REJECTION_STORAGE: AsyncLocalStorage<(rejection: unknown) => void> = new AsyncLocalStorage<(rejection: unknown) => void>();
+  private static readonly FAILURE_STORAGE: AsyncLocalStorage<StrayFailureRecorder> = new AsyncLocalStorage<StrayFailureRecorder>();
 
   private static readonly ON_UNHANDLED_REJECTION = (t: unknown): void => {
-    const record = TestExecutor.REJECTION_STORAGE.getStore();
+    const record = TestExecutor.FAILURE_STORAGE.getStore();
     if (Object.isUndefined(record))
       throw t;
 
-    record(t);
+    record(t, Resources.formatRejectedAfterItsTest);
+  };
+
+  private static readonly ON_UNCAUGHT_EXCEPTION = (t: unknown): void => {
+    const record = TestExecutor.FAILURE_STORAGE.getStore();
+    if (Object.isUndefined(record)) {
+      process.off(Resources.uncaughtExceptionEvent, TestExecutor.ON_UNCAUGHT_EXCEPTION);
+      process.nextTick(() => {
+        throw t;
+      });
+      return;
+    }
+
+    record(t, Resources.formatThrewAfterItsTest);
   };
 
   private readonly timeoutMilliseconds: number;
   private readonly clock: IClock;
-  private lateRejection: TestingException | undefined;
+  private lateFailure: TestingException | undefined;
 
   public constructor(timeoutMilliseconds: number, clock: IClock = new SystemClock()) {
     ArgumentOutOfRangeException.throwIfNotPositiveInteger(timeoutMilliseconds, Resources.timeoutMillisecondsParameter, Resources.timeoutInvalid);
@@ -46,7 +60,7 @@ export class TestExecutor {
 
     this.timeoutMilliseconds = timeoutMilliseconds;
     this.clock = clock;
-    this.lateRejection = undefined;
+    this.lateFailure = undefined;
   }
 
   public getTimeoutMilliseconds(method: DiscoveredTestMethod): number {
@@ -58,6 +72,9 @@ export class TestExecutor {
     const ownsRejectionListener = !process.listeners(Resources.unhandledRejectionEvent).includes(TestExecutor.ON_UNHANDLED_REJECTION);
     if (ownsRejectionListener)
       process.on(Resources.unhandledRejectionEvent, TestExecutor.ON_UNHANDLED_REJECTION);
+    const ownsExceptionListener = !process.listeners(Resources.uncaughtExceptionEvent).includes(TestExecutor.ON_UNCAUGHT_EXCEPTION);
+    if (ownsExceptionListener)
+      process.on(Resources.uncaughtExceptionEvent, TestExecutor.ON_UNCAUGHT_EXCEPTION);
 
     try {
       const classResults: TestClassResult[] = [];
@@ -75,8 +92,8 @@ export class TestExecutor {
           progressListener?.onMethodCompleted?.(methodResult);
         }
 
-        if (!Object.isUndefined(this.lateRejection))
-          throw this.lateRejection;
+        if (!Object.isUndefined(this.lateFailure))
+          throw this.lateFailure;
 
         const classResult = new TestClassResult(testClass.packageName, testClass.className, testClass.filePath, methodResults);
         classResults.push(classResult);
@@ -88,6 +105,8 @@ export class TestExecutor {
     finally {
       if (ownsRejectionListener)
         process.off(Resources.unhandledRejectionEvent, TestExecutor.ON_UNHANDLED_REJECTION);
+      if (ownsExceptionListener)
+        process.off(Resources.uncaughtExceptionEvent, TestExecutor.ON_UNCAUGHT_EXCEPTION);
     }
   }
 
@@ -118,20 +137,20 @@ export class TestExecutor {
         undefined,
         skipReason);
 
-    const unhandledRejections: unknown[] = [];
+    const strayFailures: unknown[] = [];
     let endedAs: string | undefined;
-    const record = (rejection: unknown): void => {
+    const record: StrayFailureRecorder = (failure, formatLate) => {
       if (Object.isUndefined(endedAs))
-        unhandledRejections.push(rejection);
+        strayFailures.push(failure);
       else
-        this.lateRejection ??= new TestingException(Resources.formatRejectedAfterItsTest(endedAs), new ExceptionOptions(rejection));
+        this.lateFailure ??= new TestingException(formatLate(endedAs), new ExceptionOptions(failure));
     };
     const start = this.clock.now();
     let didFail = false;
     let failure: unknown;
 
     try {
-      await TestExecutor.REJECTION_STORAGE.run(record, async () => {
+      await TestExecutor.FAILURE_STORAGE.run(record, async () => {
         try {
           await this.invokeWithTimeoutAsync(testClass, method);
         }
@@ -140,9 +159,9 @@ export class TestExecutor {
         }
       });
 
-      if (unhandledRejections.length > 0) {
+      if (strayFailures.length > 0) {
         didFail = true;
-        failure = unhandledRejections[0];
+        failure = strayFailures[0];
       }
     }
     catch (error) {

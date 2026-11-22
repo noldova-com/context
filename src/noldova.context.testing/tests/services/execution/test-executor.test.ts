@@ -144,6 +144,23 @@ export class TestExecutorTests {
   }
 
   @TestMethod
+  public async attributesAStrayThrowToItsTestAsync(): Promise<void> {
+    const results = await this.executeAsync(["leavesAStrayThrow"]);
+
+    Assert.areEqual(TestOutcome.Failed, results.get("leavesAStrayThrow"));
+  }
+
+  @TestMethod
+  public async failsNamingATestWhoseWorkThrowsDuringALaterTestAsync(): Promise<void> {
+    const failure = await Assert.throwsAsync(() => this.executeAsync(["leavesALateThrow", "waitsSeveralTurnsAsync"]), TestingException);
+
+    Assert.areEqual("ExecutionFixtureTests.leavesALateThrow left work that threw after the test ended, uncaught; a test must await or handle " +
+      "what it starts.", failure.message);
+    Assert.isInstanceOf(failure.cause, Error);
+    Assert.areEqual("late", failure.cause.message);
+  }
+
+  @TestMethod
   public async failsNamingATestWhosePromiseRejectsDuringALaterClassAsync(): Promise<void> {
     const testClasses = [this.discoveredClass(["leavesALateRejection"], undefined), this.discoveredClass(["waitsSeveralTurnsAsync"], undefined)];
 
@@ -175,6 +192,32 @@ export class TestExecutorTests {
     Assert.areEqual(failure, Assert.throws(() => {
       new ExecutionFixture().emitUnhandledRejectionOutsideTestExecution(failure);
     }, Error));
+  }
+
+  @TestMethod
+  public async rethrowsAnUncaughtExceptionOutsideTestExecutionAsync(): Promise<void> {
+    const failure = new Error("outside");
+    const listeners = process.listeners("uncaughtException");
+    const caught: unknown[] = [];
+    const rethrown = Promise.withResolvers<void>();
+    const capture = (error: unknown): void => {
+      caught.push(error);
+      if (caught.length === 2)
+        rethrown.resolve();
+    };
+    process.on("uncaughtException", capture);
+    try {
+      new ExecutionFixture().emitUncaughtExceptionOutsideTestExecution(failure);
+      await rethrown.promise;
+    }
+    finally {
+      process.off("uncaughtException", capture);
+      for (const listener of listeners)
+        if (!process.listeners("uncaughtException").includes(listener))
+          process.on("uncaughtException", listener);
+    }
+
+    Assert.isTrue(caught.every(t => t === failure));
   }
 
   @TestMethod

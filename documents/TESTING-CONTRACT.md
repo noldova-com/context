@@ -38,10 +38,11 @@ Every discovered file, class, method, and row is accounted in the results.
 A test file yielding no marked class, an exported `*Tests` class without `@TestClass`, a marked class or method violating the naming convention, a malformed data row or category, and a corrupt mark are failures, not silent no-ops.
 Inline values are the only current data source, apart from the rows each conformance runner applies at module load from its committed expected answers, one per applicable case, as section 7 requires.
 Class and method marks must be own data properties containing `true`.
+A test class whose base classes carry marked members fails discovery, naming the class and the member; marks are never inherited.
 Symbol-named and generator test methods are unsupported and fail discovery; they are never silently skipped or reported as executed.
 
 `@TestData` is valid only on an instance method also marked with `@TestMethod`; methods declaring runtime parameters without data fail discovery.
-Default and rest forms that do not expose a fixed runtime arity are not data-test inputs.
+Default and rest forms that do not expose a fixed runtime arity are not data-test inputs; a method declaring them without data fails discovery too.
 `@Category` is valid only on a class marked with `@TestClass` or an instance method marked with `@TestMethod`; empty, whitespace, static, unmarked, and corrupt uses fail discovery.
 `@Timeout(milliseconds)` is valid only on an instance method marked with `@TestMethod`, and gives each of its invocations that time limit instead of the run's; a limit that is not a positive integer within the timer limit less the main thread's grace throws, and a class, static, unmarked, or corrupt use fails discovery.
 Using any of these decorators outside its permitted targets fails discovery.
@@ -49,10 +50,10 @@ Using any of these decorators outside its permitted targets fails discovery.
 ## 3. Execution
 
 Each method or data row runs on a fresh instance of its test class; no state flows between tests.
-Synchronous and asynchronous methods are supported: a returned promise is awaited, and a rejection, thrown exception, or unhandled rejection attributable to the test is a failure.
+Synchronous and asynchronous methods are supported: a returned promise is awaited, and a rejection, thrown exception, unhandled rejection, or uncaught exception attributable to the test is a failure.
 Work that never settles fails loudly; a hang is never success or silence.
-The runner owns the timeout mechanism and reports it with the failure; later unhandled rejections remain attributed to their originating test while a class runs, and one that lands after that test ended, while its class or a later class on the same executor runs, fails the run at the end of that class, naming that test, as an open resource does; a command-line worker keeps one executor for every class it runs.
-One that lands while no executor runs a class, such as while a worker waits for its next class, fails the run through the runtime's own unhandled-rejection handling, with the rejection and without the test's name.
+The runner owns the timeout mechanism and reports it with the failure; later unhandled rejections and uncaught exceptions remain attributed to their originating test while a class runs, and one that lands after that test ended, while its class or a later class on the same executor runs, fails the run at the end of that class, naming that test, as an open resource does; a command-line worker keeps one executor for every class it runs.
+One that lands while no executor runs a class, such as while a worker waits for its next class, fails the run through the runtime's own handling of unhandled rejections and uncaught exceptions, with the failure and without the test's name.
 A test runs under its own `@Timeout` limit when it has one, and under the run's limit otherwise; the run's limit never changes for one test, and a test past its own limit times out as one past the run's limit does.
 The command-line run isolates tests in parallel worker threads, one per available processor and at least two by default, that its main thread times per test: the workers take whole test classes from one shared queue, and the run reports each class in discovery order, whichever worker finishes it first.
 Its summary's time is the run's elapsed time, not the sum of its tests' durations.

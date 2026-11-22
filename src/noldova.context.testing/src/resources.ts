@@ -32,6 +32,7 @@ export class Resources {
   public static readonly testMethodMarkInvalid: string = "A test-method mark must be an own data property containing true.";
   public static readonly unprintableValue: string = "<unprintable value>";
   public static readonly unhandledRejectionEvent: "unhandledRejection" = "unhandledRejection";
+  public static readonly uncaughtExceptionEvent: "uncaughtException" = "uncaughtException";
   public static readonly messageEvent: string = "message";
   public static readonly closeEvent: string = "close";
   public static readonly errorEvent: string = "error";
@@ -109,6 +110,8 @@ export class Resources {
   public static readonly stopLimitVariable: string = "CONTEXT_TEST_STOP_LIMIT_MILLISECONDS";
   public static readonly resultsFileVariable: string = "CONTEXT_TEST_RESULTS_FILE";
   public static readonly timeoutVariablePattern: RegExp = /^[1-9][0-9]*$/u;
+  public static readonly emptyParameterListPattern: RegExp = /^(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\n]*\n)*\)/u;
+  public static readonly parameterListStart: string = "(";
   public static readonly testTimeFields: readonly string[] = ["packageName", "filePath", "className", "methodName", "testDataIndex", "outcome", "durationMilliseconds"];
   public static readonly testTimesInvalid: string = "The test times must be a JSON array of results, each with its package, file, class and method names, an optional non-negative integer data row, an outcome, and a non-negative duration.";
   public static readonly budgetMillisecondsParameter: string = "budgetMilliseconds";
@@ -352,6 +355,10 @@ export class Resources {
     return `${heading} left ${resources.join(Resources.valueSeparator)} open after its tests finished; a test must close what it opens.`;
   }
 
+  public static formatThrewAfterItsTest(testName: string): string {
+    return `${testName} left work that threw after the test ended, uncaught; a test must await or handle what it starts.`;
+  }
+
   public static formatRejectedAfterItsTest(testName: string): string {
     return `${testName} left a promise that rejected after the test ended, unhandled; a test must await or handle what it starts.`;
   }
@@ -430,6 +437,10 @@ export class Resources {
 
   public static categoryWithoutTestMethod(memberName: string, className: string, filePath: string): string {
     return `Method "${memberName}" of "${className}" in "${filePath}" carries @Category but is not marked with @TestMethod.`;
+  }
+
+  public static inheritedTestMetadataInvalid(memberName: string, className: string, filePath: string): string {
+    return `"${className}" in "${filePath}" inherits the marked member "${memberName}" from a base class; marks must be the test class's own.`;
   }
 
   public static testMethodRequiresData(memberName: string, className: string, filePath: string): string {

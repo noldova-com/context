@@ -90,6 +90,12 @@ export class TestDiscovery {
         throw new TestingException(Resources.staticTestMetadataInvalid(String(memberName), className, filePath));
     }
 
+    for (let ancestor: unknown = Object.getPrototypeOf(prototype); Object.isObject(ancestor) && ancestor !== Object.prototype;
+      ancestor = Object.getPrototypeOf(ancestor))
+      for (const memberName of [...Object.getOwnPropertyNames(ancestor).sort(), ...Object.getOwnPropertySymbols(ancestor)])
+        if (this.descriptorHasTestMetadata(this.getOwnDescriptor(ancestor, memberName, className, filePath)))
+          throw new TestingException(Resources.inheritedTestMetadataInvalid(String(memberName), className, filePath));
+
     const methods: DiscoveredTestMethod[] = [];
     for (const memberName of [...Object.getOwnPropertyNames(prototype).sort(), ...Object.getOwnPropertySymbols(prototype)]) {
       const descriptor = this.getOwnDescriptor(prototype, memberName, className, filePath);
@@ -135,7 +141,7 @@ export class TestDiscovery {
       const timeoutMilliseconds = this.getTimeoutMilliseconds(member);
       const categories = [...classCategories, ...methodCategories];
       if (Object.isUndefined(testDataEntries)) {
-        if (member.length > 0)
+        if (this.declaresParameters(member))
           throw new TestingException(Resources.testMethodRequiresData(memberName, className, filePath));
 
         methods.push(new DiscoveredTestMethod(memberName, undefined, [], skipReason, categories, timeoutMilliseconds));
@@ -197,6 +203,12 @@ export class TestDiscovery {
       throw new TestingException(Resources.testMethodMarkInvalid);
 
     return true;
+  }
+
+  private declaresParameters(method: Function): boolean {
+    const source = Function.prototype.toString.call(method);
+
+    return method.length > 0 || !Resources.emptyParameterListPattern.test(source.slice(source.indexOf(Resources.parameterListStart) + 1));
   }
 
   private hasTestData(value: unknown): value is Function {

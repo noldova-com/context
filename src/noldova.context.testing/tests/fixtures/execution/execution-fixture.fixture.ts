@@ -70,6 +70,16 @@ export class ExecutionFixture {
     void ExecutionFixture.rejectAfterTurnsAsync(3, new Error("late"));
   }
 
+  public leavesAStrayThrow(): void {
+    setImmediate(() => {
+      throw new Error("stray");
+    });
+  }
+
+  public leavesALateThrow(): void {
+    ExecutionFixture.throwAfterTurns(3, new Error("late"));
+  }
+
   public async waitsSeveralTurnsAsync(): Promise<void> {
     for (let turn = 0; turn < 10; turn++)
       await new Promise<void>(t => setImmediate(t));
@@ -83,9 +93,24 @@ export class ExecutionFixture {
     ExecutionFixture.OUTSIDE_TEST_EXECUTION.runInAsyncScope(() => process.emit("unhandledRejection", reason, Promise.resolve()));
   }
 
+  public emitUncaughtExceptionOutsideTestExecution(error: Error): void {
+    ExecutionFixture.OUTSIDE_TEST_EXECUTION.runInAsyncScope(() => process.emit("uncaughtException", error));
+  }
+
   public throwsAndRejects(): void {
     void Promise.reject(new Error("stray"));
     throw new Error("primary");
+  }
+
+  private static throwAfterTurns(turns: number, reason: Error): void {
+    setImmediate(() => {
+      if (turns > 1) {
+        ExecutionFixture.throwAfterTurns(turns - 1, reason);
+        return;
+      }
+
+      throw reason;
+    });
   }
 
   private static async rejectAfterTurnsAsync(turns: number, reason: Error): Promise<void> {
