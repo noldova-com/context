@@ -4,7 +4,7 @@
 [![npm](https://badgen.net/npm/v/@noldova/context.core)](https://www.npmjs.com/package/@noldova/context.core)
 [![License: MIT](https://badgen.net/static/license/MIT/blue)](LICENSE)
 
-**TypeScript libraries for collections, exceptions, text, JSON, testing and parsing, with no third-party runtime dependencies.**
+**TypeScript libraries for collections, exceptions, text, queries, JSON, data access, testing and parsing, with no third-party runtime dependencies.**
 
 They're the first parts of CONTEXT, Noldova's platform for taking TypeScript sources to portable and native programs.
 The compiler, Runtime and SDK are designed in [documents/](documents/), as [VISION.md](documents/VISION.md) says, and aren't built yet.
@@ -123,8 +123,10 @@ const result = await new ParallelTestRunner(30_000).runAsync([new TestProject("S
 
 - **The workers:** one per available processor and at least two by default; the constructor's second argument sets another number.
 - **A test that overruns** its timeout, including one that blocks synchronously, is recorded as timed out, its worker is ended, and a fresh worker resumes after it; the run goes on.
-- **The result** is the `TestRunResult` that `TestRunner` returns. A value that can't cross between threads, such as a class instance in a test's data, arrives as a value that prints as the original did, so `TestReportWriter` prints the same lines from either runner.
-- **The listener** hears `onMethodCompleted` as each test ends and `onClassCompleted` in discovery order. `onMethodStarted` is never called, because only the workers load the test modules; loading them in the app's thread too would run their top-level code twice.
+- **The result** is the `TestRunResult` that `TestRunner` returns.
+  A value that can't cross between threads, such as a class instance in a test's data, arrives as a value that prints as the original did, so `TestReportWriter` prints the same lines from either runner.
+- **The listener** hears `onMethodCompleted` as each test ends and `onClassCompleted` in discovery order.
+  `onMethodStarted` is never called, because only the workers load the test modules; loading them in the app's thread too would run their top-level code twice.
 - **The run fails,** after every worker has ended, when a worker crashes, starts no test within its limit or discovers different tests from another, or when a class leaves a timer or handle open.
 - **Temporary files:** the runner leaves the environment as it is; an app that wants its tests' temporary files in a folder of their own sets `TMPDIR`, `TEMP` and `TMP` before the run.
 

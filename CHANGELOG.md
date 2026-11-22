@@ -62,7 +62,8 @@ CONTEXT's packages take their siblings as peers in a range, its text package dec
   - a query that a cancel sent for an earlier query stopped runs once more where the connection can retry it, and otherwise fails with a message that says so (#160);
   - SCRAM sign-in refuses a server's iteration count above 1,000,000, derives the key off the event loop so the connection's timeouts keep running, and connections that sign in with the same password, salt and count share one running derivation.
 - `@noldova/context.json`: `JsonReader` converts a value reached through several references once, and the result shares it wherever the source does.
-- `@noldova/context.parsers.typescript`: the source parser merges the top-level regions it parses again, such as top-level awaits, in one pass over all of them. It and `@noldova/context.parsers` and `@noldova/context.parsers.regex` prove the values they asserted non-null, with no change to what they parse or report (#115, #125, #126).
+- `@noldova/context.parsers.typescript`: the source parser merges the top-level regions it parses again, such as top-level awaits, in one pass over all of them.
+  It and `@noldova/context.parsers` and `@noldova/context.parsers.regex` prove the values they asserted non-null, with no change to what they parse or report (#115, #125, #126).
 - No other package's source changes.
 
 ## 0.0.8
@@ -78,7 +79,8 @@ CONTEXT's test runner takes its hang limit from the suite, writes each test's ti
     - `TestTimingCheck` judges test files by the median of their times over several runs, against a budget or a time the suite lists, plus a margin, and reads that list from a README;
     - `TestFileTiming` is one file's result, over its limit or listed but within the budget;
   - discovery throws a `TestingException` for a member a class lists without a property descriptor, and a test worker refuses to start without a parent port (#98).
-- `@noldova/context.data.sql.postgresql`: the connect and cancel limits run on the client's own `ClientTimers` instead of the global `setTimeout` (#105). Its twelve exceptions take their name from the base `Exception`, and each name is unchanged (#93).
+- `@noldova/context.data.sql.postgresql`: the connect and cancel limits run on the client's own `ClientTimers` instead of the global `setTimeout` (#105).
+  Its twelve exceptions take their name from the base `Exception`, and each name is unchanged (#93).
 - `@noldova/context.data`: `DataException` takes its name from the base `Exception`, and its declaration no longer lists `name`; the name is unchanged (#93).
 - `@noldova/context.parsers` and `@noldova/context.parsers.typescript`: the parsers prove the values they asserted non-null, through their types and by splitting flag-keyed methods in two, with no change to what they parse or report (#97, #98, #99, #101).
 - `@noldova/context.text`: its README names the Unicode data its identifier tables come from, with the file's SHA-256 (#95).

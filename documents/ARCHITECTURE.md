@@ -35,7 +35,7 @@ No package removes an existing API.
 ## 4. Extension methods
 
 Type-grafted extension methods are the preferred way to add responsibility-specific behavior to an existing concrete type.
-This is broader than the TypeScript standard, which confines declaration merging and prototype additions to one foundation package: here every package that owns an operation on a type extends it, such as a parser's node extensions, and that needs a maintainer's decision.
+The code standard allows additions to existing types only in foundation packages, each adding the members of its own subject; every CONTEXT package is a foundation package, so the package that owns an operation on a type extends it, such as a parser's node extensions.
 - The concrete class owns its state, invariants, identity and core lifecycle; an extension adds cohesive behavior without becoming a second owner of the class's state or facts.
 - The package responsible for an operation owns its extension implementation; the extended concrete type provides the polymorphic dispatch surface.
 - Declaration merging declares the method, and a direct, named prototype assignment implements it; grafting is never hidden behind a helper.
@@ -84,7 +84,6 @@ The only comments in code are the license header, the Node-API note `TESTING-CON
 Until then, a package's `src/api/index.d.ts` is its sole public-documentation authority, and `BUILD-AND-VERIFICATION.md` owns declaration copying.
 It declares what external consumers should see: a member that is public in the code but left out of it, or a constructor declared `private` there, is internal to the package.
 Each package's comments and generation migrate together; there are never two handwritten copies, stripped installed API docs, a temporary text or regex extractor, or a legacy compiler dependency.
-The accepted destination is source-owned JSDoc for public and internal code, in the documentation-comment style of TypeScript's own source, beside the declarations it describes, including overload signatures and the consumer-facing declarations of extensions and augmentations, from which consumer declarations, IntelliSense documentation and reference pages are generated.
 
 ## 9. Scripts and tests
 

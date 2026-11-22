@@ -63,7 +63,7 @@ A package project's manifest and sources live in the package root's `src/`; its 
 
 The dependency graph is derived from project manifests and their effective framework compositions, never duplicated in a root script, configuration array, or hand-maintained order list.
 The temporary Node bootstrap is the sole exception: its explicit ordered configuration builds npm forms before the SDK build provider exists and is not a semantic graph, resolver, or certification input.
-Package-local `package.json` files are temporary bootstrap manifests containing only `name`, `version`, `type`, `main`, `types`, and `license`, plus `peerDependencies` for the CONTEXT packages actually imported during the bootstrap, in the range [VERSIONING-AND-COMPATIBILITY.md](VERSIONING-AND-COMPATIBILITY.md) sets, and `repository`, `bugs`, `homepage` and `publishConfig`, which npm's provenance and the registry need.
+Package-local `package.json` files are temporary bootstrap manifests containing only `name`, `version`, `type`, `main`, `types`, and `license`, plus `peerDependencies` for the CONTEXT packages actually imported during the bootstrap, in the range [VERSIONING-AND-COMPATIBILITY.md](VERSIONING-AND-COMPATIBILITY.md) sets, and `repository`, `bugs`, `homepage` and `publishConfig`, which npm's provenance and the registry need; the build adds `gitHead`, the commit it built from, to the manifest it publishes.
 Other npm metadata requires a demonstrated bootstrap requirement.
 These manifests are removed with the bootstrap.
 

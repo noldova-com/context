@@ -27,7 +27,8 @@ The base is abstract so that it is never thrown directly: every CONTEXT throw is
 
 Exceptions carry no numeric code.
 Identity is the type, caught with `instanceof`.
-Numeric failure codes wait for a Runtime failure-reporting contract that demonstrates a consumer; adding a field then is additive. Exceptions carry no free-form data bag, source name or serialization surface.
+Numeric failure codes wait for a Runtime failure-reporting contract that demonstrates a consumer; adding a field then is additive.
+Exceptions carry no free-form data bag, source name or serialization surface.
 
 ## 3. Concrete exceptions
 
