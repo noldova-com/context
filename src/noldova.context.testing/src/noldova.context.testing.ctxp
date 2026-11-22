@@ -12,6 +12,7 @@
       "noldova.context.collections",
       "noldova.context.core",
       "noldova.context.exceptions",
+      "noldova.context.processes",
       "noldova.context.text"
     ]
   }

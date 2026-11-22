@@ -66,11 +66,22 @@ export class StartedTree {
     const root = spawn(process.execPath, ["--input-type=module", "--eval", StartedTree.SCRIPT, StartedTree.SCRIPT, JSON.stringify(shape), String(process.pid)],
       { detached: true, env: environment, stdio: ["ignore", "pipe", "ignore"], windowsHide: true });
     const closed = once(root, StartedTree.CLOSE_EVENT);
-    const [line] = await once(createInterface({ input: root.stdout }), StartedTree.LINE_EVENT);
-    const processIds: number[] = JSON.parse(String(line));
-    const identity = await ProcessIdentity.readAsync(root.pid ?? 0);
+    const rootProcessId = root.pid;
+    Assert.isDefined(rootProcessId, "The tree's root did not start.");
+    const [line]: unknown[] = await once(createInterface({ input: root.stdout }), StartedTree.LINE_EVENT);
+    const processIds: unknown = JSON.parse(String(line));
+    if (!StartedTree.isProcessIds(processIds))
+      Assert.fail(`The tree's root printed "${String(line)}" in place of its process ids.`);
+
+    const identity = await ProcessIdentity.readAsync(rootProcessId);
     Assert.isDefined(identity);
     return new StartedTree(root, identity, processIds, closed);
+  }
+
+  public processIdAt(index: number): number {
+    const processId = this.processIds[index];
+    Assert.isDefined(processId, `The tree has no process at ${index}; its processes are ${this.processIds.join(", ")}.`);
+    return processId;
   }
 
   public async waitUntilClosedAsync(): Promise<void> {
@@ -87,6 +98,10 @@ export class StartedTree {
 
   public static async areGoneAsync(processIds: readonly number[]): Promise<boolean> {
     return !StartedTree.listsAny(await ProcessLister.useAsync(StartedTree.GONE_LIMIT_MILLISECONDS, t => t.listAsync()), processIds);
+  }
+
+  private static isProcessIds(value: unknown): value is readonly number[] {
+    return Array.isArray(value) && value.every((t: unknown) => Object.isNumber(t) && Number.isInteger(t));
   }
 
   private static listsAny(entries: readonly ProcessEntry[], processIds: readonly number[]): boolean {

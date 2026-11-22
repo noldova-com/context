@@ -22,7 +22,7 @@ import { TestRunTotals } from "../../models/results/test-run-totals.js";
 import { TestTimeRecord } from "../../models/timing/test-time-record.js";
 import { Resources } from "../../resources.js";
 import { TestConsoleReporter } from "../reporting/test-console-reporter.js";
-import { ProcessTree } from "./process-tree.js";
+import { RunProcesses } from "./run-processes.js";
 import { TestRunSupervisor } from "./test-run-supervisor.js";
 
 export class TestRunEntryPoint {
@@ -32,7 +32,6 @@ export class TestRunEntryPoint {
     const skipPassingDetails = !Object.isUndefined(process.env[Resources.skipTestDetailsVariable]);
     const reporter = new TestConsoleReporter(t => process.stdout.write(t), process.stdout.isTTY === true, skipPassingDetails);
     const temporaryDirectory = await this.isolateTemporaryFilesAsync();
-    const processTree = new ProcessTree(process.platform);
     const stopLimitMilliseconds = TestRunSupervisor.readStopLimitMilliseconds(process.env[Resources.stopLimitVariable]);
     let supervisor: TestRunSupervisor | undefined;
 
@@ -52,7 +51,7 @@ export class TestRunEntryPoint {
       const timeoutMilliseconds = TestRunSupervisor.readTimeoutMilliseconds(process.env[Resources.timeoutVariable]);
       supervisor = new TestRunSupervisor(timeoutMilliseconds, testProjects, filters, reporter, TestRunSupervisor.readCoverageDirectory(), undefined, undefined,
         undefined, undefined, undefined, stopLimitMilliseconds);
-      supervisor.whenWorkerLeftBehind(() => processTree.warm());
+      supervisor.whenWorkerLeftBehind(() => RunProcesses.startLister());
       reporter.start();
       const result = await supervisor.runAsync();
       const totals = new TestRunTotals(result.passed, result.failed, result.skipped, supervisor.elapsedMilliseconds);
@@ -70,19 +69,13 @@ export class TestRunEntryPoint {
       process.exitCode = 1;
     }
 
-    const isAbandonedWorkEnded = await this.endAbandonedWorkAsync(supervisor, processTree);
-    let isProcessTreeClosed = true;
-    try {
-      isProcessTreeClosed = await processTree.closeAsync(stopLimitMilliseconds, this.writeError.bind(this));
-    }
-    finally {
-      await this.removeTemporaryFilesAsync(temporaryDirectory);
-      if (!isAbandonedWorkEnded || !isProcessTreeClosed)
-        await this.endOwnProcessAsync();
-    }
+    const isAbandonedWorkEnded = await this.endAbandonedWorkAsync(supervisor);
+    await this.removeTemporaryFilesAsync(temporaryDirectory);
+    if (!isAbandonedWorkEnded)
+      await this.endOwnProcessAsync();
   }
 
-  private async endAbandonedWorkAsync(supervisor: TestRunSupervisor | undefined, processTree: ProcessTree): Promise<boolean> {
+  private async endAbandonedWorkAsync(supervisor: TestRunSupervisor | undefined): Promise<boolean> {
     if (Object.isUndefined(supervisor))
       return true;
 
@@ -93,13 +86,12 @@ export class TestRunEntryPoint {
     process.exitCode = 1;
     console.error(unendedWorkersMessage);
     try {
-      const descendants = await processTree.listDescendantsAsync(process.pid);
-      console.error(Resources.abandonedProcessesEnded(ProcessTree.end(descendants.processIds)));
-      console.error(descendants.describe());
+      const ended = await RunProcesses.endDescendantsAsync();
+      console.error(Resources.abandonedProcessesEnded(ended.map(t => t.processId)));
       return await supervisor.waitForUnendedWorkersAsync();
     }
     catch (error) {
-      this.writeError(error);
+      this.writeError(new TestingException(Resources.abandonedProcessesNotEnded, new ExceptionOptions(error)));
       return false;
     }
   }

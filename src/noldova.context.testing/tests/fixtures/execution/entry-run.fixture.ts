@@ -7,13 +7,15 @@
  */
 
 export class EntryRun {
-  public readonly exitCode: number;
+  public readonly exitCode: number | null;
+  public readonly signal: NodeJS.Signals | null;
   public readonly errorOutput: string;
   public readonly output: string;
   public readonly processId: number;
 
-  public constructor(exitCode: number, errorOutput: string, output: string, processId: number) {
+  public constructor(exitCode: number | null, signal: NodeJS.Signals | null, errorOutput: string, output: string, processId: number) {
     this.exitCode = exitCode;
+    this.signal = signal;
     this.errorOutput = errorOutput;
     this.output = output;
     this.processId = processId;

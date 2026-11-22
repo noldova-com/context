@@ -79,7 +79,7 @@ The accepted direct library dependencies are:
 | Data.Sql | Core, Exceptions, Data |
 | Data.Sql.SQLite | Core, Exceptions, Data, Data.Sql |
 | Data.Sql.PostgreSQL | Core, Exceptions, Data, Data.Sql |
-| Testing | Core, Exceptions, Collections, Text |
+| Testing | Core, Exceptions, Collections, Text, Processes |
 | Diagnostics | Core, Exceptions |
 | Parsers | Core, Exceptions, Collections, Text, Diagnostics |
 | Parsers.Regex | Core, Exceptions, Text, Diagnostics, Parsers |
@@ -220,6 +220,7 @@ The client is internal to the package: the provider's connection is its only use
 
 `noldova.context.processes` ends a process and every process it started, for any package or application that starts processes, so none of them needs a test package or a way of its own.
 It depends on Core and Exceptions only, and its public API is `ProcessIdentity`, `ProcessTree`, `ProcessTreeEndOptions` and its exceptions.
+`noldova.context.testing` uses it to end the processes a stopped test left, with `ProcessTree.endDescendantsAsync` from the run's own identity, so the run itself is never signalled.
 
 During the Node bootstrap it reaches the operating system through `node:child_process`, `node:events`, `node:fs/promises`, `node:net`, `node:os`, `node:path`, `node:readline` and `node:timers/promises`, and each file that imports one of them carries the Node note in `TESTING-CONTRACT.md` section 1.
 It lists processes through one lister process per system listing, started on first use and kept, unref'd, for the rest of the process's life, taking one request at a time; its script is the only part that differs by system, with the signals it sends: `sh` running `ps` on Linux and macOS, and on Windows `powershell.exe`, which defines one `NtQuerySystemInformation` call with Reflection.Emit, so no compiler runs, and reads every process with it, without WMI; it signals them with the host's `process.kill`.

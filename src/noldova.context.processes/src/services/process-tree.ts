@@ -22,17 +22,28 @@ export class ProcessTree {
   private readonly lister: ProcessLister;
   private readonly root: ProcessIdentity;
   private readonly members: ProcessTreeMembers;
+  private readonly isRootKept: boolean;
   private entries: readonly ProcessEntry[];
 
-  private constructor(lister: ProcessLister, root: ProcessIdentity) {
+  private constructor(lister: ProcessLister, root: ProcessIdentity, isRootKept: boolean) {
     this.lister = lister;
     this.root = root;
     this.members = new ProcessTreeMembers(root);
+    this.isRootKept = isRootKept;
     this.entries = [];
   }
 
   public static endAsync(root: ProcessIdentity, options: ProcessTreeEndOptions = new ProcessTreeEndOptions()): Promise<readonly ProcessIdentity[]> {
-    return ProcessLister.useAsync(options.limitMilliseconds, t => new ProcessTree(t, root).endTreeAsync(options, performance.now() + options.limitMilliseconds));
+    return ProcessTree.endMembersAsync(root, options, false);
+  }
+
+  public static endDescendantsAsync(root: ProcessIdentity, options: ProcessTreeEndOptions = new ProcessTreeEndOptions()): Promise<readonly ProcessIdentity[]> {
+    return ProcessTree.endMembersAsync(root, options, true);
+  }
+
+  private static endMembersAsync(root: ProcessIdentity, options: ProcessTreeEndOptions, isRootKept: boolean): Promise<readonly ProcessIdentity[]> {
+    return ProcessLister.useAsync(options.limitMilliseconds,
+      t => new ProcessTree(t, root, isRootKept).endTreeAsync(options, performance.now() + options.limitMilliseconds));
   }
 
   private async endTreeAsync(options: ProcessTreeEndOptions, deadline: number): Promise<readonly ProcessIdentity[]> {
@@ -53,7 +64,7 @@ export class ProcessTree {
     for (;;) {
       const alive = this.alive();
       if (alive.length === 0)
-        return this.members.identities;
+        return this.members.identities.filter(t => !this.isKept(t.processId, t.startTime));
 
       await ProcessTree.signalAsync(this.lister.listing.signals.kill, alive);
       if (performance.now() >= deadline)
@@ -83,6 +94,10 @@ export class ProcessTree {
   }
 
   private alive(): readonly ProcessEntry[] {
-    return this.entries.filter(t => !t.isZombie && this.members.has(t));
+    return this.entries.filter(t => !t.isZombie && this.members.has(t) && !this.isKept(t.processId, t.startTime));
+  }
+
+  private isKept(processId: number, startTime: number): boolean {
+    return this.isRootKept && processId === this.root.processId && startTime === this.root.startTime;
   }
 }

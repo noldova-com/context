@@ -55,7 +55,7 @@ export class ProcessTreeTests {
 
     const ended = await ProcessTree.endAsync(tree.identity);
 
-    ProcessTreeTests.assertEndedEach(isWindows ? [tree.identity.processId] : [tree.identity.processId, tree.processIds[2] ?? 0], ended);
+    ProcessTreeTests.assertEndedEach(isWindows ? [tree.identity.processId] : [tree.identity.processId, tree.processIdAt(2)], ended);
     Assert.isTrue(await StartedTree.areGoneAsync(tree.processIds));
     await tree.waitUntilClosedAsync();
   }
@@ -69,7 +69,7 @@ export class ProcessTreeTests {
     const group = await ProcessLister.useAsync(ProcessTreeTests.LISTING_LIMIT_MILLISECONDS,
       async t => (await t.listAsync()).filter(entry => entry.groupId === tree.identity.processId));
 
-    const expected = isWindows ? [] : [tree.identity.processId, tree.processIds[2] ?? 0];
+    const expected = isWindows ? [] : [tree.identity.processId, tree.processIdAt(2)];
     Assert.areEqual(expected.length, group.length);
     Assert.isTrue(expected.every(processId => group.some(t => t.processId === processId)));
     Assert.isTrue(group.every(t => t.startTime >= tree.identity.startTime));
@@ -142,6 +142,45 @@ export class ProcessTreeTests {
     ProcessTreeTests.assertEndedEach(tree.processIds, error.survivors);
     Assert.isTrue(error.message.startsWith(`The process tree still had ${error.survivors.length} processes when its 0 ms limit passed: `));
     Assert.isTrue(error.message.includes(`${tree.identity.processId} started at ${new Date(tree.identity.startTime).toISOString()}`));
+    await ProcessTree.endAsync(tree.identity);
+    Assert.isTrue(await StartedTree.areGoneAsync(tree.processIds));
+    await tree.waitUntilClosedAsync();
+  }
+
+  @TestMethod
+  public async endsARootsDescendantsAndLeavesTheRootRunningAsync(): Promise<void> {
+    const tree = await StartedTree.startAsync(TreeShape.of(TreeShape.of(TreeShape.of())));
+
+    const ended = await ProcessTree.endDescendantsAsync(tree.identity);
+
+    ProcessTreeTests.assertEndedEach(tree.processIds.slice(1), ended);
+    Assert.isFalse(ended.some(t => t.processId === tree.identity.processId));
+    Assert.isTrue(await StartedTree.areGoneAsync(tree.processIds.slice(1)));
+    Assert.areEqual(tree.identity.startTime, (await ProcessIdentity.readAsync(tree.identity.processId))?.startTime);
+    await ProcessTree.endAsync(tree.identity);
+    await tree.waitUntilClosedAsync();
+  }
+
+  @TestMethod
+  public async endsNothingForARootWithoutDescendantsAsync(): Promise<void> {
+    const tree = await StartedTree.startAsync(TreeShape.of());
+
+    const ended = await ProcessTree.endDescendantsAsync(tree.identity);
+
+    Assert.areEqual(0, ended.length);
+    Assert.isDefined(await ProcessIdentity.readAsync(tree.identity.processId));
+    await ProcessTree.endAsync(tree.identity);
+    await tree.waitUntilClosedAsync();
+  }
+
+  @TestMethod
+  public async throwsNamingOnlyTheDescendantsWhenTheLimitPassesAsync(): Promise<void> {
+    const tree = await StartedTree.startAsync(TreeShape.of(TreeShape.of()));
+
+    const error = await Assert.throwsAsync(() => ProcessTree.endDescendantsAsync(tree.identity, new ProcessTreeEndOptions(0, 0)), ProcessTreeEndException);
+
+    ProcessTreeTests.assertEndedEach(tree.processIds.slice(1), error.survivors);
+    Assert.isFalse(error.survivors.some(t => t.processId === tree.identity.processId));
     await ProcessTree.endAsync(tree.identity);
     Assert.isTrue(await StartedTree.areGoneAsync(tree.processIds));
     await tree.waitUntilClosedAsync();

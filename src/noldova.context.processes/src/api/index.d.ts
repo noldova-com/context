@@ -95,7 +95,7 @@ export declare class ProcessIdentity {
 }
 
 /**
- * How `ProcessTree.endAsync` ends a tree.
+ * How `ProcessTree.endAsync` and `ProcessTree.endDescendantsAsync` end a tree.
  */
 export declare class ProcessTreeEndOptions {
   /**
@@ -123,7 +123,8 @@ export declare class ProcessTreeEndOptions {
 }
 
 /**
- * Ends a process and every process it started, and returns only once they are gone.
+ * Ends a process and every process it started, or only the processes it started, and returns
+ * only once they are gone.
  *
  * @remarks
  * The tree is the root, every process whose parent is in the tree and that started no earlier
@@ -182,4 +183,29 @@ export declare class ProcessTree {
    * ```
    */
   public static endAsync(root: ProcessIdentity, options?: ProcessTreeEndOptions): Promise<readonly ProcessIdentity[]>;
+
+  /**
+   * Ends every process a process started, and waits until they are gone, leaving the process
+   * itself running; a process ends the processes it left this way with its own identity.
+   *
+   * @param root The identity of the tree's root, which is never signalled.
+   * @param options How to end the root's descendants; no grace and a 10-second limit by default.
+   * @returns The root's descendants, all gone; empty when the root has none, or when another
+   * process now has the root's id, so nothing was ended.
+   * @throws ProcessTreeEndException When descendants of the root are still listed when the limit
+   * passes.
+   * @throws ProcessesException When processes can't be listed on this system, the process lister
+   * is not ready within 60 seconds, or it ends before it answers, which it does when it takes 5
+   * seconds past the limit.
+   * @example
+   * ```ts
+   * import "@noldova/context.core";
+   * import { ProcessIdentity, ProcessTree } from "@noldova/context.processes";
+   *
+   * const identity = await ProcessIdentity.readAsync(process.pid);
+   * if (!Object.isUndefined(identity))
+   *   await ProcessTree.endDescendantsAsync(identity);
+   * ```
+   */
+  public static endDescendantsAsync(root: ProcessIdentity, options?: ProcessTreeEndOptions): Promise<readonly ProcessIdentity[]>;
 }

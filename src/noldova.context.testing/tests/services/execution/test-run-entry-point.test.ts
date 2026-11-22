@@ -191,9 +191,12 @@ export class TestRunEntryPointTests {
       Assert.isTrue(results.includes("\"methodName\":\"passesAfterTheBlock\",\"outcome\":\"Passed\""), results);
       Assert.isTrue(result.output.includes("Failed:"), result.output);
       Assert.isTrue(result.errorOutput.includes("Test workers that could not be ended within 1000 milliseconds of being stopped: 1, running " +
-        "BlockingFixtureTests.waitsOnAChildProcess.\nProcesses the run ended that were still running under it: 1.\n"), result.errorOutput);
-      Assert.isTrue(/\nIts (warm|one-off) listing took \d+ ms and held \d+ processes, and /u.test(result.errorOutput),
-        result.errorOutput);
+        "BlockingFixtureTests.waitsOnAChildProcess.\n"), result.errorOutput);
+      const ended = /\nProcesses the run ended that were still running under it: (\d+)((?:, process \d+)+)\.\n/u.exec(result.errorOutput);
+      Assert.isNotNull(ended, result.errorOutput);
+      const [, count, processes] = ended;
+      Assert.isDefined(processes, result.errorOutput);
+      Assert.areEqual(count, String(processes.split(", process ").length - 1), result.errorOutput);
       Assert.isFalse(result.errorOutput.includes("ends its own process"), result.errorOutput);
     }
     finally {
@@ -214,13 +217,14 @@ export class TestRunEntryPointTests {
         { CONTEXT_TEST_TIMEOUT_MILLISECONDS: "2000", CONTEXT_TEST_STOP_LIMIT_MILLISECONDS: "1000", CONTEXT_TEST_RESULTS_FILE: resultsFile, PATH: emptyDirectory });
       const results = await readFile(resultsFile, "utf8");
 
-      Assert.areEqual(process.platform === "win32" ? 1 : -1, result.exitCode, result.errorOutput);
+      Assert.areEqual(process.platform === "win32" ? 1 : null, result.exitCode, result.errorOutput);
+      Assert.areEqual(process.platform === "win32" ? null : "SIGKILL", result.signal, result.errorOutput);
       Assert.isTrue(results.includes("\"methodName\":\"waitsOnAChildProcess\",\"outcome\":\"Failed\""), results);
       Assert.isTrue(results.includes("\"methodName\":\"passesAfterTheBlock\",\"outcome\":\"Passed\""), results);
       Assert.isTrue(result.output.includes("Failed:"), result.output);
       Assert.isTrue(result.errorOutput.includes("Test workers that could not be ended within 1000 milliseconds of being stopped: 1, running " +
         "BlockingFixtureTests.waitsOnAChildProcess.\n"), result.errorOutput);
-      Assert.isTrue(result.errorOutput.includes("The run could not list the processes running under it with "), result.errorOutput);
+      Assert.isTrue(result.errorOutput.includes("The run could not end the processes still running under it.\n"), result.errorOutput);
       Assert.isTrue(result.errorOutput.includes("ENOENT"), result.errorOutput);
       Assert.isTrue(result.errorOutput.endsWith("The stopped tests' workers still have not ended, so the run ends its own process so it cannot hang.\n"),
         result.errorOutput);
@@ -336,8 +340,9 @@ export class TestRunEntryPointTests {
       child.stdout.on("data", (t: Buffer) => {
         output.push(t.toString());
       });
-      child.on("close", t => {
-        resolve(new EntryRun(t ?? -1, errorOutput.join(String.empty), output.join(String.empty), child.pid ?? -1));
+      child.on("close", (exitCode, signal) => {
+        if (!Object.isUndefined(child.pid))
+          resolve(new EntryRun(exitCode, signal, errorOutput.join(String.empty), output.join(String.empty), child.pid));
       });
       child.on("error", reject);
     });
