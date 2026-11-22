@@ -14,12 +14,15 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream } from "node:stream/web";
 
+import "@noldova/context.core";
+
 import Script from "../../../../scripts/script.ts";
 import TarArchiveReader from "./tar-archive.reader.ts";
 import TypeScriptConformanceLayout from "./typescript-conformance-layout.ts";
 import TypeScriptConformanceProvenance from "./typescript-conformance-provenance.ts";
 import TypeScriptExpectedDiagnosticsGenerator from "./typescript-expected-diagnostics-generator.ts";
 import TypeScriptPlatformPackage from "./typescript-platform-package.ts";
+import TypeScriptScriptException from "./typescript-script.exception.ts";
 import TypeScriptVendoredArchive from "./typescript-vendored-archive.ts";
 import TypeScriptVendoredCatalogRecord from "./typescript-vendored-catalog-record.ts";
 import TypeScriptVendoredCatalog from "./typescript-vendored-catalog.ts";
@@ -113,12 +116,12 @@ export default class TypeScriptConformanceVendor extends Script {
 
   public override async runAsync(): Promise<void> {
     const version = process.argv[2];
-    if (version === undefined || !TypeScriptConformanceVendor.VERSION_PATTERN.test(version))
-      throw new Error(TypeScriptConformanceVendor.VERSION_REQUIRED);
+    if (Object.isUndefined(version) || !TypeScriptConformanceVendor.VERSION_PATTERN.test(version))
+      throw new TypeScriptScriptException(TypeScriptConformanceVendor.VERSION_REQUIRED);
 
     const installedVersion = await this.readTypeScriptVersionAsync();
     if (installedVersion !== version)
-      throw new Error(TypeScriptConformanceVendor.compilerNotInstalled(version, installedVersion));
+      throw new TypeScriptScriptException(TypeScriptConformanceVendor.compilerNotInstalled(version, installedVersion));
 
     const tag = `${TypeScriptConformanceVendor.TAG_PREFIX}${version}`;
     const goCommit = await TypeScriptConformanceVendor.resolveTagAsync(tag);
@@ -153,13 +156,13 @@ export default class TypeScriptConformanceVendor extends Script {
     const localPathOf = (t: string): string | undefined => {
       const upstreamPath = t.slice(t.indexOf(path.posix.sep) + 1);
       const file = archive.files.find(t => t.upstreamPath === upstreamPath);
-      if (file !== undefined) {
+      if (!Object.isUndefined(file)) {
         this.written.add(file);
         return file.localPath;
       }
       for (const section of archive.sections) {
         const root = section.rootOf(upstreamPath);
-        if (root !== undefined) {
+        if (!Object.isUndefined(root)) {
           this.rootCounts.set(root, (this.rootCounts.get(root) ?? 0) + 1);
           return section.localPathOf(root, upstreamPath);
         }
@@ -179,10 +182,10 @@ export default class TypeScriptConformanceVendor extends Script {
       for (const section of archive.sections)
         for (const root of section.upstreamRoots)
           if (!this.rootCounts.has(root))
-            throw new Error(TypeScriptConformanceVendor.rootEmpty(root, section));
+            throw new TypeScriptScriptException(TypeScriptConformanceVendor.rootEmpty(root, section));
       for (const file of archive.files)
         if (!this.written.has(file))
-          throw new Error(TypeScriptConformanceVendor.fileMissing(file));
+          throw new TypeScriptScriptException(TypeScriptConformanceVendor.fileMissing(file));
     }
   }
 
@@ -230,8 +233,8 @@ export default class TypeScriptConformanceVendor extends Script {
   private async downloadAsync(url: string, archive: TypeScriptVendoredArchive): Promise<void> {
     await this.writeLogAsync(TypeScriptConformanceVendor.downloading(url));
     const response = await fetch(url, { headers: { [TypeScriptConformanceVendor.USER_AGENT_HEADER]: TypeScriptConformanceVendor.USER_AGENT } });
-    if (!response.ok || response.body === null)
-      throw new Error(TypeScriptConformanceVendor.requestFailed(url, response.status));
+    if (!response.ok || Object.isNull(response.body))
+      throw new TypeScriptScriptException(TypeScriptConformanceVendor.requestFailed(url, response.status));
     await pipeline(Readable.fromWeb(response.body as ReadableStream<Uint8Array>), createWriteStream(TypeScriptConformanceVendor.downloadPath(archive)));
   }
 
@@ -244,7 +247,7 @@ export default class TypeScriptConformanceVendor extends Script {
     const integrity = `${TypeScriptConformanceVendor.INTEGRITY_ALGORITHM}-${createHash(TypeScriptConformanceVendor.INTEGRITY_ALGORITHM)
       .update(readFileSync(TypeScriptConformanceVendor.downloadPath(archive))).digest(TypeScriptConformanceVendor.INTEGRITY_ENCODING)}`;
     if (integrity !== expectedIntegrity)
-      throw new Error(TypeScriptConformanceVendor.integrityMismatch(tarball));
+      throw new TypeScriptScriptException(TypeScriptConformanceVendor.integrityMismatch(tarball));
   }
 
   private static async resolveTagAsync(tag: string): Promise<string> {
@@ -268,20 +271,20 @@ export default class TypeScriptConformanceVendor extends Script {
 
   private static async fetchJsonAsync(url: string, accept: string | undefined): Promise<unknown> {
     const headers: Record<string, string> = { [TypeScriptConformanceVendor.USER_AGENT_HEADER]: TypeScriptConformanceVendor.USER_AGENT };
-    if (accept !== undefined)
+    if (!Object.isUndefined(accept))
       headers[TypeScriptConformanceVendor.ACCEPT_HEADER] = accept;
     const response = await fetch(url, { headers });
     if (!response.ok)
-      throw new Error(TypeScriptConformanceVendor.requestFailed(url, response.status));
+      throw new TypeScriptScriptException(TypeScriptConformanceVendor.requestFailed(url, response.status));
     return await response.json();
   }
 
   private static readText(answer: unknown, keys: readonly string[], url: string): string {
     let value: unknown = answer;
     for (const key of keys)
-      value = typeof value === "object" && value !== null ? (value as Record<string, unknown>)[key] : undefined;
-    if (typeof value !== "string" || value.length === 0)
-      throw new Error(TypeScriptConformanceVendor.fieldMissing(url, keys));
+      value = Object.isObject(value) ? Reflect.get(value, key) : undefined;
+    if (!Object.isString(value) || value.length === 0)
+      throw new TypeScriptScriptException(TypeScriptConformanceVendor.fieldMissing(url, keys));
     return value;
   }
 

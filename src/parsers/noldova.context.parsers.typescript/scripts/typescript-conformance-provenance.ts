@@ -8,6 +8,7 @@
 
 import { JsonReader } from "@noldova/context.json";
 
+import TypeScriptScriptException from "./typescript-script.exception.ts";
 import TypeScriptVendoredCorpus from "./typescript-vendored-corpus.ts";
 import TypeScriptVendoredDiagnostics from "./typescript-vendored-diagnostics.ts";
 import TypeScriptVendoredLibraryRecord from "./typescript-vendored-library-record.ts";
@@ -50,7 +51,7 @@ export default class TypeScriptConformanceProvenance {
     const reader = JsonReader.parse(text, identity);
     const schemaVersion = reader.readInteger("schemaVersion");
     if (schemaVersion !== TypeScriptConformanceProvenance.SCHEMA_VERSION)
-      throw new Error(TypeScriptConformanceProvenance.schemaUnsupported(identity, schemaVersion));
+      throw new TypeScriptScriptException(TypeScriptConformanceProvenance.schemaUnsupported(identity, schemaVersion));
 
     const provenance = new TypeScriptConformanceProvenance(
       reader.readString("typescriptVersion"),
@@ -60,7 +61,7 @@ export default class TypeScriptConformanceProvenance {
       TypeScriptVendoredDiagnostics.read(reader.readObject("diagnostics")),
       TypeScriptVendoredLicenses.read(reader.readObject("licenses")));
     if (JSON.stringify(provenance) !== JSON.stringify(reader.toJson()))
-      throw new Error(TypeScriptConformanceProvenance.notWrittenByTheVendor(identity));
+      throw new TypeScriptScriptException(TypeScriptConformanceProvenance.notWrittenByTheVendor(identity));
 
     return provenance;
   }

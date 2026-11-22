@@ -6,6 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "@noldova/context.core";
+
+import TypeScriptScriptException from "./typescript-script.exception.ts";
+
 export default class TypeScriptReferenceIdentity {
   private static readonly CONFIG_IDENTITY: string = "tsconfig.json";
   private static readonly LIBRARY_IDENTITY_PREFIX: string = "libraries/";
@@ -23,7 +27,7 @@ export default class TypeScriptReferenceIdentity {
 
   public ofFile(fileName: string): number | string {
     const unitIndex = this.unitIndexes.get(fileName);
-    if (unitIndex !== undefined)
+    if (!Object.isUndefined(unitIndex))
       return unitIndex;
 
     if (fileName === this.configPath)
@@ -32,7 +36,7 @@ export default class TypeScriptReferenceIdentity {
     if (fileName.startsWith(this.libraryDirectoryPrefix))
       return `${TypeScriptReferenceIdentity.LIBRARY_IDENTITY_PREFIX}${fileName.slice(this.libraryDirectoryPrefix.length)}`;
 
-    throw new Error(TypeScriptReferenceIdentity.fileUnknown(fileName));
+    throw new TypeScriptScriptException(TypeScriptReferenceIdentity.fileUnknown(fileName));
   }
 
   public ofText(text: string): string {

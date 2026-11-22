@@ -11,6 +11,8 @@ import { readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import "@noldova/context.core";
+
 import Script from "../../../../scripts/script.ts";
 import TypeScriptConformanceCase from "./typescript-conformance-case.ts";
 import TypeScriptConformanceLayout from "./typescript-conformance-layout.ts";
@@ -22,8 +24,10 @@ import TypeScriptExpectedDiagnosticSections from "./typescript-expected-diagnost
 import type TypeScriptExpectedInapplicableRecord from "./typescript-expected-inapplicable-record.ts";
 import TypeScriptExpectedManifestTotals from "./typescript-expected-manifest-totals.ts";
 import TypeScriptExpectedManifest from "./typescript-expected-manifest.ts";
+import TypeScriptExpectedProcessMemory from "./typescript-expected-process-memory.ts";
 import TypeScriptExpectedWorkerSupervisor from "./typescript-expected-worker-supervisor.ts";
 import TypeScriptReferenceInvocation from "./typescript-reference-invocation.ts";
+import TypeScriptScriptException from "./typescript-script.exception.ts";
 
 export default class TypeScriptExpectedDiagnosticsGenerator extends Script {
   private static readonly BATCH_FILE_NAME: string = "batch.json";
@@ -53,48 +57,55 @@ export default class TypeScriptExpectedDiagnosticsGenerator extends Script {
 
     await this.writeLogAsync(TypeScriptExpectedDiagnosticsGenerator.starting(cases.length, checkpoint.accountedCount));
 
-    while (true) {
-      const outstanding = cases.filter(t => !checkpoint.isAccounted(t));
-      if (outstanding.length === 0)
-        break;
+    const memory = await TypeScriptExpectedProcessMemory.startAsync();
+    try {
+      while (true) {
+        const outstanding = cases.filter(t => !checkpoint.isAccounted(t));
+        if (outstanding.length === 0)
+          break;
 
-      const batch = outstanding.slice(0, TypeScriptExpectedDiagnosticsGenerator.BATCH_SIZE);
-      await this.writeFileAsync(batchPath, JSON.stringify(new TypeScriptExpectedBatch(
-        TypeScriptExpectedDiagnosticsGenerator.CASES_DIRECTORY, TypeScriptExpectedDiagnosticsGenerator.LIBRARIES_DIRECTORY, batch)));
+        const batch = outstanding.slice(0, TypeScriptExpectedDiagnosticsGenerator.BATCH_SIZE);
+        await this.writeFileAsync(batchPath, JSON.stringify(new TypeScriptExpectedBatch(
+          TypeScriptExpectedDiagnosticsGenerator.CASES_DIRECTORY, TypeScriptExpectedDiagnosticsGenerator.LIBRARIES_DIRECTORY, batch)));
 
-      const started = performance.now();
-      const accountedBefore = checkpoint.accountedCount;
-      const outcome = await new TypeScriptExpectedWorkerSupervisor(
-        workerPath, batchPath, TypeScriptExpectedDiagnosticsGenerator.CASE_TIMEOUT_MILLISECONDS, TypeScriptExpectedDiagnosticsGenerator.MEMORY_BUDGET_BYTES)
-        .runAsync(t => { checkpoint.addResult(t); });
+        const started = performance.now();
+        const accountedBefore = checkpoint.accountedCount;
+        const outcome = await new TypeScriptExpectedWorkerSupervisor(
+          workerPath, batchPath, TypeScriptExpectedDiagnosticsGenerator.CASE_TIMEOUT_MILLISECONDS, TypeScriptExpectedDiagnosticsGenerator.MEMORY_BUDGET_BYTES,
+          memory)
+          .runAsync(t => { checkpoint.addResult(t); });
 
-      if (outcome.reason !== undefined) {
-        if (outcome.chargedPath === undefined && outcome.exitCode !== null && outcome.exitCode !== 0)
-          throw new Error(TypeScriptExpectedDiagnosticsGenerator.workerFailedBeforeACase(outcome.exitCode, outcome.signal));
+        if (!Object.isUndefined(outcome.reason)) {
+          if (Object.isUndefined(outcome.chargedPath) && !Object.isNull(outcome.exitCode) && outcome.exitCode !== 0)
+            throw new TypeScriptScriptException(TypeScriptExpectedDiagnosticsGenerator.workerFailedBeforeACase(outcome.exitCode, outcome.signal));
 
-        if (outcome.chargedPath !== undefined) {
-          const attempts = checkpoint.recordAttempt(outcome.chargedPath, outcome.reason);
-          await this.writeLogAsync(TypeScriptExpectedDiagnosticsGenerator.caseEndedAbnormally(outcome.chargedPath, outcome.reason, attempts));
-          if (attempts >= TypeScriptExpectedDiagnosticsGenerator.MAXIMUM_ATTEMPTS)
-            checkpoint.addExceeded(outcome.chargedPath, outcome.reason);
+          if (!Object.isUndefined(outcome.chargedPath)) {
+            const attempts = checkpoint.recordAttempt(outcome.chargedPath, outcome.reason);
+            await this.writeLogAsync(TypeScriptExpectedDiagnosticsGenerator.caseEndedAbnormally(outcome.chargedPath, outcome.reason, attempts));
+            if (attempts >= TypeScriptExpectedDiagnosticsGenerator.MAXIMUM_ATTEMPTS)
+              checkpoint.addExceeded(outcome.chargedPath, outcome.reason);
+          }
+          else
+            await this.writeLogAsync(TypeScriptExpectedDiagnosticsGenerator.workerKilledBetweenCases(outcome.reason));
         }
-        else
-          await this.writeLogAsync(TypeScriptExpectedDiagnosticsGenerator.workerKilledBetweenCases(outcome.reason));
+
+        if (checkpoint.accountedCount === accountedBefore && Object.isUndefined(outcome.chargedPath))
+          throw new TypeScriptScriptException(TypeScriptExpectedDiagnosticsGenerator.NO_PROGRESS);
+
+        batchNumber++;
+        await this.writeLogAsync(TypeScriptExpectedDiagnosticsGenerator.batchDone(
+          batchNumber, checkpoint.accountedCount, cases.length, checkpoint.exceededReasons.size, checkpoint.retries.length, performance.now() - started));
       }
-
-      if (checkpoint.accountedCount === accountedBefore && outcome.chargedPath === undefined)
-        throw new Error(TypeScriptExpectedDiagnosticsGenerator.NO_PROGRESS);
-
-      batchNumber++;
-      await this.writeLogAsync(TypeScriptExpectedDiagnosticsGenerator.batchDone(
-        batchNumber, checkpoint.accountedCount, cases.length, checkpoint.exceededReasons.size, checkpoint.retries.length, performance.now() - started));
+    }
+    finally {
+      await memory.closeAsync();
     }
 
     if (checkpoint.accountedCount !== cases.length)
-      throw new Error(TypeScriptExpectedDiagnosticsGenerator.accountingDrift(cases.length, checkpoint.accountedCount));
+      throw new TypeScriptScriptException(TypeScriptExpectedDiagnosticsGenerator.accountingDrift(cases.length, checkpoint.accountedCount));
 
     if (checkpoint.exceededReasons.size !== 0)
-      throw new Error(TypeScriptExpectedDiagnosticsGenerator.casesExceeded(checkpoint.exceededReasons));
+      throw new TypeScriptScriptException(TypeScriptExpectedDiagnosticsGenerator.casesExceeded(checkpoint.exceededReasons));
 
     await this.sealAsync(cases, checkpoint);
     await this.writeSummaryAsync(cases, checkpoint.retries.length);
@@ -110,20 +121,20 @@ export default class TypeScriptExpectedDiagnosticsGenerator extends Script {
     const manifestPath = path.join(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_DIRECTORY, TypeScriptExpectedDiagnosticsGenerator.MANIFEST_FILE_NAME);
     const diagnosticsPath = path.join(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_DIRECTORY, TypeScriptExpectedDiagnosticsGenerator.DIAGNOSTICS_FILE_NAME);
     if (!await this.pathExistsAsync(manifestPath) || !await this.pathExistsAsync(diagnosticsPath))
-      throw new Error(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_MISSING);
+      throw new TypeScriptScriptException(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_MISSING);
 
     const manifest = TypeScriptExpectedManifest.parse(await this.readFileAsync(manifestPath), manifestPath);
     if (manifest.typescriptVersion !== await this.readTypeScriptVersionAsync())
-      throw new Error(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_PIN_OUTDATED);
+      throw new TypeScriptScriptException(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_PIN_OUTDATED);
 
     if (manifest.compilerOptionsSha256 !== TypeScriptReferenceInvocation.hash())
-      throw new Error(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_INVOCATION_OUTDATED);
+      throw new TypeScriptScriptException(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_INVOCATION_OUTDATED);
 
     if (manifest.unitSplittingVersion !== TypeScriptConformanceCase.SPLITTING_VERSION)
-      throw new Error(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_SPLITTING_OUTDATED);
+      throw new TypeScriptScriptException(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_SPLITTING_OUTDATED);
 
     if (manifest.resultsSha256 !== TypeScriptExpectedDiagnosticsGenerator.hash(await this.readFileAsync(diagnosticsPath)))
-      throw new Error(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_RESULTS_ALTERED);
+      throw new TypeScriptScriptException(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_RESULTS_ALTERED);
   }
 
   private listCases(): readonly string[] {
@@ -137,7 +148,7 @@ export default class TypeScriptExpectedDiagnosticsGenerator extends Script {
     const provenance = TypeScriptConformanceProvenance.parse(
       await this.readFileAsync(TypeScriptExpectedDiagnosticsGenerator.PROVENANCE_PATH), TypeScriptExpectedDiagnosticsGenerator.PROVENANCE_PATH);
     if (provenance.typescriptVersion !== await this.readTypeScriptVersionAsync())
-      throw new Error(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_PIN_OUTDATED);
+      throw new TypeScriptScriptException(TypeScriptExpectedDiagnosticsGenerator.EXPECTED_PIN_OUTDATED);
 
     const inapplicableByReason = new Map<string, number>();
     let applicable = 0;
@@ -146,8 +157,8 @@ export default class TypeScriptExpectedDiagnosticsGenerator extends Script {
 
     for (const casePath of cases) {
       const line = checkpoint.resultLines.get(casePath);
-      if (line === undefined)
-        throw new Error(TypeScriptExpectedDiagnosticsGenerator.resultMissing(casePath));
+      if (Object.isUndefined(line))
+        throw new TypeScriptScriptException(TypeScriptExpectedDiagnosticsGenerator.resultMissing(casePath));
 
       const record: TypeScriptExpectedApplicableRecord | TypeScriptExpectedInapplicableRecord = JSON.parse(line);
       if (record.applicability === TypeScriptExpectedApplicableRecord.APPLICABILITY) {

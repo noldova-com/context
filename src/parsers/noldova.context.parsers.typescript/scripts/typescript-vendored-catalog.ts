@@ -13,6 +13,7 @@ import { JsonReader } from "@noldova/context.json";
 
 import TypeScriptDiagnosticDefinitionCategory from "./typescript-diagnostic-definition-category.ts";
 import TypeScriptDiagnosticDefinition from "./typescript-diagnostic-definition.ts";
+import TypeScriptScriptException from "./typescript-script.exception.ts";
 
 export default class TypeScriptVendoredCatalog {
   private static readonly CATEGORY_PROPERTY_NAME: string = "category";
@@ -58,11 +59,11 @@ export default class TypeScriptVendoredCatalog {
       const definition = catalog.readObject(messageTemplate);
       for (const propertyName of Object.keys(definition.toJson()))
         if (!TypeScriptVendoredCatalog.ALLOWED_DEFINITION_FIELDS.includes(propertyName))
-          throw new Error(TypeScriptVendoredCatalog.unknownDefinitionField(filePath, messageTemplate, propertyName));
+          throw new TypeScriptScriptException(TypeScriptVendoredCatalog.unknownDefinitionField(filePath, messageTemplate, propertyName));
 
       const code = definition.readInteger(TypeScriptVendoredCatalog.CODE_PROPERTY_NAME);
       if (codes.has(code))
-        throw new Error(TypeScriptVendoredCatalog.duplicateCode(filePath, code));
+        throw new TypeScriptScriptException(TypeScriptVendoredCatalog.duplicateCode(filePath, code));
 
       codes.add(code);
       TypeScriptVendoredCatalog.validatePlaceholders(messageTemplate, code);
@@ -91,7 +92,7 @@ export default class TypeScriptVendoredCatalog {
 
     for (let index = 0; index < indexes.size; index++)
       if (!indexes.has(index))
-        throw new Error(TypeScriptVendoredCatalog.invalidPlaceholder(code));
+        throw new TypeScriptScriptException(TypeScriptVendoredCatalog.invalidPlaceholder(code));
   }
 
   private static duplicateCode(filePath: string, code: number): string {

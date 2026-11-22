@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 1,
   "typescriptVersion": "7.0.2",
   "sources": {
     "typescriptGo": {

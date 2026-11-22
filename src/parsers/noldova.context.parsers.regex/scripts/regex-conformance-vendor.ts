@@ -10,12 +10,14 @@ import { createHash } from "node:crypto";
 import { cp, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import "@noldova/context.core";
 import { JsonReader } from "@noldova/context.json";
 
 import Script from "../../../../scripts/script.ts";
 import RegexConformanceLayout from "./regex-conformance-layout.ts";
 import RegexConformanceProvenance from "./regex-conformance-provenance.ts";
 import RegexExpectedPatternsGenerator from "./regex-expected-patterns-generator.ts";
+import RegexScriptException from "./regex-script.exception.ts";
 import RegexVendoredFile from "./regex-vendored-file.ts";
 import RegexVendoredRoot from "./regex-vendored-root.ts";
 
@@ -51,8 +53,8 @@ export default class RegexConformanceVendor extends Script {
 
   public override async runAsync(): Promise<void> {
     const commit = process.argv[2];
-    if (commit === undefined || !RegexConformanceVendor.COMMIT_PATTERN.test(commit))
-      throw new Error(RegexConformanceVendor.COMMIT_REQUIRED);
+    if (Object.isUndefined(commit) || !RegexConformanceVendor.COMMIT_PATTERN.test(commit))
+      throw new RegexScriptException(RegexConformanceVendor.COMMIT_REQUIRED);
 
     await this.writeLogAsync(`Listing Test262 ${commit}...`);
     const treeSha = (await this.fetchJsonAsync(`${RegexConformanceVendor.COMMITS_PATH}/${commit}`)).readObject("tree").readString("sha");
@@ -88,7 +90,7 @@ export default class RegexConformanceVendor extends Script {
 
     const listing = await this.fetchJsonAsync(`${RegexConformanceVendor.TREES_PATH}/${sha}${RegexConformanceVendor.RECURSIVE_QUERY}`);
     if (listing.hasField("truncated") && listing.readBoolean("truncated"))
-      throw new Error(RegexConformanceVendor.TREE_TRUNCATED);
+      throw new RegexScriptException(RegexConformanceVendor.TREE_TRUNCATED);
 
     return listing.readObjectArray("tree")
       .filter(t => t.readString("type") === RegexConformanceVendor.BLOB_TYPE)
@@ -100,8 +102,8 @@ export default class RegexConformanceVendor extends Script {
     const tree = this.trees.get(treeSha) ?? await this.fetchJsonAsync(`${RegexConformanceVendor.TREES_PATH}/${treeSha}`);
     this.trees.set(treeSha, tree);
     const entry = tree.readObjectArray("tree").find(t => t.readString("path") === name && t.readString("type") === type);
-    if (entry === undefined)
-      throw new Error(RegexConformanceVendor.entryMissing(name));
+    if (Object.isUndefined(entry))
+      throw new RegexScriptException(RegexConformanceVendor.entryMissing(name));
 
     return entry.readString("sha");
   }
@@ -109,7 +111,7 @@ export default class RegexConformanceVendor extends Script {
   private async downloadAsync(commit: string, files: readonly RegexVendoredFile[]): Promise<void> {
     let next = 0;
     const downloadNextAsync = async (): Promise<void> => {
-      for (let file = files[next++]; file !== undefined; file = files[next++])
+      for (let file = files[next++]; !Object.isUndefined(file); file = files[next++])
         await this.downloadFileAsync(commit, file);
     };
     await Promise.all(Array.from({ length: RegexConformanceVendor.DOWNLOAD_CONCURRENCY }, downloadNextAsync));
@@ -119,12 +121,12 @@ export default class RegexConformanceVendor extends Script {
     const url = `${RegexConformanceVendor.RAW_CONTENT}/${RegexConformanceVendor.REPOSITORY}/${commit}/${file.upstreamPath}`;
     const response = await fetch(url, { headers: { [RegexConformanceVendor.USER_AGENT_HEADER]: RegexConformanceVendor.USER_AGENT } });
     if (!response.ok)
-      throw new Error(RegexConformanceVendor.requestFailed(url, response.status));
+      throw new RegexScriptException(RegexConformanceVendor.requestFailed(url, response.status));
 
     const bytes = Buffer.from(await response.arrayBuffer());
     const blobSha = createHash(RegexConformanceVendor.BLOB_HASH_ALGORITHM).update(`blob ${bytes.length}\0`).update(bytes).digest(RegexConformanceVendor.HASH_ENCODING);
     if (blobSha !== file.blobSha)
-      throw new Error(RegexConformanceVendor.blobMismatch(file.upstreamPath, blobSha, file.blobSha));
+      throw new RegexScriptException(RegexConformanceVendor.blobMismatch(file.upstreamPath, blobSha, file.blobSha));
 
     const target = path.join(RegexConformanceVendor.STAGING_DIRECTORY, file.localPath);
     await mkdir(path.dirname(target), { recursive: true });
@@ -140,7 +142,7 @@ export default class RegexConformanceVendor extends Script {
       },
     });
     if (!response.ok)
-      throw new Error(RegexConformanceVendor.requestFailed(url, response.status));
+      throw new RegexScriptException(RegexConformanceVendor.requestFailed(url, response.status));
 
     return JsonReader.parse(await response.text(), url);
   }

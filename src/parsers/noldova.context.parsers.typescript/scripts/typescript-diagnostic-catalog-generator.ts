@@ -12,6 +12,7 @@ import Script from "../../../../scripts/script.ts";
 import TypeScriptConformanceLayout from "./typescript-conformance-layout.ts";
 import TypeScriptConformanceProvenance from "./typescript-conformance-provenance.ts";
 import type TypeScriptDiagnosticDefinition from "./typescript-diagnostic-definition.ts";
+import TypeScriptScriptException from "./typescript-script.exception.ts";
 import type TypeScriptVendoredCatalogRecord from "./typescript-vendored-catalog-record.ts";
 import TypeScriptVendoredCatalog from "./typescript-vendored-catalog.ts";
 import TypeScriptVendoredComposition from "./typescript-vendored-composition.ts";
@@ -38,11 +39,11 @@ export default class TypeScriptDiagnosticCatalogGenerator extends Script {
     const expected = await this.createCatalogAsync();
 
     if (!await this.pathExistsAsync(TypeScriptDiagnosticCatalogGenerator.OUTPUT_FILE_PATH))
-      throw new Error(TypeScriptDiagnosticCatalogGenerator.outputMissing());
+      throw new TypeScriptScriptException(TypeScriptDiagnosticCatalogGenerator.outputMissing());
 
     const actual = await this.readFileAsync(TypeScriptDiagnosticCatalogGenerator.OUTPUT_FILE_PATH);
     if (actual !== expected)
-      throw new Error(TypeScriptDiagnosticCatalogGenerator.outputOutdated());
+      throw new TypeScriptScriptException(TypeScriptDiagnosticCatalogGenerator.outputOutdated());
   }
 
   private async createCatalogAsync(): Promise<string> {
@@ -52,7 +53,7 @@ export default class TypeScriptDiagnosticCatalogGenerator extends Script {
     const classic = this.readCatalog(diagnostics.classic);
     const native = this.readCatalog(diagnostics.native);
     if (JSON.stringify(TypeScriptVendoredComposition.of(classic, native)) !== JSON.stringify(diagnostics.composition))
-      throw new Error(TypeScriptDiagnosticCatalogGenerator.COMPOSITION_MISMATCH);
+      throw new TypeScriptScriptException(TypeScriptDiagnosticCatalogGenerator.COMPOSITION_MISMATCH);
 
     return this.renderCatalog(TypeScriptVendoredComposition.effectiveDefinitions(classic, native), [
       this.attribution(provenance.sources.typescript, TypeScriptDiagnosticCatalogGenerator.CLASSIC_SOURCE_NAME),
@@ -62,11 +63,11 @@ export default class TypeScriptDiagnosticCatalogGenerator extends Script {
 
   private readCatalog(record: TypeScriptVendoredCatalogRecord): TypeScriptVendoredCatalog {
     if (!record.localPath.startsWith(`${TypeScriptConformanceLayout.DIAGNOSTIC_DEFINITIONS}${path.posix.sep}`))
-      throw new Error(TypeScriptDiagnosticCatalogGenerator.sourceOutsideDiagnostics(record.localPath));
+      throw new TypeScriptScriptException(TypeScriptDiagnosticCatalogGenerator.sourceOutsideDiagnostics(record.localPath));
 
     const catalog = TypeScriptVendoredCatalog.read(TypeScriptConformanceLayout.pathOf(record.localPath));
     if (catalog.sha256 !== record.sha256 || catalog.entries !== record.entries)
-      throw new Error(TypeScriptDiagnosticCatalogGenerator.catalogMismatch(record.localPath));
+      throw new TypeScriptScriptException(TypeScriptDiagnosticCatalogGenerator.catalogMismatch(record.localPath));
 
     return catalog;
   }

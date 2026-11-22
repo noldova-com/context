@@ -9,6 +9,10 @@
 import { createReadStream } from "node:fs";
 import { createGunzip } from "node:zlib";
 
+import "@noldova/context.core";
+
+import TypeScriptScriptException from "./typescript-script.exception.ts";
+
 export default class TarArchiveReader {
   private static readonly BLOCK_SIZE: number = 512;
   private static readonly NAME_OFFSET: number = 0;
@@ -86,12 +90,12 @@ export default class TarArchiveReader {
       const entryPath = extendedName ?? TarArchiveReader.readName(header);
       extendedName = undefined;
       const destination = type === TarArchiveReader.DIRECTORY_TYPE ? undefined : destinationOf(entryPath);
-      if (destination === undefined) {
+      if (Object.isUndefined(destination)) {
         await this.skipAsync(storedSize);
         continue;
       }
       if (!TarArchiveReader.REGULAR_FILE_TYPES.includes(type))
-        throw new Error(TarArchiveReader.notARegularFile(entryPath, type));
+        throw new TypeScriptScriptException(TarArchiveReader.notARegularFile(entryPath, type));
       await write(destination, (await this.takeAsync(storedSize)).subarray(0, size));
     }
   }
@@ -102,7 +106,7 @@ export default class TarArchiveReader {
     while (available < length) {
       const next = await this.chunks.next();
       if (next.done === true)
-        throw new Error(TarArchiveReader.TRUNCATED);
+        throw new TypeScriptScriptException(TarArchiveReader.TRUNCATED);
       parts.push(next.value);
       available += next.value.length;
     }
@@ -118,7 +122,7 @@ export default class TarArchiveReader {
       remaining -= this.buffered.length;
       const next = await this.chunks.next();
       if (next.done === true)
-        throw new Error(TarArchiveReader.TRUNCATED);
+        throw new TypeScriptScriptException(TarArchiveReader.TRUNCATED);
       this.buffered = next.value;
     }
     this.buffered = this.buffered.subarray(remaining);
@@ -131,7 +135,7 @@ export default class TarArchiveReader {
 
     const size = Number.parseInt(text, TarArchiveReader.OCTAL_RADIX);
     if (!TarArchiveReader.OCTAL_DIGITS_PATTERN.test(text) || !Number.isSafeInteger(size))
-      throw new Error(TarArchiveReader.unreadableSize(text));
+      throw new TypeScriptScriptException(TarArchiveReader.unreadableSize(text));
     return size;
   }
 
@@ -159,11 +163,11 @@ export default class TarArchiveReader {
       const length = Number.parseInt(lengthText, TarArchiveReader.DECIMAL_RADIX);
       if (!TarArchiveReader.DECIMAL_DIGITS_PATTERN.test(lengthText) || !Number.isSafeInteger(length) || length <= space - offset + 1
         || offset + length > data.length || data[offset + length - 1] !== TarArchiveReader.PAX_RECORD_END)
-        throw new Error(TarArchiveReader.unreadablePaxRecord(offset));
+        throw new TypeScriptScriptException(TarArchiveReader.unreadablePaxRecord(offset));
       const record = data.subarray(space + 1, offset + length - 1).toString();
       const equals = record.indexOf(TarArchiveReader.PAX_ASSIGNMENT);
       if (equals < 0)
-        throw new Error(TarArchiveReader.unreadablePaxRecord(offset));
+        throw new TypeScriptScriptException(TarArchiveReader.unreadablePaxRecord(offset));
       if (record.slice(0, equals) === TarArchiveReader.PAX_PATH_KEY)
         path = record.slice(equals + 1);
       offset += length;

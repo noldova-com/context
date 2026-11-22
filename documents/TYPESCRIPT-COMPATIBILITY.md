@@ -107,7 +107,7 @@ A record holds every diagnostic the reference reported, family by family in the 
 The command line publishes the parsing and syntactic diagnostics, adds the option and global ones only when those are empty, adds the semantic ones only when all of those are empty, never publishes suggestions, and sorts and deduplicates what it publishes; a comparison takes that from the families rather than the record deciding it.
 Binder-only and declaration-emit queries report what the invocation does not and are not recorded.
 A file the reference names is recorded as the unit's index, a vendored library's name under `libraries/`, or `tsconfig.json` for the project; a message names a unit under the `/case` root every case is mounted at, the project as `/tsconfig.json`, and a library under `libraries/`.
-A case whose evaluation ends abnormally, because the reference process died, ran past its time, or took more than the memory budget, is asked about again up to a fixed number of attempts, and every such attempt is sealed in the manifest beside the answer; a case that never answers blocks the seal.
+A case whose evaluation ends abnormally, because the reference process died, ran past its time, or held more resident memory than the budget across the worker and every process it started, is asked about again up to a fixed number of attempts, and every such attempt is sealed in the manifest beside the answer; a case that never answers blocks the seal.
 CONTEXT results are compared only against those expected diagnostics, through the fields `DIAGNOSTIC-CONTRACT.md` defines and the exit criterion `LANGUAGE-SURFACE.md` owns.
 
 ### Canonical reference invocation

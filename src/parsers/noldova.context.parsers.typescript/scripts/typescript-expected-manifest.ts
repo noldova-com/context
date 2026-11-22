@@ -10,12 +10,13 @@ import { JsonReader } from "@noldova/context.json";
 
 import TypeScriptExpectedManifestTotals from "./typescript-expected-manifest-totals.ts";
 import TypeScriptExpectedRetry from "./typescript-expected-retry.ts";
+import TypeScriptScriptException from "./typescript-script.exception.ts";
 import TypeScriptVendoredSources from "./typescript-vendored-sources.ts";
 
 export default class TypeScriptExpectedManifest {
   private static readonly JSON_INDENTATION: number = 2;
   private static readonly LINE_FEED: string = "\n";
-  private static readonly SCHEMA_VERSION: number = 2;
+  private static readonly SCHEMA_VERSION: number = 1;
 
   public readonly schemaVersion: number;
   public readonly typescriptVersion: string;
@@ -43,7 +44,7 @@ export default class TypeScriptExpectedManifest {
   public static parse(json: string, identity: string): TypeScriptExpectedManifest {
     const reader = JsonReader.parse(json, identity);
     if (reader.readInteger("schemaVersion") !== TypeScriptExpectedManifest.SCHEMA_VERSION)
-      throw new Error(TypeScriptExpectedManifest.MANIFEST_MALFORMED);
+      throw new TypeScriptScriptException(TypeScriptExpectedManifest.MANIFEST_MALFORMED);
 
     const manifest = new TypeScriptExpectedManifest(
       reader.readString("typescriptVersion"),
@@ -55,7 +56,7 @@ export default class TypeScriptExpectedManifest {
       reader.readObjectArray("retries").map(t => TypeScriptExpectedRetry.read(t)),
       reader.readString("resultsSha256"));
     if (JSON.stringify(manifest) !== JSON.stringify(reader.toJson()))
-      throw new Error(TypeScriptExpectedManifest.MANIFEST_MALFORMED);
+      throw new TypeScriptScriptException(TypeScriptExpectedManifest.MANIFEST_MALFORMED);
 
     return manifest;
   }

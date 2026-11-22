@@ -6,9 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "@noldova/context.core";
+
 import { type Diagnostic, DiagnosticCategory } from "typescript/unstable/sync";
 
 import type TypeScriptReferenceIdentity from "./typescript-reference-identity.ts";
+import TypeScriptScriptException from "./typescript-script.exception.ts";
 
 export default class TypeScriptExpectedDiagnostic {
   private static readonly CATEGORY_NAMES: ReadonlyMap<DiagnosticCategory, string> = new Map<DiagnosticCategory, string>([
@@ -35,7 +38,7 @@ export default class TypeScriptExpectedDiagnostic {
     this.category = TypeScriptExpectedDiagnostic.categoryName(diagnostic.category);
     this.text = identity.ofText(diagnostic.text);
 
-    if (isLocated && diagnostic.fileName !== undefined) {
+    if (isLocated && !Object.isUndefined(diagnostic.fileName)) {
       this.file = identity.ofFile(diagnostic.fileName);
       this.start = diagnostic.pos;
       this.length = diagnostic.end - diagnostic.pos;
@@ -49,9 +52,9 @@ export default class TypeScriptExpectedDiagnostic {
     if (tags.length !== 0)
       this.tags = tags;
 
-    if (diagnostic.messageChain !== undefined && diagnostic.messageChain.length !== 0)
+    if (!Object.isUndefined(diagnostic.messageChain) && diagnostic.messageChain.length !== 0)
       this.chain = diagnostic.messageChain.map(t => TypeScriptExpectedDiagnostic.chainNode(diagnostic, t, identity));
-    if (diagnostic.relatedInformation !== undefined && diagnostic.relatedInformation.length !== 0)
+    if (!Object.isUndefined(diagnostic.relatedInformation) && diagnostic.relatedInformation.length !== 0)
       this.related = diagnostic.relatedInformation.map(t => new TypeScriptExpectedDiagnostic(t, identity, true));
   }
 
@@ -60,16 +63,16 @@ export default class TypeScriptExpectedDiagnostic {
   }
 
   private static chainNode(parent: Diagnostic, node: Diagnostic, identity: TypeScriptReferenceIdentity): TypeScriptExpectedDiagnostic {
-    if (node.fileName !== undefined && (node.fileName !== parent.fileName || node.pos !== parent.pos || node.end !== parent.end))
-      throw new Error(TypeScriptExpectedDiagnostic.chainNodeLocated(parent.code, node.code));
+    if (!Object.isUndefined(node.fileName) && (node.fileName !== parent.fileName || node.pos !== parent.pos || node.end !== parent.end))
+      throw new TypeScriptScriptException(TypeScriptExpectedDiagnostic.chainNodeLocated(parent.code, node.code));
 
     return new TypeScriptExpectedDiagnostic(node, identity, false);
   }
 
   private static categoryName(category: DiagnosticCategory): string {
     const name = TypeScriptExpectedDiagnostic.CATEGORY_NAMES.get(category);
-    if (name === undefined)
-      throw new Error(TypeScriptExpectedDiagnostic.categoryUnknown(category));
+    if (Object.isUndefined(name))
+      throw new TypeScriptScriptException(TypeScriptExpectedDiagnostic.categoryUnknown(category));
 
     return name;
   }

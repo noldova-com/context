@@ -6,6 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "@noldova/context.core";
+
+import TypeScriptScriptException from "./typescript-script.exception.ts";
+
 export default class TypeScriptDiagnosticDefinitionCategory {
   private static readonly CATEGORIES: readonly TypeScriptDiagnosticDefinitionCategory[] = ["Error", "Message", "Suggestion", "Warning"]
     .map(t => new TypeScriptDiagnosticDefinitionCategory(t));
@@ -18,8 +22,8 @@ export default class TypeScriptDiagnosticDefinitionCategory {
 
   public static of(name: string): TypeScriptDiagnosticDefinitionCategory {
     const category = TypeScriptDiagnosticDefinitionCategory.CATEGORIES.find(t => t.name === name);
-    if (category === undefined)
-      throw new Error(TypeScriptDiagnosticDefinitionCategory.unknownCategory(name));
+    if (Object.isUndefined(category))
+      throw new TypeScriptScriptException(TypeScriptDiagnosticDefinitionCategory.unknownCategory(name));
 
     return category;
   }

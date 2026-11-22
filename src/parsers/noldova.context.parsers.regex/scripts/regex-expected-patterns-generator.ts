@@ -12,6 +12,7 @@ import path from "node:path";
 
 import { API } from "typescript/unstable/sync";
 
+import "@noldova/context.core";
 import { JsonReader } from "@noldova/context.json";
 
 import Script from "../../../../scripts/script.ts";
@@ -19,6 +20,7 @@ import RegexConformanceCase from "./regex-conformance-case.ts";
 import RegexConformanceLayout from "./regex-conformance-layout.ts";
 import RegexExpectedManifest from "./regex-expected-manifest.ts";
 import type RegexExpectedRecord from "./regex-expected-record.ts";
+import RegexScriptException from "./regex-script.exception.ts";
 
 export default class RegexExpectedPatternsGenerator extends Script {
   private static readonly READING_VERSION: number = 1;
@@ -58,17 +60,17 @@ export default class RegexExpectedPatternsGenerator extends Script {
 
   public async verifyAsync(): Promise<void> {
     if (!await this.pathExistsAsync(RegexExpectedPatternsGenerator.MANIFEST_PATH) || !await this.pathExistsAsync(RegexExpectedPatternsGenerator.PATTERNS_PATH))
-      throw new Error(RegexExpectedPatternsGenerator.EXPECTED_MISSING);
+      throw new RegexScriptException(RegexExpectedPatternsGenerator.EXPECTED_MISSING);
 
     const manifest = JsonReader.parse(await this.readFileAsync(RegexExpectedPatternsGenerator.MANIFEST_PATH), RegexExpectedPatternsGenerator.MANIFEST_PATH);
     if (manifest.readString("typescriptVersion") !== await this.readTypeScriptVersionAsync())
-      throw new Error(RegexExpectedPatternsGenerator.EXPECTED_PIN_OUTDATED);
+      throw new RegexScriptException(RegexExpectedPatternsGenerator.EXPECTED_PIN_OUTDATED);
 
     if (manifest.readInteger("readingVersion") !== RegexExpectedPatternsGenerator.READING_VERSION)
-      throw new Error(RegexExpectedPatternsGenerator.EXPECTED_READING_OUTDATED);
+      throw new RegexScriptException(RegexExpectedPatternsGenerator.EXPECTED_READING_OUTDATED);
 
     if (manifest.readString("patternsSha256") !== RegexExpectedPatternsGenerator.hash(await this.readFileAsync(RegexExpectedPatternsGenerator.PATTERNS_PATH)))
-      throw new Error(RegexExpectedPatternsGenerator.EXPECTED_PATTERNS_ALTERED);
+      throw new RegexScriptException(RegexExpectedPatternsGenerator.EXPECTED_PATTERNS_ALTERED);
   }
 
   private async readRecordsAsync(): Promise<readonly RegexExpectedRecord[]> {
@@ -80,14 +82,14 @@ export default class RegexExpectedPatternsGenerator extends Script {
     const api = new API({ cwd: path.dirname(projectPath) });
     try {
       const project = api.updateSnapshot({ openProjects: [projectPath] }).getProjects()[0];
-      if (project === undefined)
-        throw new Error(RegexExpectedPatternsGenerator.PROJECT_UNAVAILABLE);
+      if (Object.isUndefined(project))
+        throw new RegexScriptException(RegexExpectedPatternsGenerator.PROJECT_UNAVAILABLE);
 
       return casePaths.map(casePath => {
         const fileName = path.resolve(RegexExpectedPatternsGenerator.CASES_DIRECTORY, casePath);
         const sourceFile = project.program.getSourceFile(fileName);
-        if (sourceFile === undefined)
-          throw new Error(RegexExpectedPatternsGenerator.caseUnread(casePath));
+        if (Object.isUndefined(sourceFile))
+          throw new RegexScriptException(RegexExpectedPatternsGenerator.caseUnread(casePath));
 
         const sha256 = createHash(RegexExpectedPatternsGenerator.HASH_ALGORITHM).update(readFileSync(fileName)).digest(RegexExpectedPatternsGenerator.HASH_ENCODING);
         return new RegexConformanceCase(casePath, sha256, sourceFile, project.program.getSyntacticDiagnostics(fileName).length > 0).read();

@@ -10,6 +10,8 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import "@noldova/context.core";
+
 import { API, type Diagnostic, type Program } from "typescript/unstable/sync";
 
 import type TypeScriptConformanceCase from "./typescript-conformance-case.ts";
@@ -20,6 +22,7 @@ import TypeScriptPlatformPackage from "./typescript-platform-package.ts";
 import TypeScriptReferenceFileSystem from "./typescript-reference-file-system.ts";
 import TypeScriptReferenceIdentity from "./typescript-reference-identity.ts";
 import TypeScriptReferenceInvocation from "./typescript-reference-invocation.ts";
+import TypeScriptScriptException from "./typescript-script.exception.ts";
 
 export default class TypeScriptReferenceCompiler {
   private static readonly SEPARATOR: string = "/";
@@ -51,12 +54,12 @@ export default class TypeScriptReferenceCompiler {
       const snapshot = api.updateSnapshot({ openProjects: [TypeScriptReferenceCompiler.CONFIG_PATH] });
       try {
         const project = snapshot.getProject(TypeScriptReferenceCompiler.CONFIG_PATH);
-        if (project === undefined)
-          throw new Error(TypeScriptReferenceCompiler.projectNotOpened(conformanceCase.path));
+        if (Object.isUndefined(project))
+          throw new TypeScriptScriptException(TypeScriptReferenceCompiler.projectNotOpened(conformanceCase.path));
 
         const sourceFileNames = project.program.getSourceFileNames();
         if (!sourceFileNames.some(t => identity.isLibrary(t)))
-          throw new Error(TypeScriptReferenceCompiler.librariesNotLoaded(conformanceCase.path, this.libraryDirectory));
+          throw new TypeScriptScriptException(TypeScriptReferenceCompiler.librariesNotLoaded(conformanceCase.path, this.libraryDirectory));
 
         const unitFileNames = sourceFileNames.filter(t => identity.isUnit(t));
 
@@ -76,7 +79,7 @@ export default class TypeScriptReferenceCompiler {
   }
 
   private createConfig(conformanceCase: TypeScriptConformanceCase): string {
-    const compilerOptions = conformanceCase.libraries === undefined
+    const compilerOptions = Object.isUndefined(conformanceCase.libraries)
       ? TypeScriptReferenceInvocation.COMPILER_OPTIONS
       : { ...TypeScriptReferenceInvocation.COMPILER_OPTIONS, [TypeScriptReferenceCompiler.LIBRARY_OPTION_NAME]: conformanceCase.libraries };
 
