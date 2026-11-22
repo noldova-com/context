@@ -45,6 +45,7 @@ Package size never justifies moving an unrelated responsibility into Core.
 | `noldova.context.collections` | Collections and their queries: `Enumerable` with the query operators, `List`, `Dictionary`, `HashSet`, `Queue`, `Stack`, their read-only views, comparers, and collection algorithms; planned: weak collections |
 | `noldova.context.text` | Additional text abstractions and accepted String augmentations; planned: ECMAScript URI encoding functions |
 | `noldova.context.json` | JSON reading; planned: serialization |
+| `noldova.context.processes` | Process identities and ending a process tree (section 8) |
 | `noldova.context.query.expressions` | Expression trees: the immutable expression classes, their factories and operators, their source text and expression replacement; no evaluation or translation |
 | `noldova.context.query` | Queries built as expression trees, the query provider contract, and the in-memory provider that runs the trees on `Enumerable`; their results are asynchronous |
 | `noldova.context.data` | The provider-independent data model: data sources, connections, transactions, migrations and their history, the change feed, and `DbContext` with its options (section 7) |
@@ -71,6 +72,7 @@ The accepted direct library dependencies are:
 | Collections | Core, Exceptions |
 | Text | Core, Exceptions, Collections |
 | JSON | Core, Exceptions |
+| Processes | Core, Exceptions |
 | Query.Expressions | Core, Exceptions |
 | Query | Core, Exceptions, Collections, Query.Expressions |
 | Data | Core, Exceptions |
@@ -115,7 +117,7 @@ The stable portable environment composes the accepted stable packages.
 Web and Worker environments are optional and share common Web packages rather than duplicating identities.
 ESNext behavior is experimental until explicitly adopted into the stable environment.
 Script Host is not an adopted Runtime environment; its vendored declarations remain conformance evidence.
-Node APIs are not TypeScript built-ins and require a separate future framework or package decision; section 7 records the one package decision taken so far, the data providers'.
+Node APIs are not TypeScript built-ins and require a separate future framework or package decision; sections 7 and 8 record the package decisions taken so far, the data providers' and Processes'.
 The exact framework identities and the complete Web package topology remain deferred.
 
 Implementation of a standard-library global begins with the complete surface inventory defined by `TYPESCRIPT-COMPATIBILITY.md`.
@@ -213,3 +215,14 @@ The port keeps, from `src/`, the connection, the pool, the entry point's options
 It leaves out `subscribe.js` (logical replication), `large.js` (large objects), `cf.js` (Cloudflare sockets), `diagnostics.js` (the diagnostics channels), and `build.js` (the tagged-template query builder), since Data.Sql renders every statement as text with parameters, and the password file.
 It reads the TLS certificate options, `sslrootcert`, `sslcert`, `sslkey` and `sslpassword`, from the files the connection string names.
 The client is internal to the package: the provider's connection is its only user, and the package's public API is the provider's.
+
+## 8. Processes and its host boundary
+
+`noldova.context.processes` ends a process and every process it started, for any package or application that starts processes, so none of them needs a test package or a way of its own.
+It depends on Core and Exceptions only, and its public API is `ProcessIdentity`, `ProcessTree`, `ProcessTreeEndOptions` and its exceptions.
+
+During the Node bootstrap it reaches the operating system through `node:child_process`, `node:events`, `node:fs/promises`, `node:net`, `node:os`, `node:path`, `node:readline` and `node:timers/promises`, and each file that imports one of them carries the Node note in `TESTING-CONTRACT.md` section 1.
+It lists processes through one lister process per system listing, started on first use and kept, unref'd, for the rest of the process's life, taking one request at a time; its script is the only part that differs by system, with the signals it sends: `sh` running `ps` on Linux and macOS, and on Windows `powershell.exe`, which defines one `NtQuerySystemInformation` call with Reflection.Emit, so no compiler runs, and reads every process with it, without WMI; it signals them with the host's `process.kill`.
+The lister gets ready within its own 60 s limit, apart from a call's limit, which starts once the lister is ready, since a fresh `powershell.exe` can take many seconds to start; one that ends is started again on the next call.
+A listing that leaves out the process that asked for it is incomplete: the lister lists again, three times at most within the call's limit, and then throws, so a partial listing never reads as an ended tree.
+When the Runtime owns processes, the package moves onto its contracts, and its public API doesn't change for it.

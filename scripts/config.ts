@@ -30,6 +30,7 @@ export default class Config {
     new PackageInfo("noldova.context.collections", "noldova.context.collections", "@noldova/context.collections"),
     new PackageInfo("noldova.context.text", "noldova.context.text", "@noldova/context.text"),
     new PackageInfo("noldova.context.json", "noldova.context.json", "@noldova/context.json"),
+    new PackageInfo("noldova.context.processes", "noldova.context.processes", "@noldova/context.processes"),
     new PackageInfo("noldova.context.query.expressions", "query/noldova.context.query.expressions", "@noldova/context.query.expressions"),
     new PackageInfo("noldova.context.query", "query/noldova.context.query", "@noldova/context.query"),
     new PackageInfo("noldova.context.data", "data/noldova.context.data", "@noldova/context.data"),

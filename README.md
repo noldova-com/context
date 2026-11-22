@@ -42,6 +42,7 @@ Each name opens the package's folder and its own README; each badge opens it on 
 | [`context.exceptions`](src/noldova.context.exceptions) | [![npm](https://badgen.net/npm/v/@noldova/context.exceptions)](https://www.npmjs.com/package/@noldova/context.exceptions) | An `Exception` base and argument guards that check a value and narrow its type in one call |
 | [`context.collections`](src/noldova.context.collections) | [![npm](https://badgen.net/npm/v/@noldova/context.collections)](https://www.npmjs.com/package/@noldova/context.collections) | Collections and their queries: `List`, `Dictionary`, `HashSet`, `Queue`, `Stack` and `Enumerable`'s query operators |
 | [`context.text`](src/noldova.context.text) | [![npm](https://badgen.net/npm/v/@noldova/context.text)](https://www.npmjs.com/package/@noldova/context.text) | A string builder, read-only views of part of a string, line endings, and Unicode identifier rules |
+| [`context.processes`](src/noldova.context.processes) | [![npm](https://badgen.net/npm/v/@noldova/context.processes)](https://www.npmjs.com/package/@noldova/context.processes) | Ends a process and every process it started, told apart from later processes by start time, and returns once they are gone, on Linux, macOS and Windows |
 
 ### Queries
 
@@ -161,9 +162,11 @@ Test files slower than the timing check's budget:
 | `noldova.context.parsers.typescript/conformance/conformance-cases.test.js` | 14500 ms | It runs every vendored TypeScript conformance case. |
 | `noldova.context.exceptions/api/packed-install.test.js` | 11700 ms | Each of its tests loads core in a child process, most after installing packed packages into an app with npm. |
 | `noldova.context.parsers.typescript/services/typescript-syntax.parser.test.js` | 7800 ms | Its long-chain tests parse inputs large enough to show the parser's work stays linear. |
+| `noldova.context.processes/services/process-lister.test.js` | 5500 ms | One test waits out a call's real 5 s margin, after which a lister that doesn't answer is ended. |
 | `noldova.context.parsers.typescript/services/parsers/declarations/parameter-list.parser.test.js` | 3900 ms | Its long-chain tests parse signature initializers large enough to show the work stays linear. |
 | `noldova.context.data.sql.postgresql/models/client/postgresql-pool.server.test.js` | 3800 ms | It runs queries against a real PostgreSQL server and waits out its real timeouts. |
 | `noldova.context.testing/services/execution/parallel-test-runner.test.js` | 3400 ms | Each of its tests starts worker processes to show the runner handling one way a worker can fail or finish. |
+| `noldova.context.processes/services/process-tree.test.js` | 3000 ms | Each of its tests starts a tree of real processes, ends it and waits until a listing shows none of it. |
 
 Each time is the file's slowest median over three runs on a Linux, a Windows and a macOS test machine, rounded up to 100 ms.
 A file stays listed while its slowest machine needs it, so the timing check may name it as stale on a faster one.

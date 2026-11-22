@@ -22,6 +22,8 @@
     "parsers/noldova.context.parsers/tests/noldova.context.parsers.tests.ctxp",
     "parsers/noldova.context.parsers.regex/src/noldova.context.parsers.regex.ctxp",
     "parsers/noldova.context.parsers.regex/tests/noldova.context.parsers.regex.tests.ctxp",
+    "noldova.context.processes/src/noldova.context.processes.ctxp",
+    "noldova.context.processes/tests/noldova.context.processes.tests.ctxp",
     "query/noldova.context.query.expressions/src/noldova.context.query.expressions.ctxp",
     "query/noldova.context.query.expressions/tests/noldova.context.query.expressions.tests.ctxp",
     "query/noldova.context.query/src/noldova.context.query.ctxp",
