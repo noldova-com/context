@@ -66,11 +66,19 @@ export class StartedTree {
     const root = spawn(process.execPath, ["--input-type=module", "--eval", StartedTree.SCRIPT, StartedTree.SCRIPT, JSON.stringify(shape), String(process.pid)],
       { detached: true, env: environment, stdio: ["ignore", "pipe", "ignore"], windowsHide: true });
     const closed = once(root, StartedTree.CLOSE_EVENT);
+    const rootProcessId = root.pid;
+    Assert.isDefined(rootProcessId, "The tree's root did not start.");
     const [line] = await once(createInterface({ input: root.stdout }), StartedTree.LINE_EVENT);
     const processIds: number[] = JSON.parse(String(line));
-    const identity = await ProcessIdentity.readAsync(root.pid ?? 0);
+    const identity = await ProcessIdentity.readAsync(rootProcessId);
     Assert.isDefined(identity);
     return new StartedTree(root, identity, processIds, closed);
+  }
+
+  public processIdAt(index: number): number {
+    const processId = this.processIds[index];
+    Assert.isDefined(processId, `The tree has no process at ${index}; its processes are ${this.processIds.join(", ")}.`);
+    return processId;
   }
 
   public async waitUntilClosedAsync(): Promise<void> {

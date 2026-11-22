@@ -172,6 +172,16 @@ declare module "@noldova/context.testing/services/timing/system-clock.js" {
   }
 }
 
+declare module "@noldova/context.testing/services/execution/run-processes.js" {
+  import type { ProcessIdentity } from "@noldova/context.processes";
+
+  export class RunProcesses {
+    public static startLister(): void;
+    public static endDescendantsAsync(): Promise<readonly ProcessIdentity[]>;
+    public static requireListed(identity: ProcessIdentity | undefined): ProcessIdentity;
+  }
+}
+
 declare module "@noldova/context.testing/services/execution/test-run-supervisor.js" {
   import type { Worker, WorkerOptions } from "node:worker_threads";
 

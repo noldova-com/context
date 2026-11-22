@@ -55,7 +55,7 @@ export class ProcessTreeTests {
 
     const ended = await ProcessTree.endAsync(tree.identity);
 
-    ProcessTreeTests.assertEndedEach(isWindows ? [tree.identity.processId] : [tree.identity.processId, tree.processIds[2] ?? 0], ended);
+    ProcessTreeTests.assertEndedEach(isWindows ? [tree.identity.processId] : [tree.identity.processId, tree.processIdAt(2)], ended);
     Assert.isTrue(await StartedTree.areGoneAsync(tree.processIds));
     await tree.waitUntilClosedAsync();
   }
@@ -69,7 +69,7 @@ export class ProcessTreeTests {
     const group = await ProcessLister.useAsync(ProcessTreeTests.LISTING_LIMIT_MILLISECONDS,
       async t => (await t.listAsync()).filter(entry => entry.groupId === tree.identity.processId));
 
-    const expected = isWindows ? [] : [tree.identity.processId, tree.processIds[2] ?? 0];
+    const expected = isWindows ? [] : [tree.identity.processId, tree.processIdAt(2)];
     Assert.areEqual(expected.length, group.length);
     Assert.isTrue(expected.every(processId => group.some(t => t.processId === processId)));
     Assert.isTrue(group.every(t => t.startTime >= tree.identity.startTime));

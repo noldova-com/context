@@ -9,7 +9,8 @@
     ],
     "packages": [
       "noldova.context.core",
-      "noldova.context.exceptions"
+      "noldova.context.exceptions",
+      "noldova.context.processes"
     ]
   }
 }

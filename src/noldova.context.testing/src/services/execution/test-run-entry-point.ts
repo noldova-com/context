@@ -13,8 +13,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import "@noldova/context.core";
-import { ArgumentNullException, ExceptionOptions } from "@noldova/context.exceptions";
-import { ProcessIdentity, ProcessTree } from "@noldova/context.processes";
+import { ExceptionOptions } from "@noldova/context.exceptions";
 
 import { TestingException } from "../../exceptions/testing.exception.js";
 import { TestProject } from "../../models/discovery/test-project.js";
@@ -23,6 +22,7 @@ import { TestRunTotals } from "../../models/results/test-run-totals.js";
 import { TestTimeRecord } from "../../models/timing/test-time-record.js";
 import { Resources } from "../../resources.js";
 import { TestConsoleReporter } from "../reporting/test-console-reporter.js";
+import { RunProcesses } from "./run-processes.js";
 import { TestRunSupervisor } from "./test-run-supervisor.js";
 
 export class TestRunEntryPoint {
@@ -51,7 +51,7 @@ export class TestRunEntryPoint {
       const timeoutMilliseconds = TestRunSupervisor.readTimeoutMilliseconds(process.env[Resources.timeoutVariable]);
       supervisor = new TestRunSupervisor(timeoutMilliseconds, testProjects, filters, reporter, TestRunSupervisor.readCoverageDirectory(), undefined, undefined,
         undefined, undefined, undefined, stopLimitMilliseconds);
-      supervisor.whenWorkerLeftBehind(() => this.startProcessLister());
+      supervisor.whenWorkerLeftBehind(() => RunProcesses.startLister());
       reporter.start();
       const result = await supervisor.runAsync();
       const totals = new TestRunTotals(result.passed, result.failed, result.skipped, supervisor.elapsedMilliseconds);
@@ -86,9 +86,7 @@ export class TestRunEntryPoint {
     process.exitCode = 1;
     console.error(unendedWorkersMessage);
     try {
-      const run = await ProcessIdentity.readAsync(process.pid);
-      ArgumentNullException.throwIfNull(run, Resources.runProcessName);
-      const ended = await ProcessTree.endDescendantsAsync(run);
+      const ended = await RunProcesses.endDescendantsAsync();
       console.error(Resources.abandonedProcessesEnded(ended.map(t => t.processId)));
       return await supervisor.waitForUnendedWorkersAsync();
     }
@@ -96,10 +94,6 @@ export class TestRunEntryPoint {
       this.writeError(new TestingException(Resources.abandonedProcessesNotEnded, new ExceptionOptions(error)));
       return false;
     }
-  }
-
-  private startProcessLister(): void {
-    void Promise.allSettled([ProcessIdentity.readAsync(process.pid)]);
   }
 
   private writeError(error: unknown): void {

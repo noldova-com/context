@@ -36,7 +36,6 @@ export class Resources {
   public static readonly errorEvent: string = "error";
   public static readonly exitEvent: string = "exit";
   public static readonly killSignal: "SIGKILL" = "SIGKILL";
-  public static readonly runProcessName: string = "run";
   public static readonly testRunWorkerFileName: string = "./test-run-worker-entry-point.js";
   public static readonly testWorkerGraceMilliseconds: number = 250;
   public static readonly testWorkerStartMilliseconds: number = 5_000;
@@ -265,6 +264,10 @@ export class Resources {
   public static testWorkersNotEnded(workerCount: number, limitMilliseconds: number, testNames: readonly string[]): string {
     const running = testNames.length === 0 ? String.empty : `, running ${testNames.join(", ")}`;
     return `Test workers that could not be ended within ${limitMilliseconds} milliseconds of being stopped: ${workerCount}${running}.`;
+  }
+
+  public static runProcessNotListed(processId: number): string {
+    return `The process listing left out the run's own process, ${processId}, so the processes running under it could not be found.`;
   }
 
   public static abandonedProcessesEnded(processIds: readonly number[]): string {
