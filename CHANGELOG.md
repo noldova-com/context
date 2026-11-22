@@ -6,6 +6,28 @@ Each version's section is written by the pull request that changes the version, 
 Every package moves to each version together, as [VERSIONING-AND-COMPATIBILITY.md](documents/VERSIONING-AND-COMPATIBILITY.md) says.
 Versions before 0.0.6 are described in their version pull requests.
 
+## 0.0.13
+
+CONTEXT gets a package that ends a process tree, and its test runner, PostgreSQL provider, JSON, Text and SQLite packages get fixes.
+
+- `@noldova/context.processes` (new): `ProcessTree.endAsync(root, options?)` ends a process and every process it started, on Linux, macOS and Windows, and returns the identities it ended once none of them runs, or throws `ProcessTreeEndException` naming the survivors when its limit passes; `ProcessIdentity` is a process id with its start time, and `ProcessIdentity.readAsync(processId)` reads a running process's (#240).
+- `@noldova/context.testing`:
+  - a failed test whose error isn't an `AssertFailedException` shows the error's stack frames and each `cause` in turn with its own frames (#238);
+  - discovery fails on a base class's marked members, which never ran, and on a data-less test method with default or rest parameters, and a throw from work a test left fails the run naming the test (#225);
+  - a test's promise that rejects unhandled after the test ended fails the command-line run at the end of whichever class is running, a later class included (#211);
+  - when the run's listing of the processes a stopped test left leaves out the run's own process, the run lists again, three times at most within 65 s, then fails naming each listing; the line it writes says how it listed (#241, #239).
+- `@noldova/context.data.sql.postgresql`:
+  - the default `sslmode` is `prefer` in place of `disable` (#214);
+  - bytes after the startup's last message reach the session; an array deeper than 6 dimensions fails, read with `MalformedMessageException` and sent with `DataException`, so a cyclic array parameter no longer recurses forever; and an answer to the SSL request other than exactly `S` or `N` fails with `MalformedMessageException` (#214);
+  - a callback that throws fails the operation it belongs to, and a date or time that isn't ISO fails with a `DataException` in place of being read by `new Date(text)` (#220);
+  - a lease's `closed` resolves once its released connection is back, in place of staying pending (#224);
+  - `PostgreSQLClientException`, extending `DataException`, is the base of the package's own exceptions; `PostgreSQLException` stays the server's error (#228);
+  - `Backend.readRowDescription` and `Backend.readDataRow`, which nothing called, are removed (#214), and per-row work is faster with the same behavior (#217).
+- `@noldova/context.json`: a number too large to be finite and an integer outside the safe range fail with their own messages, and a path key that isn't a plain name is quoted, as `$["a.b"]` (#221).
+- `@noldova/context.text`: a second loaded copy fails with an `Error` saying two copies are loaded (#221).
+- `@noldova/context.data.sql.sqlite`: `prepare` refuses text holding more than one statement, which `node:sqlite` would run only the first of (#221).
+- No other package's behavior changes; `@noldova/context.collections`, `diagnostics` and `exceptions` get import lines in their declaration examples (#221).
+
 ## 0.0.12
 
 Every CONTEXT package is published again at one version, including the seven that 0.0.11's release left out.
