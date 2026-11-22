@@ -39,6 +39,24 @@ export class FrameReaderTests {
   }
 
   @TestMethod
+  public givesWhatItHasNotReadOncePausedAfterAFrameSplitAcrossChunks(): void {
+    const frames: string[] = [];
+    const reader: FrameReader = new FrameReader(type => {
+      frames.push(String.fromCharCode(type));
+      reader.pause();
+    }, () => undefined);
+    const ready = M.readyForQuery("I");
+
+    reader.push(ready.subarray(0, 3));
+    reader.push(Buffer.concat([ready.subarray(3), M.parameterStatus("TimeZone", "UTC")]));
+    reader.push(M.noData());
+
+    Assert.areEqual("Z", frames.join(","));
+    Assert.areEqual(Buffer.concat([M.parameterStatus("TimeZone", "UTC"), M.noData()]).toString("hex"), reader.takeRemainder().toString("hex"));
+    Assert.areEqual(0, reader.takeRemainder().length);
+  }
+
+  @TestMethod
   public ownsEveryFrameWhenNotShared(): void {
     const owned: boolean[] = [];
     const reader: FrameReader = new FrameReader((_type, data) => owned.push(reader.isOwning(data)), () => undefined);

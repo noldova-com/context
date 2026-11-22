@@ -30,7 +30,8 @@ contract.
 
 ## SSL
 
-The connection string's `sslmode` takes these modes:
+The connection string's `sslmode` takes these modes, and is `prefer` when
+neither it nor the `ssl` setting is given:
 
 - `disable`: no encryption.
 - `prefer`: encrypts when the server supports it, without verifying the

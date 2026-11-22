@@ -190,7 +190,7 @@ export class ClientOptionsParser {
     if (query.get(Resources.sslRootCertOption) === Resources.systemCertificates)
       return SslMode.VerifyFull;
 
-    return query.get(Resources.sslModeOption) ?? query.get(Resources.sslOption) ?? false;
+    return query.get(Resources.sslModeOption) ?? query.get(Resources.sslOption) ?? SslMode.Prefer;
   }
 
   private static fromQuery(query: ReadonlyMap<string, string>): OptionValues {

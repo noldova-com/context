@@ -96,7 +96,6 @@ export class BackendTests {
 
   @TestMethod
   public refusesMessagesWhoseFieldsPassTheirEnd(): void {
-    const row = M.dataRow(["7"]);
     const description = M.rowDescription([["a", 23]]);
     const types = M.parameterDescription([23, 25]);
     const unterminated = M.message("T", Buffer.from("0001616263", "hex"));
@@ -107,10 +106,9 @@ export class BackendTests {
     Assert.throws(() => Backend.readFieldLength(Buffer.from("fffffffe", "hex"), 0, 4), MalformedMessageException);
     Assert.throws(() => Backend.readFieldLength(Buffer.from("0000000561", "hex"), 0, 5), MalformedMessageException);
     Assert.throws(() => Backend.readFieldLength(Buffer.from("000000", "hex"), 0, 3), MalformedMessageException);
-    Assert.throws(() => Backend.readDataRow(row, 0, row.length - 1), MalformedMessageException);
     Assert.throws(() => Backend.readColumns(description, 0, description.length - 1, name => name), MalformedMessageException);
     Assert.throws(() => Backend.readColumnTypes(description, 0, 8), MalformedMessageException);
-    Assert.throws(() => Backend.readRowDescription(unterminated, 0, unterminated.length), MalformedMessageException);
+    Assert.throws(() => Backend.readColumns(unterminated, 0, unterminated.length, name => name), MalformedMessageException);
     Assert.throws(() => Backend.readParameterDescription(types, 0, types.length - 1), MalformedMessageException);
     Assert.throws(() => Backend.readReadyForQuery(empty, 0, empty.length), MalformedMessageException);
     Assert.throws(() => Backend.readParameterStatus(status, 0, status.length), MalformedMessageException);

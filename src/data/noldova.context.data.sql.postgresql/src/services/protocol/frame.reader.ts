@@ -72,6 +72,15 @@ export class FrameReader {
     this.run();
   }
 
+  public takeRemainder(): Buffer {
+    const remainder = this.chunks.splice(0);
+    if (!Object.isNull(this.data))
+      remainder.unshift(this.data.subarray(this.at));
+    this.data = null;
+    this.at = 0;
+    return Buffer.concat(remainder);
+  }
+
   private copy(data: Buffer): Buffer {
     const copy = Buffer.from(data);
     this.owned.add(copy);

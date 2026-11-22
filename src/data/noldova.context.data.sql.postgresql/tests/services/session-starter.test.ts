@@ -274,6 +274,33 @@ export class SessionStarterTests {
   }
 
   @TestMethod
+  public async keepsWhatFollowsAReadyForQuerySplitAcrossReadsAsync(): Promise<void> {
+    const server = await FakeServer.startAsync();
+    const ready = M.readyForQuery("I");
+    server.onStartup = peer => peer.send(peer.authentication(3), peer.authentication(0), ready.subarray(0, 3));
+    server.onMessage = peer => peer.send(ready.subarray(3), M.parameterStatus("TimeZone", "UTC"));
+
+    const session = await new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "pencil", 0), new DerivedKeys()).startAsync();
+
+    Assert.areEqual(M.parameterStatus("TimeZone", "UTC").toString("hex"), session.rest.toString("hex"));
+    Assert.areEqual("I", session.status);
+    await SessionStarterTests.endAsync(session);
+    await SessionStarterTests.closeAsync(server);
+  }
+
+  @TestMethod
+  public async leavesAnErrorAfterReadyForTheSessionAsync(): Promise<void> {
+    const server = await FakeServer.startAsync();
+    server.onStartup = peer => peer.send(peer.authentication(0), M.readyForQuery("I"), M.error("57P01", "terminating connection", "FATAL"));
+
+    const session = await new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0), new DerivedKeys()).startAsync();
+
+    Assert.areEqual(M.error("57P01", "terminating connection", "FATAL").toString("hex"), session.rest.toString("hex"));
+    await SessionStarterTests.endAsync(session);
+    await SessionStarterTests.closeAsync(server);
+  }
+
+  @TestMethod
   public async failsWhenTheServerClosesOrBreaksTheStartupAsync(): Promise<void> {
     const server = await FakeServer.startAsync();
     const options = SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0);
@@ -308,6 +335,20 @@ export class SessionStarterTests {
     server.peers[0]?.socket.end();
 
     Assert.isInstanceOf(await closed, ConnectionClosedException);
+    await SessionStarterTests.closeAsync(server);
+  }
+
+  @TestMethod
+  public async refusesAnSslAnswerOtherThanOneAcceptOrRefuseAsync(): Promise<void> {
+    const server = await FakeServer.startAsync();
+    server.ssl = "silent";
+    const options = SessionStarterTests.fake(server, SslMode.Prefer, ChannelBinding.Prefer, "", 0);
+
+    server.onNegotiate = peer => peer.socket.write("E");
+    await Assert.throwsAsync(() => new SessionStarter(options, new DerivedKeys()).startAsync(), MalformedMessageException);
+    server.onNegotiate = peer => peer.socket.write("NR");
+    await Assert.throwsAsync(() => new SessionStarter(options, new DerivedKeys()).startAsync(), MalformedMessageException);
+
     await SessionStarterTests.closeAsync(server);
   }
 

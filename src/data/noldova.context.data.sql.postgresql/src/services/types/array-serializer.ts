@@ -14,12 +14,21 @@ import { Resources } from "../../resources.js";
 import type { ValueSerializer } from "../../types/value-serializer.js";
 
 export class ArraySerializer {
+  private static readonly MAX_DIMENSIONS: number = 6;
+
   public static serialize(values: readonly unknown[], serialize: ValueSerializer, delimiter: string = Resources.arrayDelimiter, undefinedValue: unknown = undefined): string {
-    const items = values.map(item => ArraySerializer.serializeItem(item, serialize, delimiter, undefinedValue));
+    return ArraySerializer.serializeLevel(values, serialize, delimiter, undefinedValue, 1);
+  }
+
+  private static serializeLevel(values: readonly unknown[], serialize: ValueSerializer, delimiter: string, undefinedValue: unknown, dimension: number): string {
+    if (dimension > ArraySerializer.MAX_DIMENSIONS)
+      throw new DataException(Resources.arrayTooDeep);
+
+    const items = values.map(item => ArraySerializer.serializeItem(item, serialize, delimiter, undefinedValue, dimension));
     return Resources.arrayStart + items.join(delimiter) + Resources.arrayEnd;
   }
 
-  private static serializeItem(item: unknown, serialize: ValueSerializer, delimiter: string, undefinedValue: unknown): string {
+  private static serializeItem(item: unknown, serialize: ValueSerializer, delimiter: string, undefinedValue: unknown, dimension: number): string {
     const typed = item instanceof TypedParameter;
     let value = typed ? item.value : item;
     if (Object.isUndefined(value)) {
@@ -29,7 +38,7 @@ export class ArraySerializer {
     }
 
     if (Array.isArray(value) && !typed)
-      return ArraySerializer.serialize(value, serialize, delimiter, undefinedValue);
+      return ArraySerializer.serializeLevel(value, serialize, delimiter, undefinedValue, dimension + 1);
     if (Object.isNull(value))
       return Resources.nullLiteral;
 

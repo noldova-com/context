@@ -1042,11 +1042,9 @@ declare module "@noldova/context.data.sql.postgresql/services/protocol/backend.j
     public static readFieldCount(data: Buffer, start: number, end: number): number;
     public static readFieldLength(data: Buffer, at: number, end: number): number;
     public static readError(data: Buffer, start: number, end: number): ReadonlyMap<string, string>;
-    public static readRowDescription(data: Buffer, start: number, end: number): readonly { readonly name: string; readonly type: number }[];
     public static readColumns<T>(data: Buffer, start: number, end: number, make: (name: string, table: number, number: number, type: number) => T): T[];
     public static readColumnTypes(data: Buffer, start: number, end: number): number[];
     public static readParameterDescription(data: Buffer, start: number, end: number): number[];
-    public static readDataRow(data: Buffer, start: number, end: number): readonly (string | null)[];
     public static readCommandComplete(data: Buffer, start: number, end: number): { readonly command: string; readonly count: number | null };
     public static readReadyForQuery(data: Buffer, start: number, end: number): string;
     public static readParameterStatus(data: Buffer, start: number, end: number): ParameterStatus;
@@ -1067,6 +1065,7 @@ declare module "@noldova/context.data.sql.postgresql/services/protocol/frame.rea
     public setOwning(owning: boolean): void;
     public pause(): void;
     public resume(): void;
+    public takeRemainder(): Buffer;
   }
 }
 

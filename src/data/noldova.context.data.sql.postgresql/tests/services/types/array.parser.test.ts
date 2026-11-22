@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { MalformedMessageException } from "@noldova/context.data.sql.postgresql/exceptions/malformed-message.exception.js";
 import { ArrayParser } from "@noldova/context.data.sql.postgresql/services/types/array.parser.js";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
@@ -32,6 +33,13 @@ export class ArrayParserTests {
   @TestMethod
   public skipsTheDimensionPrefix(): void {
     Assert.areEqual("[5,6]", JSON.stringify(ArrayParser.parse("[1:2]={5,6}", Number)));
+  }
+
+  @TestMethod
+  public parsesSixDimensionsAndRefusesASeventh(): void {
+    Assert.areEqual("[[[[[[1]]]]]]", JSON.stringify(ArrayParser.parse("{{{{{{1}}}}}}", Number)));
+    Assert.throws(() => ArrayParser.parse("{{{{{{{1}}}}}}}", Number), MalformedMessageException);
+    Assert.throws(() => ArrayParser.parse("{".repeat(100_000), Number), MalformedMessageException);
   }
 
   @TestMethod

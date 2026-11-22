@@ -17,6 +17,7 @@ import { ExceptionOptions } from "@noldova/context.exceptions";
 import { BackendMessage } from "../enums/backend-message.js";
 import { SslMode } from "../enums/ssl-mode.js";
 import { ConnectionClosedException } from "../exceptions/connection-closed.exception.js";
+import { MalformedMessageException } from "../exceptions/malformed-message.exception.js";
 import { PostgreSQLException } from "../exceptions/postgresql.exception.js";
 import { BackendKey } from "../models/backend-key.js";
 import { ClientTimers } from "../models/client/client-timers.js";
@@ -33,6 +34,7 @@ import { TlsOptionsReader } from "./tls-options.reader.js";
 
 export class SessionStarter {
   private static readonly sslAccepted: number = 83;
+  private static readonly sslRefused: number = 78;
   private static readonly keepAliveSeconds: number = 60;
 
   private readonly options: ConnectionOptions;
@@ -117,12 +119,16 @@ export class SessionStarter {
     if (this.options.sslMode === SslMode.Disable)
       return;
 
-    const answer = new Promise<number>((resolve, reject) => {
-      socket.onData = data => resolve(data.readUInt8(0));
+    const answer = new Promise<Buffer>((resolve, reject) => {
+      socket.onData = data => resolve(data);
       socket.onClose = error => reject(error ?? new ConnectionClosedException(false, this.options.host, this.options.port, null));
     });
     socket.write(this.frontend.createSslRequest());
-    if (await answer === SessionStarter.sslAccepted) {
+    const [answered, ...others] = await answer;
+    if (others.length > 0 || (answered !== SessionStarter.sslAccepted && answered !== SessionStarter.sslRefused))
+      throw new MalformedMessageException();
+
+    if (answered === SessionStarter.sslAccepted) {
       await socket.upgradeAsync(await TlsOptionsReader.readAsync(this.options));
       return;
     }
@@ -162,7 +168,7 @@ export class SessionStarter {
           else if (type === BackendMessage.ErrorResponse)
             fail(new PostgreSQLException(Backend.readError(data, start, end)));
           else if (type === BackendMessage.ReadyForQuery) {
-            const rest = Buffer.from(data.subarray(end));
+            frames.pause();
             const status = Backend.readReadyForQuery(data, start, end);
             authenticating.then(() => {
               if (!authenticator.isAuthenticated) {
@@ -173,7 +179,7 @@ export class SessionStarter {
               socket.onData = () => undefined;
               socket.onClose = () => undefined;
               socket.pause();
-              resolve(new StartedSession(socket, rest, parameters, backend, status, this.options.host, this.options.port, this));
+              resolve(new StartedSession(socket, frames.takeRemainder(), parameters, backend, status, this.options.host, this.options.port, this));
             }, () => undefined);
           }
         }

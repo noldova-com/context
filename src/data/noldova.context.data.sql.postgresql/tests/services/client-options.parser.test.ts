@@ -68,7 +68,7 @@ export class ClientOptionsParserTests {
     Assert.areEqual(5432, parsed.connection.port);
     Assert.areEqual("app", parsed.connection.database);
     Assert.areEqual("", parsed.connection.password);
-    Assert.areEqual("disable", parsed.connection.sslMode);
+    Assert.areEqual("prefer", parsed.connection.sslMode);
     Assert.areEqual("prefer", parsed.connection.channelBinding);
     Assert.areEqual(30, parsed.connection.connectTimeout);
     Assert.areEqual(10, parsed.options.max);

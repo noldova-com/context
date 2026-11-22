@@ -19,6 +19,17 @@ export class ArraySerializerTests {
   }
 
   @TestMethod
+  public serializesSixDimensionsAndRefusesASeventhOrACycle(): void {
+    const cycle: unknown[] = [];
+    cycle.push(cycle);
+
+    Assert.areEqual("{{{{{{\"1\"}}}}}}", ArraySerializer.serialize([[[[[[1]]]]]], String));
+    const deep = Assert.throws(() => ArraySerializer.serialize([[[[[[[1]]]]]]], String), DataException);
+    Assert.throws(() => ArraySerializer.serialize(cycle, String), DataException);
+    Assert.areEqual("An array value nests more than the 6 dimensions PostgreSQL allows.", deep.message);
+  }
+
+  @TestMethod
   public escapesQuotesAndBackslashes(): void {
     Assert.areEqual("{\"a\\\"b\\\\c\"}", ArraySerializer.serialize(["a\"b\\c"], String));
   }

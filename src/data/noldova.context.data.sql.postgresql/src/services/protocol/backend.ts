@@ -17,7 +17,6 @@ import { BackendKey } from "../../models/backend-key.js";
 import { CommandResult } from "../../models/command-result.js";
 import { Notification } from "../../models/notification.js";
 import { ParameterStatus } from "../../models/parameter-status.js";
-import { RowColumn } from "../../models/row-column.js";
 import { Resources } from "../../resources.js";
 
 export class Backend {
@@ -78,10 +77,6 @@ export class Backend {
     return length;
   }
 
-  public static readRowDescription(data: Buffer, start: number, end: number): readonly RowColumn[] {
-    return Backend.readColumns(data, start, end, (name, _table, _number, type) => new RowColumn(name, type));
-  }
-
   public static readColumns<T>(data: Buffer, start: number, end: number, make: (name: string, table: number, number: number, type: number) => T): T[] {
     const count = Backend.readFieldCount(data, start, end);
     const columns: T[] = [];
@@ -107,23 +102,6 @@ export class Backend {
       oids.push(data.readUInt32BE(start + 7 + index * 4));
 
     return oids;
-  }
-
-  public static readDataRow(data: Buffer, start: number, end: number): readonly (string | null)[] {
-    const count = Backend.readFieldCount(data, start, end);
-    const values: (string | null)[] = [];
-    for (let index = start + 7; values.length < count;) {
-      const length = Backend.readFieldLength(data, index, end);
-      index += 4;
-      if (length === -1)
-        values.push(null);
-      else {
-        values.push(Backend.readText(data, index, index + length));
-        index += length;
-      }
-    }
-
-    return values;
   }
 
   public static readCommandComplete(data: Buffer, start: number, end: number): CommandResult {

@@ -15,6 +15,7 @@ export class Resources {
   public static readonly arrayDelimiter: string = ",";
   public static readonly arrayEnd: string = "}";
   public static readonly arrayStart: string = "{";
+  public static readonly arrayTooDeep: string = "An array value nests more than the 6 dimensions PostgreSQL allows.";
   public static readonly authenticationIncomplete: string = "The server was ready before it accepted the authentication.";
   public static readonly baseColumn: string = "base";
   public static readonly beginKeyword: RegExp = /\bbegin\b/i;

@@ -72,13 +72,11 @@ export class ProtocolTests {
       Buffer.from("0002", "hex"),
       Buffer.from("id\0"), Buffer.from("000000000000" + "00000014" + "0008" + "ffffffff" + "0000", "hex"),
       Buffer.from("text\0"), Buffer.from("000000000000" + "00000019" + "ffff" + "ffffffff" + "0000", "hex")]));
-    const row = ProtocolTests.message("D", Buffer.from("0002" + "00000001" + "37" + "ffffffff", "hex"));
     const ready = ProtocolTests.message("Z", "T");
     const status = ProtocolTests.message("S", "TimeZone\0UTC\0");
     const error = ProtocolTests.message("E", "SERROR\0C23505\0Mduplicate key\0nIX_notes\0\0");
 
-    Assert.areEqual("id:20,text:25", Backend.readRowDescription(description, 0, description.length).map(t => `${t.name}:${t.type}`).join(","));
-    Assert.areEqual("7,null", Backend.readDataRow(row, 0, row.length).map(t => t ?? "null").join(","));
+    Assert.areEqual("id:20,text:25", Backend.readColumns(description, 0, description.length, (name, _table, _number, type) => `${name}:${String(type)}`).join(","));
     const insert = Backend.readCommandComplete(ProtocolTests.message("C", "INSERT 0 3\0"), 0, 16);
     Assert.areEqual("INSERT", insert.command);
     Assert.areEqual(3, insert.count);

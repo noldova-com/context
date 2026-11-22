@@ -8,10 +8,12 @@
 
 import "@noldova/context.core";
 
+import { MalformedMessageException } from "../../exceptions/malformed-message.exception.js";
 import { Resources } from "../../resources.js";
 import type { ValueParser } from "../../types/value-parser.js";
 
 export class ArrayParser {
+  private static readonly MAX_DIMENSIONS: number = 6;
   private static readonly openBracket: number = 91;
   private static readonly equals: number = 61;
   private static readonly openBrace: number = 123;
@@ -32,16 +34,19 @@ export class ArrayParser {
   }
 
   public static parse(text: string, parse: ValueParser | null, delimiter: string = Resources.arrayDelimiter): unknown[] {
-    return new ArrayParser(text, parse, delimiter).parseLevel();
+    return new ArrayParser(text, parse, delimiter).parseLevel(1);
   }
 
-  private parseLevel(): unknown[] {
+  private parseLevel(dimension: number): unknown[] {
+    if (dimension > ArrayParser.MAX_DIMENSIONS)
+      throw new MalformedMessageException();
+
     const values: unknown[] = [];
     const length = this.text.length;
     this.at += 1;
     while (this.at < length && this.readCode() !== ArrayParser.closeBrace) {
       if (this.readCode() === ArrayParser.openBrace)
-        values.push(this.parseLevel());
+        values.push(this.parseLevel(dimension + 1));
       else if (this.readCode() === ArrayParser.quote) {
         let value = "";
         for (this.at += 1; this.at < length && this.readCode() !== ArrayParser.quote; this.at += 1) {
