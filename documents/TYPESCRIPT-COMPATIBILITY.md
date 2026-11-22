@@ -108,6 +108,7 @@ The command line publishes the parsing and syntactic diagnostics, adds the optio
 Binder-only and declaration-emit queries report what the invocation does not and are not recorded.
 A file the reference names is recorded as the unit's index, a vendored library's name under `libraries/`, or `tsconfig.json` for the project; a message names a unit under the `/case` root every case is mounted at, the project as `/tsconfig.json`, and a library under `libraries/`.
 A case whose evaluation ends abnormally, because the reference process died, ran past its time, or held more resident memory than the budget across the worker and every process it started, is asked about again up to a fixed number of attempts, and every such attempt is sealed in the manifest beside the answer; a case that never answers blocks the seal.
+One process lister runs for the whole generation and answers each reading with every process's id, parent and resident memory: a long-lived shell that runs `ps` once per reading on Linux and macOS, and one `cscript` process that queries WMI on Windows, so a reading starts no process on Windows and one `ps` on Linux and macOS.
 CONTEXT results are compared only against those expected diagnostics, through the fields `DIAGNOSTIC-CONTRACT.md` defines and the exit criterion `LANGUAGE-SURFACE.md` owns.
 
 ### Canonical reference invocation

@@ -6,11 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-/**
- * Supplies test-local declarations for installed internal modules.
- * Keep this file a script so the public API stays as the package declares it.
- */
-
 declare module "@noldova/context.testing/enums/test-worker-message-kind.js" {
   export enum TestWorkerMessageKind {
     Imported = "Imported",

@@ -6,16 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-/**
- * Supplies test-local types for the installed package's internal modules and extensions.
- * These declarations must stay synchronized with their implementations;
- * they do not enforce access permissions or ship with production code.
- *
- * This file is a script, not a module: it must contain no top-level import or
- * export. Top-level blocks declare internal modules; a nested module block
- * augments an existing module without replacing its public declarations.
- */
-
 declare module "@noldova/context.parsers.regex/models/regex-group-name.js" {
   export class RegexGroupName {
     public readonly value: string;

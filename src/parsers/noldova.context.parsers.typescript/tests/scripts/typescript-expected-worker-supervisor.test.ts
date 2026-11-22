@@ -14,17 +14,14 @@ import { ScriptDriver } from "../fixtures/scripts/script-driver.fixture.js";
 export class TypeScriptExpectedWorkerSupervisorTests {
   private static readonly BUDGET_BYTES: number = ScriptDriver.GROWN_BYTES / 2;
   private static readonly START_EVENT: string = "console.log(JSON.stringify({ event: \"start\", path: \"case.ts\" }));";
-  // Answers its case once the gate file, its batch path, exists.
   private static readonly GATED_WORKER: string = "const fs = require(\"node:fs\"); const gate = process.argv[2]; " +
     "fs.writeFileSync(gate + \".pid\", String(process.pid)); " +
     `${TypeScriptExpectedWorkerSupervisorTests.START_EVENT} ` +
     "const wait = () => { if (!fs.existsSync(gate)) { setTimeout(wait, 10); return; } " +
     "console.log(JSON.stringify({ event: \"result\", path: \"case.ts\", record: { path: \"case.ts\" } })); }; wait();";
-  // Starts grow.cjs from its case and never answers.
   private static readonly GROWING_WORKER: string = `${TypeScriptExpectedWorkerSupervisorTests.START_EVENT} ` +
     "require(\"node:child_process\").spawn(process.execPath, [require(\"node:path\").join(__dirname, \"grow.cjs\")], { stdio: \"ignore\" }); " +
     "setInterval(() => undefined, 1_000);";
-  // Answers each listing with no process until the worker has written its process id, then ends.
   private static readonly ENDING_LISTER: string = "const fs = require(\"node:fs\"); const pidPath = process.argv[1]; console.log(\"ready\"); " +
     "process.stdin.on(\"data\", () => { if (fs.existsSync(pidPath)) process.exit(1); else console.log(\"end\"); });";
   private static readonly WORKER_FILE_NAME: string = "worker.cjs";
@@ -120,7 +117,6 @@ export class TypeScriptExpectedWorkerSupervisorTests {
     Assert.areEqual("reason undefined, kills 0", output);
   }
 
-  // Holds the first reading, which opens the gate, until the worker has answered and exited; then settles it and counts the kills that follow.
   private static lateReadingDriver(settle: string): string {
     return `
       const supervisor = await load("typescript-expected-worker-supervisor.ts");

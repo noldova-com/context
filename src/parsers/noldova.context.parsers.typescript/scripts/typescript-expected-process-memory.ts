@@ -20,9 +20,6 @@ import TypeScriptExpectedProcessListing from "./typescript-expected-process-list
 import TypeScriptExpectedProcessRow from "./typescript-expected-process-row.ts";
 import TypeScriptScriptException from "./typescript-script.exception.ts";
 
-// One lister runs for the whole generation and answers each request with every process's id, parent and resident memory:
-// on Linux and macOS a long-lived shell that runs one ps for each reading, and on Windows one cscript that queries WMI in its own process,
-// so a reading starts nothing there.
 export default class TypeScriptExpectedProcessMemory {
   public static readonly SCRIPT_ARGUMENT: string = "<listing script>";
   private static readonly CLOSE_EVENT: string = "close";

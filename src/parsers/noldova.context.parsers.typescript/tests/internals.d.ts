@@ -6,11 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-/**
- * Supplies test-local declarations for installed internal modules and extensions.
- * Keep this file a script; nested augmentation preserves the public API.
- */
-
 declare module "@noldova/context.parsers.typescript/models/diagnostics/typescript-diagnostic-templates.js" {
   import type { DiagnosticTemplate } from "@noldova/context.diagnostics";
 

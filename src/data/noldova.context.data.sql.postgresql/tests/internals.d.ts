@@ -8,15 +8,6 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
-/**
- * Supplies test-local types for the installed package's internal modules.
- * These declarations must stay synchronized with their implementations;
- * they do not enforce access permissions or ship with production code.
- *
- * This file is a script, not a module: it must contain no top-level import or
- * export.
- */
-
 declare module "@noldova/context.data.sql.postgresql/services/parameter-rewriter.js" {
   export class ParameterRewriter {
     public static rewrite(text: string, parameters: number): string;

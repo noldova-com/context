@@ -15,8 +15,6 @@ import { pathToFileURL } from "node:url";
 
 import { Assert } from "@noldova/context.testing";
 
-// Runs a driver module in its own Node process, since the package's scripts are run by Node as written rather than compiled with the tests.
-// The driver imports a script with load(name) and finds grow.cjs, which holds GROWN_BYTES of touched memory once it prints "grown".
 export class ScriptDriver {
   public static readonly GROWN_BYTES: number = 384 * 1024 * 1024;
   private static readonly DIRECTORY_PREFIX: string = "noldova-script-driver-";
