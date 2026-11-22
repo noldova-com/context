@@ -145,8 +145,8 @@ The data packages are framework code: a portable data model, a SQL layer that st
 Data and Data.Sql are portable: they import no host module and perform no I/O.
 Everything that reaches a database is an abstract member a provider implements: a connection's open, close and statements, a transaction's commit and rollback, and the dialect's SQL forms.
 
-A provider package is the only place a database engine or the network is reached.
-During the Node bootstrap, the SQLite provider uses `node:sqlite`, `node:fs` and `node:path`, and the PostgreSQL provider reaches its server only through `node:net` and `node:tls`, with `node:crypto` for its SCRAM-SHA-256 sign-in, behind the same host boundary as `node:sqlite`.
+A provider package is the only place a database engine or the network is reached, and it is the host boundary for every Node module it needs.
+During the Node bootstrap, the SQLite provider uses `node:sqlite`, `node:fs` and `node:path`, and the PostgreSQL provider reaches its server only through `node:net` and `node:tls`, with `node:crypto` for its SCRAM-SHA-256 sign-in, and also uses `node:buffer`, `node:stream`, `node:fs/promises`, `node:timers` and `node:perf_hooks`.
 Each file that imports one of them carries the Node note in `TESTING-CONTRACT.md` section 1.
 When the Runtime owns files and networking, each provider moves onto the Runtime's contracts, and neither the portable packages nor a provider's public API changes for it.
 

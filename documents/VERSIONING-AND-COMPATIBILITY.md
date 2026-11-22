@@ -33,6 +33,7 @@ A version-1 contract may change in place: the contract, writer, reader, validato
 
 CONTEXT makes no backward- or forward-compatibility promise between development revisions, even when both sides report the same `0.0.<n>` and version `1`.
 The peer ranges of section 1 allow an install to pair a package with a sibling at another version in the range, so that an app gets one copy of each; they promise nothing about how that pair works together, as section 3 says.
+This covers representations and artifacts, not API: no package removes an existing API, as `ARCHITECTURE.md` section 3 says.
 Do not add legacy readers or writers, migration or upgrade pipelines, field aliases, deprecated fields retained for compatibility, dual encoding, version negotiation or feature handshakes, probing of historical layouts, fallback parsing after current validation fails, or special cases for historical artifacts.
 
 When a contract changes: change the owning contract; change every producer and consumer atomically; replace tests and fixtures rather than preserving obsolete cases as accepted behavior; delete generated, cached, installed, and generation outputs; rebuild the affected dependency closure; and verify only the new state.

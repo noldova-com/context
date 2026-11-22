@@ -21,11 +21,21 @@ declare global {
   }
 }
 
+const ASCII_DIGIT_NINE: string = "9";
+const ASCII_DIGIT_ZERO: string = "0";
+const ASCII_LOWERCASE_A: string = "a";
+const ASCII_LOWERCASE_F: string = "f";
+const ASCII_LOWERCASE_Z: string = "z";
+const ASCII_UPPERCASE_A: string = "A";
+const ASCII_UPPERCASE_F: string = "F";
+const ASCII_UPPERCASE_Z: string = "Z";
+const DECIMAL_RADIX: number = 10;
+
 function isAsciiDigit(character: string): boolean {
   if (character.length !== 1)
     return false;
 
-  return character >= Resources.asciiDigitZero && character <= Resources.asciiDigitNine;
+  return character >= ASCII_DIGIT_ZERO && character <= ASCII_DIGIT_NINE;
 }
 
 function isAsciiHexDigit(character: string): boolean {
@@ -33,16 +43,16 @@ function isAsciiHexDigit(character: string): boolean {
     return false;
 
   return String.isAsciiDigit(character)
-    || character >= Resources.asciiLowercaseA && character <= Resources.asciiLowercaseF
-    || character >= Resources.asciiUppercaseA && character <= Resources.asciiUppercaseF;
+    || character >= ASCII_LOWERCASE_A && character <= ASCII_LOWERCASE_F
+    || character >= ASCII_UPPERCASE_A && character <= ASCII_UPPERCASE_F;
 }
 
 function isAsciiLetter(character: string): boolean {
   if (character.length !== 1)
     return false;
 
-  return character >= Resources.asciiLowercaseA && character <= Resources.asciiLowercaseZ
-    || character >= Resources.asciiUppercaseA && character <= Resources.asciiUppercaseZ;
+  return character >= ASCII_LOWERCASE_A && character <= ASCII_LOWERCASE_Z
+    || character >= ASCII_UPPERCASE_A && character <= ASCII_UPPERCASE_Z;
 }
 
 function format(template: string, ...formatArguments: (string | number)[]): string {
@@ -65,7 +75,7 @@ function format(template: string, ...formatArguments: (string | number)[]): stri
         break;
 
       hasArgumentIndex = true;
-      argumentIndex = argumentIndex * Resources.decimalRadix + Number(character);
+      argumentIndex = argumentIndex * DECIMAL_RADIX + Number(character);
       placeholderIndex++;
     }
 
@@ -93,7 +103,7 @@ function isNullOrEmpty(value: string | null | undefined): value is null | undefi
 }
 
 function isNullOrWhitespace(value: string | null | undefined): boolean {
-  return String.isNullOrEmpty(value) || value.trim() === String.empty;
+  return String.isNullOrEmpty(value) || !Resources.nonWhitespacePattern.test(value);
 }
 
 Object.defineProperty(String, nameof<StringConstructor>(t => t.empty), { value: "", writable: false, enumerable: false, configurable: false });

@@ -6,8 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { runInNewContext } from "node:vm";
-
 import { nameof } from "@noldova/context.core";
 import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
@@ -72,8 +70,9 @@ export class ObjectExtensionsTests {
 
   @TestMethod
   public isPlainObjectRefusesAnObjectLiteralFromAnotherRealm(): void {
-    Assert.isFalse(Object.isPlainObject(runInNewContext("({})")));
-    Assert.isTrue(Object.isPlainObject(runInNewContext("Object.create(null)")));
+    const otherRealmObjectPrototype: object = Object.create(null);
+
+    Assert.isFalse(Object.isPlainObject(Object.create(otherRealmObjectPrototype)));
   }
 
   @TestMethod

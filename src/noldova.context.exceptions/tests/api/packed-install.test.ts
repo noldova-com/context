@@ -12,15 +12,15 @@ import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { PackedArchives } from "../fixtures/packed-archives.fixture.js";
 
-// The tests that install packed packages into an app with npm: exceptions sharing one core in its peer range, npm refusing a core outside
-// it, and core refusing to load beside a second copy npm installs. Exceptions' tests hold them since its package needs core installed too.
+// The tests that load core in a child process: exceptions sharing one core in its peer range, npm refusing a core outside it, and core
+// refusing to load beside a second copy, loaded first or installed by npm. Exceptions' tests hold them since core's tests use no Node API.
 @TestClass
 export class PackedInstallTests {
   private static readonly CORE_NAME: string = "@noldova/context.core";
@@ -79,11 +79,40 @@ export class PackedInstallTests {
       const app = await PackedInstallTests.createAppAsync(directory, { [PackedInstallTests.CORE_NAME]: `file:../${archives.second}`, dependent: `file:../${archives.first}` });
       await PackedInstallTests.runNpmAsync(PackedInstallTests.INSTALL_VALUES, app, directory);
       const scriptPath = join(app, "main.js");
-      await writeFile(scriptPath,
-        `try {\n  await import("${PackedInstallTests.CORE_NAME}");\n  await import("dependent");\n}\ncatch (error) {\n  process.stdout.write(error.message);\n}\n`);
+      await writeFile(scriptPath, PackedInstallTests.loadingScript(`await import("${PackedInstallTests.CORE_NAME}");`, "await import(\"dependent\");"));
 
       Assert.areEqual(PackedInstallTests.COPIES_LOADED, await PackedInstallTests.runAsync(scriptPath, app, directory));
     });
+  }
+
+  @TestMethod
+  public refusesASecondCopyAsync(): Promise<void> {
+    return PackedInstallTests.withDirectoryAsync(async directory => {
+      const copy = join(directory, "copy");
+      await cp(PackedInstallTests.CORE_FOLDER, copy, { recursive: true });
+      const scriptPath = join(directory, "load.js");
+      await writeFile(scriptPath, PackedInstallTests.loadingScript(
+        `await import(${JSON.stringify(pathToFileURL(join(copy, "api", "index.js")).href)});`,
+        `await import("${PackedInstallTests.CORE_NAME}");`));
+
+      Assert.areEqual(PackedInstallTests.COPIES_LOADED, await PackedInstallTests.runAsync(scriptPath, directory, directory));
+    });
+  }
+
+  @TestMethod
+  public refusesToLoadBesideACopyFromBeforeTheCheckAsync(): Promise<void> {
+    return PackedInstallTests.withDirectoryAsync(async directory => {
+      const scriptPath = join(directory, "load.js");
+      await writeFile(scriptPath, PackedInstallTests.loadingScript(
+        "Object.defineProperty(Object, \"isFunction\", { value: () => true, writable: false, enumerable: false, configurable: false });",
+        `await import("${PackedInstallTests.CORE_NAME}");`));
+
+      Assert.areEqual(PackedInstallTests.COPIES_LOADED, await PackedInstallTests.runAsync(scriptPath, directory, directory));
+    });
+  }
+
+  private static loadingScript(first: string, second: string): string {
+    return `try {\n  ${first}\n  ${second}\n}\ncatch (error) {\n  process.stdout.write(error.message);\n}\n`;
   }
 
   // A core version inside the range the installed exceptions takes core in, a patch above its lower bound.

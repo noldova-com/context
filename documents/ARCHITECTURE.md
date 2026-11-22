@@ -27,6 +27,11 @@ Names received dynamically remain dynamic.
 An upstream TypeScript interface or type alias that represents a runtime object maps to a concrete CONTEXT class.
 The framework or Runtime may add call or construction entry points to that class without a second source owner or JavaScript prototype wiring.
 
+A type is complete for its concept: it has every operation a user would expect of that concept, even before anything calls it.
+JavaScript's own built-ins are the measure, so `List` does what `Array` does, `Dictionary` what `Map` does, `HashSet` what `Set` does, and `Enumerable` what the iterator helpers do, with the ordering, grouping and joining that querying needs.
+API beyond a type's concept is added when a caller needs it.
+No package removes an existing API.
+
 ## 4. Extension methods
 
 Type-grafted extension methods are the preferred way to add responsibility-specific behavior to an existing concrete type.
@@ -77,6 +82,7 @@ Stricter than the code standard: until a package has a verified source-owned doc
 The only comments in code are the license header, the Node-API note `TESTING-CONTRACT.md` requires, and a generated file's upstream attribution.
 
 Until then, a package's `src/api/index.d.ts` is its sole public-documentation authority, and `BUILD-AND-VERIFICATION.md` owns declaration copying.
+It declares what external consumers should see: a member that is public in the code but left out of it, or a constructor declared `private` there, is internal to the package.
 Each package's comments and generation migrate together; there are never two handwritten copies, stripped installed API docs, a temporary text or regex extractor, or a legacy compiler dependency.
 The accepted destination is source-owned JSDoc for public and internal code, in the documentation-comment style of TypeScript's own source, beside the declarations it describes, including overload signatures and the consumer-facing declarations of extensions and augmentations, from which consumer declarations, IntelliSense documentation and reference pages are generated.
 

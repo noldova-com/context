@@ -201,9 +201,9 @@ declare global {
      * {@link ObjectConstructor.isObject} for every non-null object, functions included.
      *
      * The prototype is compared with this realm's `Object.prototype`, so an object literal from another
-     * realm, such as a `vm` context or an iframe, returns `false`, while one made there with
-     * `Object.create(null)` returns `true`. A proxy answers through its `getPrototypeOf` trap; a revoked
-     * proxy, or a trap that throws, returns `false` rather than throwing.
+     * realm returns `false`, while one made there with `Object.create(null)` returns `true`. A proxy
+     * answers through its `getPrototypeOf` trap; a revoked proxy, or a trap that throws, returns `false`
+     * rather than throwing.
      * @example
      * ```ts
      * import "@noldova/context.core";

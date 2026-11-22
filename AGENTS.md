@@ -10,6 +10,7 @@ Read the owner before you work on its subject, and change a rule there.
 |---|---|
 | need what each part is for, or how to build and test it | [README.md](README.md) |
 | write code, tests, documents or commits | [documents/ARCHITECTURE.md](documents/ARCHITECTURE.md), the code rules of this repository |
+| write or review code | [documents/CHECKLIST.md](documents/CHECKLIST.md), the list each change is read against |
 | need the organization's rules for code, tests, documents, Git and security | [Noldova's standards](https://github.com/noldova-com/.github/blob/main/standards/AGENTS.md) |
 | need why CONTEXT exists | [documents/VISION.md](documents/VISION.md) |
 | work on compiler phases, semantics, IR or AOT | [documents/COMPILER-ARCHITECTURE.md](documents/COMPILER-ARCHITECTURE.md) |
