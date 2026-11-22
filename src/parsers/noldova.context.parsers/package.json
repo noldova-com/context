@@ -19,10 +19,10 @@
     "registry": "https://registry.npmjs.org/"
   },
   "peerDependencies": {
-    "@noldova/context.collections": ">=__VERSION__ <__NEXT_MINOR__",
-    "@noldova/context.core": ">=__VERSION__ <__NEXT_MINOR__",
-    "@noldova/context.diagnostics": ">=__VERSION__ <__NEXT_MINOR__",
-    "@noldova/context.exceptions": ">=__VERSION__ <__NEXT_MINOR__",
-    "@noldova/context.text": ">=__VERSION__ <__NEXT_MINOR__"
+    "@noldova/context.collections": ">=__VERSION__ <__UPPER_BOUND__",
+    "@noldova/context.core": ">=__VERSION__ <__UPPER_BOUND__",
+    "@noldova/context.diagnostics": ">=__VERSION__ <__UPPER_BOUND__",
+    "@noldova/context.exceptions": ">=__VERSION__ <__UPPER_BOUND__",
+    "@noldova/context.text": ">=__VERSION__ <__UPPER_BOUND__"
   }
 }

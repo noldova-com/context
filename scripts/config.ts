@@ -19,7 +19,7 @@ export default class Config {
   private static readonly VERSION_PATTERN: RegExp = /^(?<major>0|[1-9]\d*)\.(?<minor>0|[1-9]\d*)\.(?:0|[1-9]\d*)$/u;
 
   public static readonly VERSION: string = Config.readVersion();
-  public static readonly NEXT_MINOR: string = Config.nextMinor(Config.VERSION);
+  public static readonly UPPER_BOUND: string = Config.upperBound(Config.VERSION);
   public static readonly BUILD_FOLDER: string = "_build/node";
   public static readonly COVERAGE_FOLDER: string = "_build/coverage";
   public static readonly PACKAGES_FOLDER: string = "_packages";
@@ -52,12 +52,13 @@ export default class Config {
     return version;
   }
 
-  private static nextMinor(version: string): string {
+  private static upperBound(version: string): string {
     const groups = Config.VERSION_PATTERN.exec(version)?.groups;
     if (groups?.["major"] === undefined || groups["minor"] === undefined)
       throw new CommandFailedException(Config.versionInvalid(version));
 
-    return `${groups["major"]}.${Number(groups["minor"]) + 1}.0`;
+    const major = Number(groups["major"]);
+    return major === 0 ? `0.${Number(groups["minor"]) + 1}.0` : `${major + 1}.0.0`;
   }
 
   private static versionInvalid(version: string): string {

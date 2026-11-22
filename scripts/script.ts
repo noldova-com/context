@@ -12,6 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import CommandFailedException from "./command-failed.exception.ts";
+import CompiledCopy from "./compiled-copy.ts";
 import Config from "./config.ts";
 import type PackageInfo from "./package-info.ts";
 import ProcessResult from "./process-result.ts";
@@ -190,10 +191,12 @@ export default abstract class Script {
       `${Config.BUILD_FOLDER}/${packageInfo.name}/${Script.API_DIRECTORY_NAME}/${Script.DECLARATION_FILE_NAME}`);
   }
 
-  protected static listCompiledCopies(packageInfo: PackageInfo): readonly (readonly [source: string, filePath: string])[] {
+  protected static listCompiledCopies(packageInfo: PackageInfo): readonly CompiledCopy[] {
     return [
-      [`${Script.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Script.SOURCE_DIRECTORY_NAME}/${Script.API_DIRECTORY_NAME}/${Script.DECLARATION_FILE_NAME}`, `${Script.API_DIRECTORY_NAME}/${Script.DECLARATION_FILE_NAME}`],
-      [`${Script.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Script.README_FILE_NAME}`, Script.README_FILE_NAME]
+      new CompiledCopy(
+        `${Script.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Script.SOURCE_DIRECTORY_NAME}/${Script.API_DIRECTORY_NAME}/${Script.DECLARATION_FILE_NAME}`,
+        `${Script.API_DIRECTORY_NAME}/${Script.DECLARATION_FILE_NAME}`),
+      new CompiledCopy(`${Script.SOURCE_DIRECTORY_NAME}/${packageInfo.path}/${Script.README_FILE_NAME}`, Script.README_FILE_NAME)
     ];
   }
 

@@ -21,8 +21,8 @@ export class TestTiming extends SuiteScript {
 
   public override async runAsync(): Promise<void> {
     const projects = await this.listTestProjectsAsync();
-    for (const packageInfo of projects)
-      if (!await this.pathExistsAsync(TestTiming.testBuildDirectory(packageInfo))) {
+    for (const project of projects)
+      if (!await this.pathExistsAsync(project.buildDirectory)) {
         await this.writeLogAsync(TestTiming.NOT_BUILT);
         process.exitCode = 1;
         return;

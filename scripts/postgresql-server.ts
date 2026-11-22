@@ -12,9 +12,10 @@ import fs from "node:fs/promises";
 import { createServer } from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { gunzipSync } from "node:zlib";
 
 import CommandFailedException from "./command-failed.exception.ts";
+import PostgreSQLStartFailedException from "./postgresql-start-failed.exception.ts";
+import TarArchive from "./tar-archive.ts";
 
 export default class PostgreSQLServer implements AsyncDisposable {
   public static readonly URL_VARIABLE: string = "NOLDOVA_CONTEXT_POSTGRESQL_URL";
@@ -50,26 +51,6 @@ export default class PostgreSQLServer implements AsyncDisposable {
   private static readonly HASH_ALGORITHM: string = "sha256";
   private static readonly HEX_ENCODING: "hex" = "hex";
   private static readonly TEXT_ENCODING: BufferEncoding = "utf8";
-  private static readonly TAR_BLOCK: number = 512;
-  private static readonly TAR_NAME_LENGTH: number = 100;
-  private static readonly TAR_MODE_OFFSET: number = 100;
-  private static readonly TAR_SIZE_OFFSET: number = 124;
-  private static readonly TAR_TYPE_OFFSET: number = 156;
-  private static readonly TAR_LINK_OFFSET: number = 157;
-  private static readonly TAR_PREFIX_OFFSET: number = 345;
-  private static readonly TAR_PREFIX_LENGTH: number = 155;
-  private static readonly TAR_FIELD_LENGTH: number = 12;
-  private static readonly TAR_MODE_LENGTH: number = 8;
-  private static readonly OCTAL: number = 8;
-  private static readonly TAR_FILE_TYPES: ReadonlySet<string> = new Set(["0", "\0", "7"]);
-  private static readonly TAR_DIRECTORY_TYPE: string = "5";
-  private static readonly TAR_SYMBOLIC_LINK_TYPE: string = "2";
-  private static readonly TAR_LONG_NAME_TYPE: string = "L";
-  private static readonly TAR_LONG_LINK_TYPE: string = "K";
-  private static readonly TAR_PAX_TYPES: ReadonlySet<string> = new Set(["x", "g"]);
-  private static readonly PAX_PATH_KEY: string = "path";
-  private static readonly PAX_LINK_KEY: string = "linkpath";
-  private static readonly PARENT_SEGMENT: string = "..";
   private static readonly SETTINGS: readonly string[] = ["listen_addresses = '127.0.0.1'", "unix_socket_directories = ''", "fsync = off"];
   private static readonly PORT_SETTING: string = "port = ";
   private static readonly START_ATTEMPTS: number = 5;
@@ -103,7 +84,7 @@ export default class PostgreSQLServer implements AsyncDisposable {
         await server[Symbol.asyncDispose]();
       }
       catch (stopError) {
-        throw new AggregateError([error, stopError], PostgreSQLServer.startAndStopFailed(error, stopError));
+        throw new PostgreSQLStartFailedException(PostgreSQLServer.startAndStopFailed(error, stopError), error, stopError);
       }
       throw error;
     }
@@ -190,7 +171,7 @@ export default class PostgreSQLServer implements AsyncDisposable {
     if (!await PostgreSQLServer.existsAsync(path.join(folder, PostgreSQLServer.COMPLETE_MARKER))) {
       await fs.rm(folder, { recursive: true, force: true });
       await fs.mkdir(folder, { recursive: true });
-      await PostgreSQLServer.extractAsync(await PostgreSQLServer.downloadAsync(target, hash), folder);
+      await TarArchive.extractAsync(await PostgreSQLServer.downloadAsync(target, hash), folder);
       await fs.writeFile(path.join(folder, PostgreSQLServer.COMPLETE_MARKER), PostgreSQLServer.VERSION);
     }
 
@@ -213,99 +194,6 @@ export default class PostgreSQLServer implements AsyncDisposable {
       throw new CommandFailedException(PostgreSQLServer.hashMismatch(name, hash, actual));
 
     return archive;
-  }
-
-  private static async extractAsync(archive: Buffer, folder: string): Promise<void> {
-    const tar = gunzipSync(archive);
-    let longName: string | null = null;
-    let longLink: string | null = null;
-    let pax = new Map<string, string>();
-    for (let offset = 0; offset + PostgreSQLServer.TAR_BLOCK <= tar.length;) {
-      const header = tar.subarray(offset, offset + PostgreSQLServer.TAR_BLOCK);
-      if (header.every(t => t === 0))
-        break;
-
-      const size = PostgreSQLServer.readOctal(header, PostgreSQLServer.TAR_SIZE_OFFSET, PostgreSQLServer.TAR_FIELD_LENGTH);
-      const type = String.fromCharCode(header[PostgreSQLServer.TAR_TYPE_OFFSET] ?? 0);
-      const body = tar.subarray(offset + PostgreSQLServer.TAR_BLOCK, offset + PostgreSQLServer.TAR_BLOCK + size);
-      offset += PostgreSQLServer.TAR_BLOCK + Math.ceil(size / PostgreSQLServer.TAR_BLOCK) * PostgreSQLServer.TAR_BLOCK;
-
-      if (type === PostgreSQLServer.TAR_LONG_NAME_TYPE) {
-        longName = PostgreSQLServer.readText(body, 0, body.length);
-        continue;
-      }
-      if (type === PostgreSQLServer.TAR_LONG_LINK_TYPE) {
-        longLink = PostgreSQLServer.readText(body, 0, body.length);
-        continue;
-      }
-      if (PostgreSQLServer.TAR_PAX_TYPES.has(type)) {
-        pax = PostgreSQLServer.readPax(body);
-        continue;
-      }
-
-      const prefix = PostgreSQLServer.readText(header, PostgreSQLServer.TAR_PREFIX_OFFSET, PostgreSQLServer.TAR_PREFIX_LENGTH);
-      const shortName = PostgreSQLServer.readText(header, 0, PostgreSQLServer.TAR_NAME_LENGTH);
-      const name = pax.get(PostgreSQLServer.PAX_PATH_KEY) ?? longName ?? (prefix.length > 0 ? `${prefix}/${shortName}` : shortName);
-      const link = pax.get(PostgreSQLServer.PAX_LINK_KEY) ?? longLink ?? PostgreSQLServer.readText(header, PostgreSQLServer.TAR_LINK_OFFSET, PostgreSQLServer.TAR_NAME_LENGTH);
-      const mode = PostgreSQLServer.readOctal(header, PostgreSQLServer.TAR_MODE_OFFSET, PostgreSQLServer.TAR_MODE_LENGTH);
-      longName = null;
-      longLink = null;
-      pax = new Map();
-
-      const destination = PostgreSQLServer.resolveInside(folder, name);
-      if (type === PostgreSQLServer.TAR_DIRECTORY_TYPE)
-        await fs.mkdir(destination, { recursive: true });
-      else if (type === PostgreSQLServer.TAR_SYMBOLIC_LINK_TYPE) {
-        PostgreSQLServer.resolveInside(folder, path.join(path.dirname(name), link));
-        await fs.mkdir(path.dirname(destination), { recursive: true });
-        await fs.symlink(link, destination);
-      }
-      else if (PostgreSQLServer.TAR_FILE_TYPES.has(type)) {
-        await fs.mkdir(path.dirname(destination), { recursive: true });
-        await fs.writeFile(destination, body, { mode: mode === 0 ? 0o644 : mode });
-      }
-    }
-  }
-
-  private static resolveInside(folder: string, name: string): string {
-    const destination = path.resolve(folder, name);
-    const relative = path.relative(folder, destination);
-    if (relative.length === 0 || relative.split(path.sep).includes(PostgreSQLServer.PARENT_SEGMENT) || path.isAbsolute(relative))
-      throw new CommandFailedException(PostgreSQLServer.unsafeEntry(name));
-
-    return destination;
-  }
-
-  private static readText(data: Buffer, offset: number, length: number): string {
-    const field = data.subarray(offset, offset + length);
-    const end = field.indexOf(0);
-    return field.toString(PostgreSQLServer.TEXT_ENCODING, 0, end < 0 ? field.length : end);
-  }
-
-  private static readOctal(data: Buffer, offset: number, length: number): number {
-    const text = PostgreSQLServer.readText(data, offset, length).trim();
-    return text.length === 0 ? 0 : Number.parseInt(text, PostgreSQLServer.OCTAL);
-  }
-
-  private static readPax(body: Buffer): Map<string, string> {
-    const records = new Map<string, string>();
-    for (let offset = 0; offset < body.length;) {
-      const space = body.indexOf(0x20, offset);
-      if (space < 0)
-        break;
-
-      const length = Number.parseInt(body.toString(PostgreSQLServer.TEXT_ENCODING, offset, space), 10);
-      if (!Number.isSafeInteger(length) || length <= 0)
-        break;
-
-      const record = body.toString(PostgreSQLServer.TEXT_ENCODING, space + 1, offset + length - 1);
-      const equals = record.indexOf("=");
-      if (equals > 0)
-        records.set(record.slice(0, equals), record.slice(equals + 1));
-      offset += length;
-    }
-
-    return records;
   }
 
   private static async findBinFolderAsync(folder: string): Promise<string> {
@@ -351,10 +239,6 @@ export default class PostgreSQLServer implements AsyncDisposable {
 
   private static hashMismatch(name: string, expected: string, actual: string): string {
     return `${name} has SHA-256 ${actual}, not the pinned ${expected}.`;
-  }
-
-  private static unsafeEntry(name: string): string {
-    return `The PostgreSQL archive holds the entry "${name}", which points outside its folder.`;
   }
 
   private static binFolderMissing(folder: string): string {

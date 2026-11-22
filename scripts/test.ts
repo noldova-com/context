@@ -19,7 +19,6 @@ export class Test extends SuiteScript {
   private static readonly ENABLED_VALUE: string = "1";
   private static readonly FILTERED_COVERAGE_SKIPPED: string = "Coverage gate skipped for a filtered run.";
   private static readonly NODE_MODULES_DIRECTORY_NAME: string = "node_modules";
-  private static readonly NO_TEST_PROJECTS: string = "No test projects were found.";
   private static readonly OPTION_PREFIX: string = "--";
   private static readonly RESULTS_FILE_PATH: string = `${Config.BUILD_FOLDER}/test-results.json`;
   private static readonly SLOWEST_TEST_COUNT: number = 10;
@@ -48,17 +47,11 @@ export class Test extends SuiteScript {
     }
 
     const projects = await this.listTestProjectsAsync();
-    for (const packageInfo of projects)
-      await this.runStepAsync(Test.compilingProject(Test.testProjectName(packageInfo)), async () => {
-        await this.removeDirectoryAsync(Test.testBuildDirectory(packageInfo));
-        await this.executeTypeScriptCompilerAsync([Test.TYPESCRIPT_PROJECT_OPTION, Test.testTsconfigPath(packageInfo)]);
+    for (const project of projects)
+      await this.runStepAsync(Test.compilingProject(project.projectName), async () => {
+        await this.removeDirectoryAsync(project.buildDirectory);
+        await this.executeTypeScriptCompilerAsync([Test.TYPESCRIPT_PROJECT_OPTION, project.tsconfigPath]);
       });
-
-    if (projects.length === 0) {
-      await this.writeLogAsync(Test.NO_TEST_PROJECTS);
-      process.exitCode = 1;
-      return;
-    }
 
     await this.writeLogAsync(Test.BLANK_LINE);
 
