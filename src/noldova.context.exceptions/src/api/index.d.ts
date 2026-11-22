@@ -117,6 +117,8 @@ export declare class ArgumentException extends Exception {
    * guard uses `ArgumentException` even for nullish input, not `ArgumentNullException`.
    * @example
    * ```ts
+   * import { ArgumentException } from "@noldova/context.exceptions";
+   *
    * const input = new Map([["input", "value"]]).get("input");
    * ArgumentException.throwIfNullOrEmpty(input, "input");
    * input.length; // 5; the guard excludes undefined from the lookup result.
@@ -201,6 +203,8 @@ export declare class ArgumentNullException extends ArgumentException {
    * @throws {ArgumentNullException} If `value` is null or undefined.
    * @example
    * ```ts
+   * import { ArgumentNullException } from "@noldova/context.exceptions";
+   *
    * const count = new Map([["count", 0]]).get("count");
    * ArgumentNullException.throwIfNull(count, "count");
    * count + 1; // 1: zero is a valid non-nullish value.

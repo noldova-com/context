@@ -28,6 +28,8 @@ export declare class BinarySearchService {
    *
    * @example
    * ```ts
+   * import { BinarySearchService } from "@noldova/context.collections";
+   *
    * BinarySearchService.floorIndex([1, 3, 5, 7], 5); // 2: exact match.
    * BinarySearchService.floorIndex([1, 3, 5, 7], 4); // 1: the nearest lower value is 3.
    * BinarySearchService.floorIndex([1, 3, 3, 5], 3); // 2: the last duplicate.

@@ -10,6 +10,8 @@ import "@noldova/context.core";
 import { JsonException, JsonReader, type JsonValue } from "@noldova/context.json";
 import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
+import type { ISelfReferencing } from "../fixtures/i-self-referencing.fixture.js";
+
 @TestClass
 export class JsonReaderTests {
   private static readonly NESTED_FIELD: string = "a";
@@ -92,7 +94,7 @@ export class JsonReaderTests {
 
   @TestMethod
   public rejectsAnObjectCycleAtTheReferencingField(): void {
-    const value: { self?: unknown } = {};
+    const value: ISelfReferencing = {};
     value.self = value;
 
     const exception = Assert.throws(() => JsonReader.fromValue(value, "$.payload"), JsonException);
@@ -203,6 +205,46 @@ export class JsonReaderTests {
     Assert.areEqual("$.d", Assert.throws(() => JsonReader.toJsonValue({ d: Symbol("s") }), JsonException).path);
     Assert.areEqual("$.e", Assert.throws(() => JsonReader.toJsonValue({ e: 10n }), JsonException).path);
     Assert.areEqual("$", Assert.throws(() => JsonReader.toJsonValue(undefined), JsonException).path);
+  }
+
+  @TestMethod
+  public rejectsANumberTooLargeToBeFiniteAsOutOfRange(): void {
+    const parsed = Assert.throws(() => JsonReader.parse("{\"a\":1e400}"), JsonException);
+    const negative = Assert.throws(() => JsonReader.parseValue("[-1e400]"), JsonException);
+    const value = Assert.throws(() => JsonReader.toJsonValue({ b: Number.NEGATIVE_INFINITY }), JsonException);
+
+    Assert.areEqual("$.a: A number too large to be finite cannot be carried as JSON.", parsed.message);
+    Assert.areEqual("$.0: A number too large to be finite cannot be carried as JSON.", negative.message);
+    Assert.areEqual("$.b: A number too large to be finite cannot be carried as JSON.", value.message);
+    Assert.areEqual("$.c: A value of type \"NaN\" cannot be carried as JSON.", Assert.throws(() => JsonReader.toJsonValue({ c: Number.NaN }), JsonException).message);
+  }
+
+  @TestMethod
+  public rejectsAnIntegerANumberCannotHoldExactly(): void {
+    const reader = JsonReader.parse("{\"id\":9007199254740993,\"low\":-9007199254740992,\"max\":9007199254740991,\"min\":-9007199254740991,\"none\":null}");
+
+    const exception = Assert.throws(() => reader.readInteger("id"), JsonException);
+
+    Assert.areEqual("$.id: Expected an integer from -9007199254740991 to 9007199254740991, which a number holds exactly.", exception.message);
+    Assert.areEqual("$.low", Assert.throws(() => reader.readNullableInteger("low"), JsonException).path);
+    Assert.areEqual(Number.MAX_SAFE_INTEGER, reader.readInteger("max"));
+    Assert.areEqual(Number.MIN_SAFE_INTEGER, reader.readInteger("min"));
+    Assert.isNull(reader.readNullableInteger("none"));
+  }
+
+  @TestMethod
+  public quotesPathKeysThatAreNotPlainNames(): void {
+    const dotted = JsonReader.parse("{\"a.b\":1}");
+    const nested = JsonReader.parse("{\"a\":{\"b\":1}}");
+    const reader = JsonReader.parse("{\"line\\nbreak\":1,\"0\":2,\"$plain_1\":3,\"items\":[{\"x y\":4}]}");
+
+    Assert.areEqual("$[\"a.b\"]", Assert.throws(() => dotted.readString("a.b"), JsonException).path);
+    Assert.areEqual("$.a.b", Assert.throws(() => nested.readObject("a").readString("b"), JsonException).path);
+    Assert.areEqual("$[\"line\\nbreak\"]: Expected a string.", Assert.throws(() => reader.readString("line\nbreak"), JsonException).message);
+    Assert.areEqual("$[\"0\"]", Assert.throws(() => reader.readString("0"), JsonException).path);
+    Assert.areEqual("$.$plain_1", Assert.throws(() => reader.readString("$plain_1"), JsonException).path);
+    Assert.areEqual("$.items.0[\"x y\"]", Assert.throws(() => reader.readObjectArray("items")[0]?.readString("x y"), JsonException).path);
+    Assert.areEqual("$[\"a.b\"].0", Assert.throws(() => JsonReader.toJsonValue({ "a.b": [Number.NaN] }), JsonException).path);
   }
 
   @TestMethod

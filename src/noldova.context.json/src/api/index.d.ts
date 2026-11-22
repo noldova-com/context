@@ -33,7 +33,9 @@ export declare type JsonObject = { readonly [key: string]: JsonValue };
 export declare class JsonException extends Exception {
   /**
    * Path of the offending field, such as `$.params.name`, or the root path `$` when the whole
-   * value is at fault.
+   * value is at fault. An array item is `.` and its index, such as `$.items.0`; a key that is not a
+   * plain name (a letter, `_` or `$`, then letters, digits, `_` or `$`) is quoted as a JSON string in
+   * brackets, such as `$["a.b"]`, so no key can pass for another path or break the message's line.
    */
   public readonly path: string;
 
@@ -68,6 +70,8 @@ export declare class JsonException extends Exception {
  * accepts `null`. Unknown fields are ignored, so a reader accepts JSON that a newer writer
  * extended.
  * Every failure is a `JsonException` whose path names the field.
+ * Parsing builds the whole value before its depth is checked, so a caller that reads text from an
+ * untrusted source bounds the text's length first, such as with a message size limit.
  *
  * @example
  * ```ts
@@ -83,7 +87,8 @@ export declare class JsonException extends Exception {
 export declare class JsonReader {
   /**
    * The deepest nesting of arrays and objects a reader accepts, counting the outermost as 1;
-   * deeper JSON is refused with a `JsonException` rather than read recursively.
+   * deeper JSON is refused with a `JsonException` rather than read recursively. Parsed text is
+   * checked once `JSON.parse` has built it, so the depth limit doesn't bound the text's size.
    */
   public static readonly maximumDepth: number;
 
@@ -102,7 +107,8 @@ export declare class JsonReader {
    * @param path Path to report for the parsed value; the root path `$` by default.
    * @returns A reader over the parsed object.
    * @throws JsonException synchronously when the text is not valid JSON (the `SyntaxError` is the cause),
-   * the parsed value is not an object, or it nests deeper than `maximumDepth`.
+   * a number in it is too large to be finite, such as `1e400`, the parsed value is not an object, or it
+   * nests deeper than `maximumDepth`.
    * @example
    * ```ts
    * import { JsonReader } from "@noldova/context.json";
@@ -132,7 +138,7 @@ export declare class JsonReader {
    * @returns The parsed value. Use {@link JsonReader.parse} instead when the root must be an object,
    * to read its fields.
    * @throws JsonException synchronously when the text is not valid JSON (the `SyntaxError` is the cause),
-   * or it nests deeper than `maximumDepth`.
+   * a number in it is too large to be finite, such as `1e400`, or it nests deeper than `maximumDepth`.
    * @example
    * ```ts
    * import "@noldova/context.core";
@@ -170,8 +176,8 @@ export declare class JsonReader {
    * converts once, so the result shares it wherever the value does.
    * @param path Path to report for the value; the root path `$` by default.
    * @returns The value as JSON; object members whose value is `undefined` are dropped.
-   * @throws JsonException synchronously for `undefined`, functions, symbols, bigints, non-finite
-   * numbers, objects other than arrays and plain objects (whose prototype is `Object.prototype` or
+   * @throws JsonException synchronously for `undefined`, functions, symbols, bigints, `NaN`,
+   * infinite numbers, objects other than arrays and plain objects (whose prototype is `Object.prototype` or
    * `null`), arrays with missing items, circular references, and nesting deeper than
    * `maximumDepth`, at the path of the offending member.
    * @example
@@ -296,8 +302,11 @@ export declare class JsonReader {
    * Reads a required integer field.
    *
    * @param name The field's name.
-   * @returns The integer.
-   * @throws JsonException synchronously when the field is absent, `null`, not a number, or not an integer.
+   * @returns The integer, from `Number.MIN_SAFE_INTEGER` to `Number.MAX_SAFE_INTEGER`, so it is the
+   * one the text wrote; a larger one, such as `9007199254740993`, which a number can't hold exactly, is
+   * refused rather than rounded.
+   * @throws JsonException synchronously when the field is absent, `null`, not a number, not an integer,
+   * or outside that range.
    * @example
    * ```ts
    * import { JsonReader } from "@noldova/context.json";
@@ -313,7 +322,8 @@ export declare class JsonReader {
    *
    * @param name The field's name.
    * @returns The integer, or `null` when the field is `null`.
-   * @throws JsonException synchronously when the field is absent or not an integer.
+   * @throws JsonException synchronously when the field is absent or not an integer from
+   * `Number.MIN_SAFE_INTEGER` to `Number.MAX_SAFE_INTEGER`.
    * @example
    * ```ts
    * import { JsonReader } from "@noldova/context.json";

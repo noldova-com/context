@@ -18,6 +18,7 @@ export class Resources {
   public static readonly notInteger: string = "Expected an integer.";
   public static readonly notObject: string = "Expected a JSON object.";
   public static readonly notPlainObject: string = "Only arrays and plain objects can be carried as JSON.";
+  public static readonly numberOutOfRange: string = "A number too large to be finite cannot be carried as JSON.";
   public static readonly numberTypeName: string = "a number";
   public static readonly objectTypeName: string = "an object";
   public static readonly pathMessageSeparator: string = ": ";
@@ -25,6 +26,7 @@ export class Resources {
   public static readonly rootPath: string = "$";
   public static readonly stringTypeName: string = "a string";
   public static readonly unexpectedNull: string = "Null is not an accepted value here.";
+  public static readonly unsafeInteger: string = "Expected an integer from -9007199254740991 to 9007199254740991, which a number holds exactly.";
 
   public static formatNotJsonValue(kind: string): string {
     return `A value of type "${kind}" cannot be carried as JSON.`;
@@ -32,6 +34,10 @@ export class Resources {
 
   public static formatNotOneOf(values: readonly string[]): string {
     return `Expected one of ${values.join(Resources.listSeparator)}.`;
+  }
+
+  public static formatQuotedKeyPath(parent: string, quotedKey: string): string {
+    return `${parent}[${quotedKey}]`;
   }
 
   public static formatTooDeep(maximumDepth: number): string {

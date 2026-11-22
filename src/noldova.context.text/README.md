@@ -44,6 +44,14 @@ Lengths and offsets count UTF-16 code units, as JavaScript strings do. The
 declaration file `api/index.d.ts` documents every member with its contract and
 examples.
 
+## One copy
+
+An app loads one copy of the package, since its `String` additions can be
+installed only once. The CONTEXT packages take it as a peer in a range, so npm
+installs one copy for packages that need different versions in that range. A
+second copy that loads anyway refuses to load with an `Error` saying two copies
+are loaded; `npm ls @noldova/context.text` shows which packages bring each.
+
 ## License
 
 MIT; see `LICENSE`. The Unicode identifier tables come from the Unicode

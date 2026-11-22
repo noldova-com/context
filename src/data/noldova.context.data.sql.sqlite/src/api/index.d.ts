@@ -53,7 +53,13 @@ export declare class SQLiteDialect extends SqlDialect {
  * A connection to a SQLite database file through the host's `node:sqlite`,
  * opened with write-ahead logging, foreign keys on, and a busy timeout of
  * five seconds, within which a transaction waits for another connection's
- * write lock. The data source's
+ * write lock. The wait holds the host's thread, so it serves connections in
+ * other threads and processes; when the lock's holder is a connection in the
+ * same thread, such as a second context on the file part-way through an
+ * async transaction, the holder can't go on while the thread waits, so the
+ * transaction fails with `database is locked` after the five seconds. A query
+ * runs one statement: text holding a second one, past semicolons, comments
+ * and white space, rejects with `DataException` before any runs. The data source's
  * location is the file path. Rows hold text, numbers, and `NULL`; a row
  * holding another value, such as a blob, rejects with `DataException` when
  * read. `node:sqlite` runs each statement synchronously, so a statement holds

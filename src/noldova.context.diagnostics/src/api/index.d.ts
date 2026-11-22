@@ -42,6 +42,8 @@ export declare enum DiagnosticCategory {
  *
  * @example
  * ```ts
+ * import { DiagnosticAuthority } from "@noldova/context.diagnostics";
+ *
  * DiagnosticAuthority.context.codePrefix; // "CTX"
  * DiagnosticAuthority.typeScript.codePrefix; // "TS"
  * ```
@@ -152,6 +154,8 @@ export declare class DiagnosticLocation {
    * failures identify the offending argument and retain its value.
    * @example
    * ```ts
+   * import { DiagnosticLocation } from "@noldova/context.diagnostics";
+   *
    * const text = "A\u{1F600}B";
    * const character = new DiagnosticLocation(undefined, 1, 2, text.length);
    * text.slice(character.start, character.start + character.length); // "\u{1F600}"
@@ -222,6 +226,8 @@ export declare class DiagnosticMessage {
    * @throws {ArgumentException} If `text` is empty or whitespace-only.
    * @example
    * ```ts
+   * import { DiagnosticAuthority, DiagnosticCategory, DiagnosticCode, DiagnosticMessage } from "@noldova/context.diagnostics";
+   *
    * const code = new DiagnosticCode(DiagnosticAuthority.typeScript, 2322);
    * const detail = new DiagnosticMessage(code, DiagnosticCategory.Error,
    *   "Type 'string' is not assignable to type 'number'.", []);
@@ -260,6 +266,8 @@ export declare class DiagnosticRelatedInformation {
    * not source-bound. It need not use the primary diagnostic's source identity.
    * @example
    * ```ts
+   * import { DiagnosticAuthority, DiagnosticCategory, DiagnosticCode, DiagnosticLocation, DiagnosticMessage, DiagnosticRelatedInformation } from "@noldova/context.diagnostics";
+   *
    * const code = new DiagnosticCode(DiagnosticAuthority.typeScript, 2728);
    * const message = new DiagnosticMessage(code, DiagnosticCategory.Error,
    *   "'value' is declared here.", []);
@@ -325,6 +333,8 @@ export declare class Diagnostic {
    * @throws {ArgumentException} If `tags` contains a duplicate.
    * @example
    * ```ts
+   * import { Diagnostic, DiagnosticAuthority, DiagnosticCategory, DiagnosticCode, DiagnosticLocation, DiagnosticMessage } from "@noldova/context.diagnostics";
+   *
    * const code = new DiagnosticCode(DiagnosticAuthority.typeScript, 2304);
    * const message = new DiagnosticMessage(code, DiagnosticCategory.Error,
    *   "Cannot find name 'value'.", []);
@@ -411,6 +421,8 @@ export declare class DiagnosticTemplate {
    * template such as `"{0}"` can still produce invalid blank text after substitution.
    * @example
    * ```ts
+   * import { DiagnosticAuthority, DiagnosticCategory, DiagnosticCode, DiagnosticTemplate } from "@noldova/context.diagnostics";
+   *
    * const code = new DiagnosticCode(DiagnosticAuthority.typeScript, 2304);
    * const template = new DiagnosticTemplate(code, DiagnosticCategory.Error, "Cannot find name '{0}'.");
    * const first = template.create(undefined, ["value"]);

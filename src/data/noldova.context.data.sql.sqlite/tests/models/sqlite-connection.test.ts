@@ -84,6 +84,45 @@ export class SQLiteConnectionTests {
   }
 
   @TestMethod
+  public async refusesAQueryHoldingMoreThanOneStatementBeforeRunningAny(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    await using connection = SQLiteConnection.open(directory.dataSource("app"));
+    await connection.executeAsync(SQLiteConnectionTests.createNotes);
+    await connection.executeAsync(new SqlQuery("INSERT INTO notes (id, text) VALUES ('a', 'first'), ('b', 'second')"));
+    const message = "The query holds more than one statement; SQLite runs one statement per query, so send each on its own.";
+
+    const update = await Assert.throwsAsync(() => connection.executeAsync(new SqlQuery("UPDATE notes SET count = 1 WHERE id = 'a'; UPDATE notes SET count = 2 WHERE id = 'b'")), DataException);
+    const insert = await Assert.throwsAsync(() => connection.insertAsync(new SqlQuery("-- two rows\nINSERT INTO notes (id, text) VALUES ('c', 'third');\nINSERT INTO notes (id, text) VALUES ('d', 'fourth')")), DataException);
+    const query = await Assert.throwsAsync(() => connection.queryAsync(new SqlQuery("SELECT 1 AS one; SELECT 2 AS two")), DataException);
+    const commented = await Assert.throwsAsync(() => connection.executeAsync(new SqlQuery("UPDATE notes SET count = 1 WHERE id = 'a'; /* a */ UPDATE notes SET count = 2 WHERE id = 'b'; /* b */")), DataException);
+    const stray = await Assert.throwsAsync(() => connection.executeAsync(new SqlQuery("UPDATE notes SET count = 1 WHERE id = 'a'; /* a */ */")), DataException);
+
+    Assert.areEqual(message, update.message);
+    Assert.areEqual(message, insert.message);
+    Assert.areEqual(message, query.message);
+    Assert.areEqual(message, commented.message);
+    Assert.areEqual(message, stray.message);
+    const records = await connection.queryAsync(SQLiteConnectionTests.selectNotes);
+    Assert.areEqual(2, records.length);
+    Assert.isNull(records[0]?.readNullableInteger("count"));
+    Assert.isNull(records[1]?.readNullableInteger("count"));
+  }
+
+  @TestMethod
+  public async runsAStatementFollowedOnlyBySemicolonsCommentsAndSpace(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    await using connection = SQLiteConnection.open(directory.dataSource("app"));
+    await connection.executeAsync(new SqlQuery("  /* notes */ CREATE TABLE notes (id TEXT PRIMARY KEY, text TEXT NOT NULL, count INTEGER);\n"));
+
+    Assert.areEqual(1, await connection.executeAsync(new SqlQuery("INSERT INTO notes (id, text) VALUES (?, ?);; -- one row\n/* done */ ", ["a", "first"])));
+    Assert.areEqual(2, await connection.insertAsync(new SqlQuery("INSERT INTO notes (id, text) VALUES ('b', 'second'); /* unterminated")));
+    Assert.areEqual(2, (await connection.queryAsync(new SqlQuery("SELECT id FROM notes; -- both"))).length);
+    Assert.areEqual(";", (await connection.queryAsync(new SqlQuery("SELECT ';' AS text; -- a string")))[0]?.readString("text"));
+    Assert.areEqual(1, (await connection.queryAsync(new SqlQuery("SELECT 1 AS \"a;b\" /* an identifier */")))[0]?.readInteger("a;b"));
+    Assert.areEqual(1, (await connection.queryAsync(new SqlQuery("SELECT 1 AS one /* ; */ -- ;")))[0]?.readInteger("one"));
+  }
+
+  @TestMethod
   public async rollsBackATransactionThatThrows(): Promise<void> {
     using directory = new TemporaryDirectory();
     await using connection = SQLiteConnection.open(directory.dataSource("app"));

@@ -8,6 +8,7 @@
 
 import { nameof } from "@noldova/context.core";
 
+import { TextCopy } from "../intrinsics/text-copy.js";
 import { Resources } from "../resources.js";
 
 declare global {
@@ -28,6 +29,7 @@ function isAsciiOctalDigit(character: string): boolean {
   return character >= Resources.asciiDigitZero && character <= Resources.asciiDigitSeven;
 }
 
+TextCopy.claim();
 Object.defineProperty(String, nameof<StringConstructor>(t => t.isAsciiBinaryDigit), { value: isAsciiBinaryDigit, writable: false, enumerable: false, configurable: false });
 Object.defineProperty(String, nameof<StringConstructor>(t => t.isAsciiOctalDigit), { value: isAsciiOctalDigit, writable: false, enumerable: false, configurable: false });
 

@@ -26,4 +26,5 @@ export class Resources {
   public static readonly lineBreakIndexInvalid: string = "The line-break index must be an integer within the string.";
   public static readonly spanOutOfRange: string = "The span must be contained by its source.";
   public static readonly startInvalid: string = "The span start must be an integer within the source range.";
+  public static readonly textCopiesLoaded: string = "Two copies of @noldova/context.text are loaded, so this one cannot add its extensions. The app's packages need one context version that each of their ranges meets; npm ls @noldova/context.text names the packages that bring each copy.";
 }

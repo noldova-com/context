@@ -25,6 +25,9 @@ export class ResourcesTests {
     Assert.areEqual("$.list.0: Expected a string.", Assert.throws(() => reader.readStringArray("list"), JsonException).message);
     Assert.areEqual("$.f: A value of type \"function\" cannot be carried as JSON.", Assert.throws(() => JsonReader.toJsonValue({ f: (): void => undefined }), JsonException).message);
     Assert.areEqual("$.at: Only arrays and plain objects can be carried as JSON.", Assert.throws(() => JsonReader.toJsonValue({ at: new Date(0) }), JsonException).message);
+    Assert.areEqual("$.n: A number too large to be finite cannot be carried as JSON.", Assert.throws(() => JsonReader.parse("{\"n\":1e400}"), JsonException).message);
+    Assert.areEqual("$.n: Expected an integer from -9007199254740991 to 9007199254740991, which a number holds exactly.", Assert.throws(() => JsonReader.parse("{\"n\":9007199254740993}").readInteger("n"), JsonException).message);
+    Assert.areEqual("$[\"a b\"]: The field is required.", Assert.throws(() => reader.readValue("a b"), JsonException).message);
     Assert.areEqual("$.0: An array with a missing item cannot be carried as JSON.", Assert.throws(() => JsonReader.toJsonValue(new Array(1)), JsonException).message);
     Assert.areEqual(`$${".a".repeat(64)}: JSON nested more than 64 levels deep is not accepted.`, Assert.throws(() => JsonReader.parse(`${"{\"a\":".repeat(64)}{}${"}".repeat(64)}`), JsonException).message);
   }

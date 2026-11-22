@@ -6,6 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { JsonValue } from "./json-value.js";
-
-export type JsonConversion = readonly [JsonValue, number];
+export interface ISelfReferencing {
+  self?: ISelfReferencing;
+}
