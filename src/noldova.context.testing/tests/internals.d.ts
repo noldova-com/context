@@ -196,56 +196,6 @@ declare module "@noldova/context.testing/services/execution/test-run-supervisor.
   }
 }
 
-declare module "@noldova/context.testing/services/execution/process-tree.js" {
-  import type { IClock, TestingException } from "@noldova/context.testing";
-  import type { ProcessDescendants } from "@noldova/context.testing/models/execution/process-descendants.js";
-  import type { ProcessListing } from "@noldova/context.testing/models/execution/process-listing.js";
-
-  export class ProcessTree {
-    public constructor(platform: string, listings?: ReadonlyMap<string, ProcessListing>, clock?: IClock);
-    public get warming(): Promise<boolean>;
-    public static end(processIds: readonly number[]): number;
-    public warm(): void;
-    public listDescendantsAsync(rootProcessId: number): Promise<ProcessDescendants>;
-    public closeAsync(limitMilliseconds: number, reportFailure: (error: TestingException) => void): Promise<boolean>;
-  }
-}
-
-declare module "@noldova/context.testing/models/execution/process-descendants.js" {
-  export class ProcessDescendants {
-    public readonly processIds: readonly number[];
-    public readonly isWarm: boolean;
-    public readonly milliseconds: number;
-    public readonly listedCount: number;
-    public readonly brokenChains: readonly string[] | undefined;
-    public readonly incompleteListings: readonly string[];
-    public constructor(processIds: readonly number[], isWarm: boolean, milliseconds: number, listedCount: number, brokenChains: readonly string[] | undefined,
-      incompleteListings: readonly string[]);
-    public describe(): string;
-  }
-}
-
-declare module "@noldova/context.testing/models/execution/process-row.js" {
-  export class ProcessRow {
-    public readonly processId: number;
-    public readonly parentId: number;
-    public readonly created: string | undefined;
-    public constructor(processId: number, parentId: number, created: string | undefined);
-    public static parse(line: string): ProcessRow | undefined;
-  }
-}
-
-declare module "@noldova/context.testing/models/execution/process-listing.js" {
-  export class ProcessListing {
-    public readonly file: string;
-    public readonly arguments: readonly string[];
-    public readonly warmFile: string;
-    public readonly warmArguments: readonly string[];
-    public readonly script: string | undefined;
-    public constructor(file: string, arguments_: readonly string[], warmFile: string, warmArguments: readonly string[], script?: string);
-  }
-}
-
 declare module "@noldova/context.testing/models/coverage/coverage-range.js" {
   export class CoverageRange {
     public readonly startOffset: number;

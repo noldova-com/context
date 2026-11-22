@@ -191,9 +191,8 @@ export class TestRunEntryPointTests {
       Assert.isTrue(results.includes("\"methodName\":\"passesAfterTheBlock\",\"outcome\":\"Passed\""), results);
       Assert.isTrue(result.output.includes("Failed:"), result.output);
       Assert.isTrue(result.errorOutput.includes("Test workers that could not be ended within 1000 milliseconds of being stopped: 1, running " +
-        "BlockingFixtureTests.waitsOnAChildProcess.\nProcesses the run ended that were still running under it: 1.\n"), result.errorOutput);
-      Assert.isTrue(/\nIts (warm|one-off) listing took \d+ ms and held \d+ processes, and /u.test(result.errorOutput),
-        result.errorOutput);
+        "BlockingFixtureTests.waitsOnAChildProcess.\n"), result.errorOutput);
+      Assert.isTrue(/\nProcesses the run ended that were still running under it: 1, process \d+\.\n/u.test(result.errorOutput), result.errorOutput);
       Assert.isFalse(result.errorOutput.includes("ends its own process"), result.errorOutput);
     }
     finally {
@@ -220,7 +219,7 @@ export class TestRunEntryPointTests {
       Assert.isTrue(result.output.includes("Failed:"), result.output);
       Assert.isTrue(result.errorOutput.includes("Test workers that could not be ended within 1000 milliseconds of being stopped: 1, running " +
         "BlockingFixtureTests.waitsOnAChildProcess.\n"), result.errorOutput);
-      Assert.isTrue(result.errorOutput.includes("The run could not list the processes running under it with "), result.errorOutput);
+      Assert.isTrue(result.errorOutput.includes("The run could not end the processes still running under it.\n"), result.errorOutput);
       Assert.isTrue(result.errorOutput.includes("ENOENT"), result.errorOutput);
       Assert.isTrue(result.errorOutput.endsWith("The stopped tests' workers still have not ended, so the run ends its own process so it cannot hang.\n"),
         result.errorOutput);

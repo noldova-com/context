@@ -40,6 +40,16 @@ limit passes; the limit is 10 seconds by default.
 A process is a member's child only when no process listed took the member's id
 between the two starts, so an id passed on doesn't bring in a stranger's children.
 
+`endDescendantsAsync` ends the same tree but leaves its root running, so a
+process can end what it started without ending itself:
+
+```ts
+const own = await ProcessIdentity.readAsync(process.pid);
+
+if (!Object.isUndefined(own))
+  await ProcessTree.endDescendantsAsync(own);
+```
+
 The processes are listed through one lister process, started on the first call
 and kept for the rest of the process's life. The limit starts once it is ready,
 so the first call in a process may first wait up to 60 seconds for it, which a

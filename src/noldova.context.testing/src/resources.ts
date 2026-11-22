@@ -7,7 +7,6 @@
  */
 
 import type { TestProject } from "./models/discovery/test-project.js";
-import { ProcessListing } from "./models/execution/process-listing.js";
 
 export class Resources {
   public static readonly testClassSuffix: string = "Tests";
@@ -34,44 +33,10 @@ export class Resources {
   public static readonly unhandledRejectionEvent: "unhandledRejection" = "unhandledRejection";
   public static readonly uncaughtExceptionEvent: "uncaughtException" = "uncaughtException";
   public static readonly messageEvent: string = "message";
-  public static readonly closeEvent: string = "close";
   public static readonly errorEvent: string = "error";
-  public static readonly lineEvent: string = "line";
   public static readonly exitEvent: string = "exit";
   public static readonly killSignal: "SIGKILL" = "SIGKILL";
-  public static readonly listerReadyLine: string = "ready";
-  public static readonly listerEndLine: string = "end";
-  public static readonly warmListingMilliseconds: number = 5000;
-  public static readonly oneOffListingMilliseconds: number = 60_000;
-  public static readonly listingScriptArgument: string = "<listing script>";
-  public static readonly warmListingKind: string = "warm";
-  public static readonly oneOffListingKind: string = "one-off";
-  public static readonly listingTries: number = 3;
-  public static readonly listingPauseMilliseconds: number = 1_000;
-  public static readonly noStartTimes: string = "it gives no start times to find the processes started after the run under a parent that has gone";
-  public static readonly noBrokenChains: string = "it shows no process started after the run under a parent that has gone";
-  public static readonly listingScriptDirectoryPrefix: string = "noldova-process-listing-";
-  public static readonly listingScriptFileName: string = "list-processes.js";
-  public static readonly windowsProcessListingScript: string = "var newLine = String.fromCharCode(10); var service; " +
-    "function list() { var lines = []; " +
-    "for (var items = new Enumerator(service.ExecQuery('SELECT ProcessId, ParentProcessId, CreationDate, Name FROM Win32_Process')); " +
-    "!items.atEnd(); items.moveNext()) { var item = items.item(); " +
-    "if (item.Name !== 'conhost.exe' && item.CreationDate != null) lines.push(item.ProcessId + ' ' + item.ParentProcessId + ' ' + item.CreationDate + newLine); } " +
-    "return lines.join(''); } " +
-    "try { service = new ActiveXObject('WbemScripting.SWbemLocator').ConnectServer(); " +
-    `if (WScript.Arguments.length === 0) { WScript.StdOut.Write(list()); WScript.StdOut.WriteLine('${Resources.listerEndLine}'); } ` +
-    `else { list(); WScript.StdOut.WriteLine('${Resources.listerReadyLine}'); while (!WScript.StdIn.AtEndOfStream) { WScript.StdIn.ReadLine(); ` +
-    `WScript.StdOut.Write(list()); WScript.StdOut.WriteLine('${Resources.listerEndLine}'); } } } ` +
-    "catch (error) { WScript.StdErr.WriteLine(error.message); WScript.Quit(1); }";
-  public static readonly unixProcessListingScript: string = `ps -A -o pid=,ppid= && echo ${Resources.listerEndLine}`;
-  public static readonly unixWarmListingScript: string =
-    `echo ${Resources.listerReadyLine}; while read -r line; do ps -A -o pid=,ppid=; echo ${Resources.listerEndLine}; done`;
-  public static readonly processListings: ReadonlyMap<string, ProcessListing> = new Map([
-    ["linux", new ProcessListing("sh", ["-c", Resources.unixProcessListingScript], "sh", ["-c", Resources.unixWarmListingScript])],
-    ["darwin", new ProcessListing("sh", ["-c", Resources.unixProcessListingScript], "sh", ["-c", Resources.unixWarmListingScript])],
-    ["win32", new ProcessListing("cscript.exe", ["//nologo", "//B", "//E:jscript", Resources.listingScriptArgument],
-      "cscript.exe", ["//nologo", "//B", "//E:jscript", Resources.listingScriptArgument, "warm"], Resources.windowsProcessListingScript)],
-  ]);
+  public static readonly runProcessName: string = "run";
   public static readonly testRunWorkerFileName: string = "./test-run-worker-entry-point.js";
   public static readonly testWorkerGraceMilliseconds: number = 250;
   public static readonly testWorkerStartMilliseconds: number = 5_000;
@@ -79,6 +44,7 @@ export class Resources {
   public static readonly temporaryDirectoryPrefix: string = "noldova-test-run-";
   public static readonly temporaryDirectoryVariables: readonly string[] = ["TMPDIR", "TEMP", "TMP"];
   public static readonly temporaryRemovalRetries: number = 5;
+  public static readonly abandonedProcessesNotEnded: string = "The run could not end the processes still running under it.";
   public static readonly endingOwnProcess: string = "The stopped tests' workers still have not ended, so the run ends its own process so it cannot hang.";
   public static readonly minimumWorkerCount: number = 2;
   public static readonly testWorkerDataInvalid: string = "The test worker exchanged data that is not a test worker message.";
@@ -301,53 +267,8 @@ export class Resources {
     return `Test workers that could not be ended within ${limitMilliseconds} milliseconds of being stopped: ${workerCount}${running}.`;
   }
 
-  public static abandonedProcessesEnded(processCount: number): string {
-    return `Processes the run ended that were still running under it: ${processCount}.`;
-  }
-
-  public static processListingDescribed(kind: string, milliseconds: number, listedCount: number, chains: string): string {
-    return `Its ${kind} listing took ${milliseconds} ms and held ${listedCount} processes, and ${chains}.`;
-  }
-
-  public static brokenProcessChain(processIds: readonly number[], parentId: number): string {
-    return `${processIds.join(" under ")} under ${parentId}, gone or reused`;
-  }
-
-  public static brokenChainsListed(brokenChains: readonly string[]): string {
-    return `these processes started after the run under a parent that has gone: ${brokenChains.join("; ")}`;
-  }
-
-  public static processListingUnsupported(platform: string): string {
-    return `The run cannot list the processes running under it on ${platform}.`;
-  }
-
-  public static processListingFailed(file: string): string {
-    return `The run could not list the processes running under it with ${file}.`;
-  }
-
-  public static processListingUnfinished(file: string, answer: string): string {
-    return `The run could not list the processes running under it with ${file}, which ended without finishing its listing and wrote: "${answer}".`;
-  }
-
-  public static processListingNamed(kind: string, milliseconds: number, listedCount: number): string {
-    return `${kind}, ${milliseconds} ms, ${listedCount} listed`;
-  }
-
-  public static processListingsRetried(listings: readonly string[]): string {
-    return `Listings before it that left out the run's own process: ${listings.length} (${listings.join("; ")}).`;
-  }
-
-  public static processListingIncomplete(processId: number, listings: readonly string[]): string {
-    return `The run's process listings left out process ${processId}, whose descendants they were to list, so each was incomplete; ` +
-      `listings made: ${listings.length} (${listings.join("; ")}).`;
-  }
-
-  public static processListersNotEnded(files: readonly string[], limitMilliseconds: number): string {
-    return `The run could not end its process listings within ${limitMilliseconds} milliseconds of stopping them; still open: ${files.join(", ")}.`;
-  }
-
-  public static processListingTimedOut(file: string, limitMilliseconds: number): string {
-    return `The run could not list the processes running under it with ${file} within ${limitMilliseconds} milliseconds.`;
+  public static abandonedProcessesEnded(processIds: readonly number[]): string {
+    return `Processes the run ended that were still running under it: ${[String(processIds.length), ...processIds.map(t => `process ${t}`)].join(", ")}.`;
   }
 
   public static testWorkerDiscoveryMismatch(classCount: number, methodCount: number, otherClassCount: number, otherMethodCount: number): string {

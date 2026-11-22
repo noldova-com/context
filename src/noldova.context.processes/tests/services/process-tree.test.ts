@@ -148,6 +148,45 @@ export class ProcessTreeTests {
   }
 
   @TestMethod
+  public async endsARootsDescendantsAndLeavesTheRootRunningAsync(): Promise<void> {
+    const tree = await StartedTree.startAsync(TreeShape.of(TreeShape.of(TreeShape.of())));
+
+    const ended = await ProcessTree.endDescendantsAsync(tree.identity);
+
+    ProcessTreeTests.assertEndedEach(tree.processIds.slice(1), ended);
+    Assert.areEqual(tree.processIds.length - 1, ended.length);
+    Assert.isTrue(await StartedTree.areGoneAsync(tree.processIds.slice(1)));
+    Assert.areEqual(tree.identity.startTime, (await ProcessIdentity.readAsync(tree.identity.processId))?.startTime);
+    await ProcessTree.endAsync(tree.identity);
+    await tree.waitUntilClosedAsync();
+  }
+
+  @TestMethod
+  public async endsNothingForARootWithoutDescendantsAsync(): Promise<void> {
+    const tree = await StartedTree.startAsync(TreeShape.of());
+
+    const ended = await ProcessTree.endDescendantsAsync(tree.identity);
+
+    Assert.areEqual(0, ended.length);
+    Assert.isDefined(await ProcessIdentity.readAsync(tree.identity.processId));
+    await ProcessTree.endAsync(tree.identity);
+    await tree.waitUntilClosedAsync();
+  }
+
+  @TestMethod
+  public async throwsNamingOnlyTheDescendantsWhenTheLimitPassesAsync(): Promise<void> {
+    const tree = await StartedTree.startAsync(TreeShape.of(TreeShape.of()));
+
+    const error = await Assert.throwsAsync(() => ProcessTree.endDescendantsAsync(tree.identity, new ProcessTreeEndOptions(0, 0)), ProcessTreeEndException);
+
+    ProcessTreeTests.assertEndedEach(tree.processIds.slice(1), error.survivors);
+    Assert.isFalse(error.survivors.some(t => t.processId === tree.identity.processId));
+    await ProcessTree.endAsync(tree.identity);
+    Assert.isTrue(await StartedTree.areGoneAsync(tree.processIds));
+    await tree.waitUntilClosedAsync();
+  }
+
+  @TestMethod
   public async throwsOnASystemItCantListProcessesOnAsync(): Promise<void> {
     const platform = Object.getOwnPropertyDescriptor(process, ProcessTreeTests.PLATFORM_PROPERTY);
     Assert.isDefined(platform);

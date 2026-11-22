@@ -22,6 +22,7 @@
     "@noldova/context.collections": ">=__VERSION__ <__UPPER_BOUND__",
     "@noldova/context.core": ">=__VERSION__ <__UPPER_BOUND__",
     "@noldova/context.exceptions": ">=__VERSION__ <__UPPER_BOUND__",
+    "@noldova/context.processes": ">=__VERSION__ <__UPPER_BOUND__",
     "@noldova/context.text": ">=__VERSION__ <__UPPER_BOUND__"
   }
 }
