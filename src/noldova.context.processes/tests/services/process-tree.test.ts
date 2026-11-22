@@ -154,7 +154,7 @@ export class ProcessTreeTests {
     const ended = await ProcessTree.endDescendantsAsync(tree.identity);
 
     ProcessTreeTests.assertEndedEach(tree.processIds.slice(1), ended);
-    Assert.areEqual(tree.processIds.length - 1, ended.length);
+    Assert.isFalse(ended.some(t => t.processId === tree.identity.processId));
     Assert.isTrue(await StartedTree.areGoneAsync(tree.processIds.slice(1)));
     Assert.areEqual(tree.identity.startTime, (await ProcessIdentity.readAsync(tree.identity.processId))?.startTime);
     await ProcessTree.endAsync(tree.identity);

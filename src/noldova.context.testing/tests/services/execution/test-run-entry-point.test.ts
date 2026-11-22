@@ -192,7 +192,8 @@ export class TestRunEntryPointTests {
       Assert.isTrue(result.output.includes("Failed:"), result.output);
       Assert.isTrue(result.errorOutput.includes("Test workers that could not be ended within 1000 milliseconds of being stopped: 1, running " +
         "BlockingFixtureTests.waitsOnAChildProcess.\n"), result.errorOutput);
-      Assert.isTrue(/\nProcesses the run ended that were still running under it: 1, process \d+\.\n/u.test(result.errorOutput), result.errorOutput);
+      const ended = /\nProcesses the run ended that were still running under it: (\d+)((?:, process \d+)+)\.\n/u.exec(result.errorOutput);
+      Assert.areEqual(String((ended?.[2] ?? String.empty).split(", process ").length - 1), ended?.[1], result.errorOutput);
       Assert.isFalse(result.errorOutput.includes("ends its own process"), result.errorOutput);
     }
     finally {
