@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setImmediate } from "node:timers/promises";
@@ -22,6 +22,7 @@ export class ProcessListerTests {
   private static readonly STOP_COVERAGE: string = "require(\"node:v8\").stopCoverage(); ";
   private static readonly READY_MILLISECONDS: number = 10_000;
   private static readonly PROCESS_HANDLE: string = "ProcessWrap";
+  private static readonly PIPE_HANDLE: string = "PipeWrap";
   private static readonly FOLDER_PREFIX: string = "context-lister-";
   private static readonly ANSWERING_SCRIPT: string = "let answers = 0; console.log(\"end\"); require(\"node:readline\").createInterface({ input: process.stdin })" +
     ".on(\"line\", () => { answers++; console.log(process.ppid + \" 1 0 R \" + answers); console.log(\"end\"); });";
@@ -88,24 +89,24 @@ export class ProcessListerTests {
 
   @TestMethod
   public async throwsWhenItsListerIsNotReadyWithinItsOwnLimitAsync(): Promise<void> {
-    const handlesBefore = ProcessListerTests.countProcessHandles();
+    const handlesBefore = ProcessListerTests.countHandles(ProcessListerTests.PROCESS_HANDLE);
     const listings = ProcessListerTests.fakeListings("process.stdin.resume();", 100);
 
     const error = await Assert.throwsAsync(() => ProcessLister.useAsync(10_000, t => t.listAsync(), listings), ProcessesException);
 
     Assert.areEqual(`The process lister "${process.execPath}" was not ready within 100 ms.`, error.message);
-    Assert.areEqual(handlesBefore, ProcessListerTests.countProcessHandles());
+    Assert.areEqual(handlesBefore, ProcessListerTests.countHandles(ProcessListerTests.PROCESS_HANDLE));
   }
 
   @TestMethod
   public async throwsSayingTheMachineRefusedItsListingAsync(): Promise<void> {
-    const handlesBefore = ProcessListerTests.countProcessHandles();
+    const handlesBefore = ProcessListerTests.countHandles(ProcessListerTests.PROCESS_HANDLE);
     const listings = ProcessListerTests.fakeListings(`console.log("refused ${ProcessListerTests.REFUSAL}"); process.exit(1);`, ProcessListerTests.READY_MILLISECONDS);
 
     const error = await Assert.throwsAsync(() => ProcessLister.useAsync(10_000, t => t.listAsync(), listings), ProcessesException);
 
     Assert.areEqual(`The process lister "${process.execPath}" could not set up its listing, as the machine refused it: ${ProcessListerTests.REFUSAL}`, error.message);
-    Assert.areEqual(handlesBefore, ProcessListerTests.countProcessHandles());
+    Assert.areEqual(handlesBefore, ProcessListerTests.countHandles(ProcessListerTests.PROCESS_HANDLE));
   }
 
   @TestMethod
@@ -113,20 +114,33 @@ export class ProcessListerTests {
     const folder = await mkdtemp(join(tmpdir(), ProcessListerTests.FOLDER_PREFIX));
     try {
       const refusedOnce = JSON.stringify(join(folder, "refused"));
+      const hold = join(folder, "hold");
+      const holding = `const wait = () => require("node:fs").existsSync(${JSON.stringify(hold)}) ? setTimeout(wait, 10) : undefined; wait();`;
       const listings = ProcessListerTests.fakeListings(`if (!require("node:fs").existsSync(${refusedOnce})) { require("node:fs").writeFileSync(${refusedOnce}, ""); ` +
+        `require("node:child_process").spawn(process.execPath, ["-e", ${JSON.stringify(holding)}], { stdio: ["ignore", "inherit", "ignore"] }); ` +
         `console.log("refused ${ProcessListerTests.REFUSAL}"); process.exit(1); } ${ProcessListerTests.ANSWERING_SCRIPT}`, ProcessListerTests.READY_MILLISECONDS);
-      const handlesBefore = ProcessListerTests.countProcessHandles();
+      await writeFile(hold, "");
+      const processesBefore = ProcessListerTests.countHandles(ProcessListerTests.PROCESS_HANDLE);
+      const pipesBefore = ProcessListerTests.countHandles(ProcessListerTests.PIPE_HANDLE);
+      let isFailedSettled = false;
       const failed = ProcessLister.useAsync(10_000, t => t.listAsync(), listings);
-      failed.catch(() => undefined);
-      while (ProcessListerTests.countProcessHandles() === handlesBefore)
+      failed.catch(() => undefined).finally(() => {
+        isFailedSettled = true;
+      });
+      while (ProcessListerTests.countHandles(ProcessListerTests.PROCESS_HANDLE) === processesBefore)
         await setImmediate();
-      while (ProcessListerTests.countProcessHandles() > handlesBefore)
+      while (ProcessListerTests.countHandles(ProcessListerTests.PROCESS_HANDLE) > processesBefore)
+        await setImmediate();
+      await rm(hold);
+      while (ProcessListerTests.countHandles(ProcessListerTests.PIPE_HANDLE) > pipesBefore)
         await setImmediate();
 
+      const isFailedSettledAtSecondStart = isFailedSettled;
       const second = await ProcessLister.useAsync(10_000, t => t.listAsync(), listings);
       await Assert.throwsAsync(() => failed, ProcessesException);
       const third = await ProcessLister.useAsync(10_000, t => t.listAsync(), listings);
 
+      Assert.isFalse(isFailedSettledAtSecondStart);
       Assert.areEqual(1, second[0]?.startTime);
       Assert.areEqual(2, third[0]?.startTime);
     }
@@ -135,8 +149,8 @@ export class ProcessListerTests {
     }
   }
 
-  private static countProcessHandles(): number {
-    return process.getActiveResourcesInfo().filter(t => t === ProcessListerTests.PROCESS_HANDLE).length;
+  private static countHandles(type: string): number {
+    return process.getActiveResourcesInfo().filter(t => t === type).length;
   }
 
   private static answering(completeFrom: number): ReadonlyMap<string, ProcessListing> {
