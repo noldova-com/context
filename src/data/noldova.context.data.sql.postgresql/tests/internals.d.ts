@@ -131,45 +131,54 @@ declare module "@noldova/context.data.sql.postgresql/types/query-outcome.js" {
   export type QueryOutcome = Result | Readable | Writable | StatementDescription | readonly QueryOutcome[] | null;
 }
 
-declare module "@noldova/context.data.sql.postgresql/exceptions/batch.exception.js" {
+declare module "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js" {
   import { DataException } from "@noldova/context.data";
+  import type { ExceptionOptions } from "@noldova/context.exceptions";
 
-  export class BatchException extends DataException {
+  export abstract class PostgreSQLClientException extends DataException {
+    protected constructor(message: string, options?: ExceptionOptions);
+  }
+}
+
+declare module "@noldova/context.data.sql.postgresql/exceptions/batch.exception.js" {
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
+
+  export class BatchException extends PostgreSQLClientException {
     public readonly index: number;
     public constructor(index: number, cause: Error);
   }
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/callbacks-failed.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class CallbacksFailedException extends DataException {
+  export class CallbacksFailedException extends PostgreSQLClientException {
     public readonly errors: readonly Error[];
     public constructor(errors: readonly Error[]);
   }
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/batch-skipped.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class BatchSkippedException extends DataException {
+  export class BatchSkippedException extends PostgreSQLClientException {
     public readonly index: number;
     public constructor(index: number, cause: Error | null);
   }
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/malformed-message.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class MalformedMessageException extends DataException {
+  export class MalformedMessageException extends PostgreSQLClientException {
     public constructor();
   }
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/cancel-unanswered.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class CancelUnansweredException extends DataException {
+  export class CancelUnansweredException extends PostgreSQLClientException {
     public readonly seconds: number;
     public readonly silent: boolean;
     public constructor(seconds: number, silent: boolean);
@@ -177,9 +186,9 @@ declare module "@noldova/context.data.sql.postgresql/exceptions/cancel-unanswere
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/connection-closed.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class ConnectionClosedException extends DataException {
+  export class ConnectionClosedException extends PostgreSQLClientException {
     public readonly destroyed: boolean;
     public readonly host: string;
     public readonly port: number;
@@ -188,9 +197,9 @@ declare module "@noldova/context.data.sql.postgresql/exceptions/connection-close
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/postgresql.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class PostgreSQLException extends DataException {
+  export class PostgreSQLException extends PostgreSQLClientException {
     public readonly sqlState: string;
     public readonly severity: string;
     public readonly detail: string | null;
@@ -204,42 +213,42 @@ declare module "@noldova/context.data.sql.postgresql/exceptions/postgresql.excep
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/query-canceled.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class QueryCanceledException extends DataException {
+  export class QueryCanceledException extends PostgreSQLClientException {
     public constructor();
   }
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/query-timeout.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class QueryTimeoutException extends DataException {
+  export class QueryTimeoutException extends PostgreSQLClientException {
     public readonly seconds: number;
     public constructor(seconds: number, cause: unknown);
   }
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/stray-cancel.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class StrayCancelException extends DataException {
+  export class StrayCancelException extends PostgreSQLClientException {
     public constructor(cause: Error);
   }
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/unsafe-transaction.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class UnsafeTransactionException extends DataException {
+  export class UnsafeTransactionException extends PostgreSQLClientException {
     public constructor(message: string);
   }
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/connection-ended.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class ConnectionEndedException extends DataException {
+  export class ConnectionEndedException extends PostgreSQLClientException {
     public readonly host: string;
     public readonly port: number;
     public constructor(host: string, port: number);
@@ -247,18 +256,18 @@ declare module "@noldova/context.data.sql.postgresql/exceptions/connection-ended
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/queue-timeout.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class QueueTimeoutException extends DataException {
+  export class QueueTimeoutException extends PostgreSQLClientException {
     public readonly seconds: number;
     public constructor(seconds: number);
   }
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/type-not-found.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class TypeNotFoundException extends DataException {
+  export class TypeNotFoundException extends PostgreSQLClientException {
     public readonly names: readonly string[];
     public constructor(names: readonly string[]);
   }
@@ -1254,9 +1263,9 @@ declare module "@noldova/context.data.sql.postgresql/services/client/row.reader.
 }
 
 declare module "@noldova/context.data.sql.postgresql/exceptions/transaction-rolled-back.exception.js" {
-  import { DataException } from "@noldova/context.data";
+  import { PostgreSQLClientException } from "@noldova/context.data.sql.postgresql/exceptions/postgresql-client.exception.js";
 
-  export class TransactionRolledBackException extends DataException {
+  export class TransactionRolledBackException extends PostgreSQLClientException {
     public constructor(message: string);
   }
 }

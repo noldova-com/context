@@ -6,9 +6,9 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { DataException } from "@noldova/context.data";
+import { PostgreSQLClientException } from "./postgresql-client.exception.js";
 
-export class UnsafeTransactionException extends DataException {
+export class UnsafeTransactionException extends PostgreSQLClientException {
   public constructor(message: string) {
     super(message);
   }

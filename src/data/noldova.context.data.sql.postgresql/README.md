@@ -135,7 +135,8 @@ from it:
   session starter, the authenticator and the socket; `protocol.js` became
   `services/protocol/`; `query.js` became `Query` and `ClientQuery`;
   `types.js` became `services/types/` and `TypeRegistry`; `errors.js`
-  became the exceptions in `exceptions/`, each a `DataException`; and
+  became the exceptions in `exceptions/`, each a `PostgreSQLClientException`,
+  the package's `DataException` base; and
   `result.js` became `Result`.
 - Queries take text and values, `query`, `runUnsafe` and `runFile`, in place
   of tagged templates, and builder methods such as `useCursor` and

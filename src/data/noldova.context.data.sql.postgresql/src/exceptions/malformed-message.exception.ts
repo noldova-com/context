@@ -6,11 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { DataException } from "@noldova/context.data";
-
 import { Resources } from "../resources.js";
+import { PostgreSQLClientException } from "./postgresql-client.exception.js";
 
-export class MalformedMessageException extends DataException {
+export class MalformedMessageException extends PostgreSQLClientException {
   public constructor() {
     super(Resources.malformedMessage);
   }

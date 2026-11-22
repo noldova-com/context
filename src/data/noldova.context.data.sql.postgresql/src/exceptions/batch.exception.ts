@@ -6,12 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { DataException } from "@noldova/context.data";
 import { ExceptionOptions } from "@noldova/context.exceptions";
 
 import { Resources } from "../resources.js";
+import { PostgreSQLClientException } from "./postgresql-client.exception.js";
 
-export class BatchException extends DataException {
+export class BatchException extends PostgreSQLClientException {
   public readonly index: number;
 
   public constructor(index: number, cause: Error) {

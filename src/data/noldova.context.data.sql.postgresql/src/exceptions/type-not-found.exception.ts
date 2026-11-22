@@ -6,11 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { DataException } from "@noldova/context.data";
-
 import { Resources } from "../resources.js";
+import { PostgreSQLClientException } from "./postgresql-client.exception.js";
 
-export class TypeNotFoundException extends DataException {
+export class TypeNotFoundException extends PostgreSQLClientException {
   public readonly names: readonly string[];
 
   public constructor(names: readonly string[]) {

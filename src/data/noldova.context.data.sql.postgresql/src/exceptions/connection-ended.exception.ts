@@ -6,11 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { DataException } from "@noldova/context.data";
-
 import { Resources } from "../resources.js";
+import { PostgreSQLClientException } from "./postgresql-client.exception.js";
 
-export class ConnectionEndedException extends DataException {
+export class ConnectionEndedException extends PostgreSQLClientException {
   public readonly host: string;
   public readonly port: number;
 
