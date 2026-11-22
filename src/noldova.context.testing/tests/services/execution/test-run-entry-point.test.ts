@@ -192,6 +192,8 @@ export class TestRunEntryPointTests {
       Assert.isTrue(result.output.includes("Failed:"), result.output);
       Assert.isTrue(result.errorOutput.includes("Test workers that could not be ended within 1000 milliseconds of being stopped: 1, running " +
         "BlockingFixtureTests.waitsOnAChildProcess.\nProcesses the run ended that were still running under it: 1.\n"), result.errorOutput);
+      Assert.isTrue(/\nIts (warm|one-off) listing took \d+ ms and held \d+ processes, the run's own process among them, and /u.test(result.errorOutput),
+        result.errorOutput);
       Assert.isFalse(result.errorOutput.includes("ends its own process"), result.errorOutput);
     }
     finally {

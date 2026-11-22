@@ -44,16 +44,20 @@ export class Resources {
   public static readonly warmListingMilliseconds: number = 5000;
   public static readonly oneOffListingMilliseconds: number = 60_000;
   public static readonly listingScriptArgument: string = "<listing script>";
+  public static readonly warmListingKind: string = "warm";
+  public static readonly oneOffListingKind: string = "one-off";
+  public static readonly rootListed: string = "the run's own process among them";
+  public static readonly rootNotListed: string = "but not the run's own process";
+  public static readonly noStartTimes: string = "it gives no start times to find the processes started after the run under a parent that has gone";
+  public static readonly noBrokenChains: string = "it shows no process started after the run under a parent that has gone";
   public static readonly listingScriptDirectoryPrefix: string = "noldova-process-listing-";
   public static readonly listingScriptFileName: string = "list-processes.js";
   public static readonly windowsProcessListingScript: string = "var newLine = String.fromCharCode(10); var service; " +
-    "function list() { var all = [], created = {}, lines = []; " +
+    "function list() { var lines = []; " +
     "for (var items = new Enumerator(service.ExecQuery('SELECT ProcessId, ParentProcessId, CreationDate, Name FROM Win32_Process')); " +
     "!items.atEnd(); items.moveNext()) { var item = items.item(); " +
-    "var row = { id: item.ProcessId, parent: item.ParentProcessId, created: item.CreationDate, name: item.Name }; all.push(row); created[row.id] = row.created; } " +
-    "for (var index = 0; index < all.length; index++) { var entry = all[index]; var parentCreated = created[entry.parent]; " +
-    "if (entry.name !== 'conhost.exe' && parentCreated != null && entry.created != null && parentCreated < entry.created) " +
-    "lines.push(entry.id + ' ' + entry.parent + newLine); } return lines.join(''); } " +
+    "if (item.Name !== 'conhost.exe' && item.CreationDate != null) lines.push(item.ProcessId + ' ' + item.ParentProcessId + ' ' + item.CreationDate + newLine); } " +
+    "return lines.join(''); } " +
     "try { service = new ActiveXObject('WbemScripting.SWbemLocator').ConnectServer(); " +
     `if (WScript.Arguments.length === 0) { WScript.StdOut.Write(list()); WScript.StdOut.WriteLine('${Resources.listerEndLine}'); } ` +
     `else { list(); WScript.StdOut.WriteLine('${Resources.listerReadyLine}'); while (!WScript.StdIn.AtEndOfStream) { WScript.StdIn.ReadLine(); ` +
@@ -295,6 +299,18 @@ export class Resources {
 
   public static abandonedProcessesEnded(processCount: number): string {
     return `Processes the run ended that were still running under it: ${processCount}.`;
+  }
+
+  public static processListingDescribed(kind: string, milliseconds: number, listedCount: number, root: string, chains: string): string {
+    return `Its ${kind} listing took ${milliseconds} ms and held ${listedCount} processes, ${root}, and ${chains}.`;
+  }
+
+  public static brokenProcessChain(processIds: readonly number[], parentId: number): string {
+    return `${processIds.join(" under ")} under ${parentId}, gone or reused`;
+  }
+
+  public static brokenChainsListed(brokenChains: readonly string[]): string {
+    return `these processes started after the run under a parent that has gone: ${brokenChains.join("; ")}`;
   }
 
   public static processListingUnsupported(platform: string): string {

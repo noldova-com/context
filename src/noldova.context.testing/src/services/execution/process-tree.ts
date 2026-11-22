@@ -22,7 +22,9 @@ import { ExceptionOptions } from "@noldova/context.exceptions";
 
 import { TestingException } from "../../exceptions/testing.exception.js";
 import type { IClock } from "../../interfaces/i-clock.js";
+import { ProcessDescendants } from "../../models/execution/process-descendants.js";
 import type { ProcessListing } from "../../models/execution/process-listing.js";
+import { ProcessRow } from "../../models/execution/process-row.js";
 import { Resources } from "../../resources.js";
 import { SystemClock } from "../timing/system-clock.js";
 
@@ -104,11 +106,16 @@ export class ProcessTree {
     });
   }
 
-  public async listDescendantsAsync(rootProcessId: number): Promise<number[]> {
-    const links = await this.listWarmLinksAsync() ?? await this.listLinksAsync();
+  public async listDescendantsAsync(rootProcessId: number): Promise<ProcessDescendants> {
+    const warmStart = this.clock.now();
+    const warmRows = await this.listWarmRowsAsync();
+    const start = Object.isUndefined(warmRows) ? this.clock.now() : warmStart;
+    const rows = warmRows ?? await this.listRowsAsync();
+    const rowsById = new Map(rows.map(t => [t.processId, t]));
     const processIds: number[] = [];
-    ProcessTree.collectLeavesFirst(links, rootProcessId, processIds);
-    return processIds;
+    ProcessTree.collectLeavesFirst(rows, rowsById, rootProcessId, processIds);
+    return new ProcessDescendants(processIds, !Object.isUndefined(warmRows), Math.round(this.clock.now() - start), rows.length, rowsById.has(rootProcessId),
+      ProcessTree.findBrokenChains(rows, rowsById, rootProcessId));
   }
 
   public async closeAsync(): Promise<void> {
@@ -131,19 +138,48 @@ export class ProcessTree {
     }
   }
 
-  private static collectLeavesFirst(links: readonly (readonly [number, number])[], parentId: number, processIds: number[]): void {
-    for (const [processId] of links.filter(t => t[1] === parentId)) {
-      ProcessTree.collectLeavesFirst(links, processId, processIds);
-      processIds.push(processId);
+  private static collectLeavesFirst(rows: readonly ProcessRow[], rowsById: ReadonlyMap<number, ProcessRow>, parentId: number, processIds: number[]): void {
+    for (const row of rows.filter(t => t.parentId === parentId && ProcessTree.isLinked(t, rowsById))) {
+      ProcessTree.collectLeavesFirst(rows, rowsById, row.processId, processIds);
+      processIds.push(row.processId);
     }
   }
 
-  private static parseLinks(lines: readonly string[], listerProcessIds: readonly (number | undefined)[]): (readonly [number, number])[] {
-    return lines
-      .map(t => t.trim().split(/\s+/u))
-      .filter(t => t.length === 2)
-      .map((t): readonly [number, number] => [Number(t[0]), Number(t[1])])
-      .filter(t => !listerProcessIds.includes(t[0]));
+  private static isLinked(row: ProcessRow, rowsById: ReadonlyMap<number, ProcessRow>): boolean {
+    if (Object.isUndefined(row.created))
+      return true;
+
+    const parentCreated = rowsById.get(row.parentId)?.created;
+    return !Object.isUndefined(parentCreated) && parentCreated < row.created;
+  }
+
+  private static findBrokenChains(rows: readonly ProcessRow[], rowsById: ReadonlyMap<number, ProcessRow>, rootProcessId: number): string[] | undefined {
+    const rootCreated = rowsById.get(rootProcessId)?.created;
+    if (Object.isUndefined(rootCreated))
+      return undefined;
+
+    return rows.filter(t => ProcessTree.isNewer(t, rootCreated)).flatMap(t => ProcessTree.findBrokenChain(t, rowsById, rootCreated));
+  }
+
+  private static findBrokenChain(row: ProcessRow, rowsById: ReadonlyMap<number, ProcessRow>, rootCreated: string): string[] {
+    const chain = [row.processId];
+    let current = row;
+    let parent = rowsById.get(current.parentId);
+    while (!Object.isUndefined(parent) && ProcessTree.isLinked(current, rowsById) && ProcessTree.isNewer(parent, rootCreated)) {
+      chain.push(parent.processId);
+      current = parent;
+      parent = rowsById.get(current.parentId);
+    }
+
+    return Object.isUndefined(parent) || !ProcessTree.isLinked(current, rowsById) ? [Resources.brokenProcessChain(chain, current.parentId)] : [];
+  }
+
+  private static isNewer(row: ProcessRow, rootCreated: string): boolean {
+    return !Object.isUndefined(row.created) && row.created > rootCreated;
+  }
+
+  private static parseRows(lines: readonly string[], listerProcessIds: readonly (number | undefined)[]): ProcessRow[] {
+    return lines.flatMap(t => ProcessRow.parse(t) ?? []).filter(t => !listerProcessIds.includes(t.processId));
   }
 
   private withScript(arguments_: readonly string[]): readonly string[] {
@@ -169,25 +205,25 @@ export class ProcessTree {
     answer?.(lines);
   }
 
-  private listWarmLinksAsync(): Promise<(readonly [number, number])[] | undefined> {
+  private listWarmRowsAsync(): Promise<ProcessRow[] | undefined> {
     const lister = this.lister;
     if (!this.isListerUsable || Object.isUndefined(lister))
       return Promise.resolve(undefined);
 
-    return new Promise<(readonly [number, number])[] | undefined>(resolve => {
+    return new Promise<ProcessRow[] | undefined>(resolve => {
       const timer = this.clock.setTimeout(() => {
         this.isListerUsable = false;
         this.settleAnswer(undefined);
       }, Resources.warmListingMilliseconds);
       this.answer = lines => {
         this.clock.clearTimeout(timer);
-        resolve(Object.isUndefined(lines) ? undefined : ProcessTree.parseLinks(lines, [lister.pid]));
+        resolve(Object.isUndefined(lines) ? undefined : ProcessTree.parseRows(lines, [lister.pid]));
       };
       lister.stdin.write(Resources.lineSeparator);
     });
   }
 
-  private listLinksAsync(): Promise<(readonly [number, number])[]> {
+  private listRowsAsync(): Promise<ProcessRow[]> {
     const listing = this.listing;
     if (Object.isUndefined(listing))
       return Promise.reject(new TestingException(Resources.processListingUnsupported(this.platform)));
@@ -200,7 +236,7 @@ export class ProcessTree {
       return Promise.reject(new TestingException(Resources.processListingFailed(listing.file), new ExceptionOptions(error)));
     }
 
-    return new Promise<(readonly [number, number])[]>((resolve, reject) => {
+    return new Promise<ProcessRow[]>((resolve, reject) => {
       const lister = execFile(listing.file, arguments_, { encoding: Resources.textEncoding, windowsHide: true }, (error, output) => {
         this.clock.clearTimeout(timer);
         const lines = output.split(Resources.lineSeparator).map(t => t.trim());
@@ -210,7 +246,7 @@ export class ProcessTree {
         else if (endIndex < 0)
           reject(new TestingException(Resources.processListingUnfinished(listing.file, output.trim())));
         else
-          resolve(ProcessTree.parseLinks(lines.slice(0, endIndex), [lister.pid, this.lister?.pid]));
+          resolve(ProcessTree.parseRows(lines.slice(0, endIndex), [lister.pid, this.lister?.pid]));
       });
       const timer = this.clock.setTimeout(() => {
         reject(new TestingException(Resources.processListingTimedOut(listing.file, Resources.oneOffListingMilliseconds)));

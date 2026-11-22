@@ -45,7 +45,7 @@ export class ProcessTreeTests {
     try {
       const descendants = await tree.listDescendantsAsync(root.pid ?? -1);
 
-      Assert.areEqual(`${processIds[2]},${processIds[1]}`, descendants.join());
+      Assert.areEqual(`${processIds[2]},${processIds[1]}`, descendants.processIds.join());
     }
     finally {
       await ProcessTreeTests.endChainAsync(root, processIds);
@@ -60,7 +60,7 @@ export class ProcessTreeTests {
     try {
       const closed = once(root, "close");
 
-      ProcessTree.end(await tree.listDescendantsAsync(root.pid ?? -1));
+      ProcessTree.end((await tree.listDescendantsAsync(root.pid ?? -1)).processIds);
       const [exitCode] = await closed;
 
       Assert.areEqual(0, exitCode);
@@ -78,7 +78,7 @@ export class ProcessTreeTests {
     try {
       const descendants = await tree.listDescendantsAsync(root.pid ?? -1);
 
-      Assert.areEqual(`${processIds[2]},${processIds[1]}`, descendants.join());
+      Assert.areEqual(`${processIds[2]},${processIds[1]}`, descendants.processIds.join());
     }
     finally {
       await ProcessTreeTests.endChainAsync(root, processIds);
@@ -108,8 +108,10 @@ export class ProcessTreeTests {
       tree.warm();
 
       Assert.isTrue(await tree.warming);
-      Assert.areEqual("12,11", (await tree.listDescendantsAsync(5)).join());
-      Assert.areEqual("12,11", (await tree.listDescendantsAsync(5)).join());
+      const descendants = await tree.listDescendantsAsync(5);
+      Assert.areEqual("12,11", descendants.processIds.join());
+      Assert.isTrue(descendants.isWarm);
+      Assert.areEqual("12,11", (await tree.listDescendantsAsync(5)).processIds.join());
     }
     finally {
       await tree.closeAsync();
@@ -122,7 +124,7 @@ export class ProcessTreeTests {
     try {
       tree.warm();
 
-      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).join());
+      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).processIds.join());
     }
     finally {
       await tree.closeAsync();
@@ -137,8 +139,8 @@ export class ProcessTreeTests {
       tree.warm();
       Assert.isTrue(await tree.warming);
 
-      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).join());
-      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).join());
+      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).processIds.join());
+      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).processIds.join());
     }
     finally {
       await tree.closeAsync();
@@ -157,7 +159,10 @@ export class ProcessTreeTests {
       clock.advance(4_999);
       clock.advance(1);
 
-      Assert.areEqual("21", (await listing).join());
+      const descendants = await listing;
+      Assert.areEqual("21", descendants.processIds.join());
+      Assert.isFalse(descendants.isWarm);
+      Assert.areEqual(0, descendants.milliseconds);
     }
     finally {
       await tree.closeAsync();
@@ -204,10 +209,10 @@ export class ProcessTreeTests {
     const foldersBefore = await ProcessTreeTests.listScriptFoldersAsync();
     let foldersWhileOpen: string[];
     try {
-      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).join());
+      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).processIds.join());
       tree.warm();
       Assert.isTrue(await tree.warming);
-      Assert.areEqual("12,11", (await tree.listDescendantsAsync(5)).join());
+      Assert.areEqual("12,11", (await tree.listDescendantsAsync(5)).processIds.join());
       foldersWhileOpen = await ProcessTreeTests.listScriptFoldersAsync();
     }
     finally {
@@ -250,7 +255,58 @@ export class ProcessTreeTests {
       tree.warm();
 
       Assert.isFalse(await tree.warming);
-      Assert.areEqual("21", (await tree.listDescendantsAsync(5)).join());
+      const descendants = await tree.listDescendantsAsync(5);
+      Assert.areEqual("21", descendants.processIds.join());
+      Assert.isFalse(descendants.isWarm);
+      Assert.areEqual(1, descendants.listedCount);
+      Assert.isFalse(descendants.isRootListed);
+      Assert.isUndefined(descendants.brokenChains);
+    }
+    finally {
+      await tree.closeAsync();
+    }
+  }
+
+  @TestMethod
+  public async linksAProcessToItsParentOnlyWhenItStartedAfterItAndSkipsOtherLinesAsync(): Promise<void> {
+    const tree = ProcessTreeTests.startOneOffTree(["PID PPID START NAME", "5 1 100", "11 5 102", "12 11 101", "13 5"]);
+    try {
+      const descendants = await tree.listDescendantsAsync(5);
+
+      Assert.areEqual("11,13", descendants.processIds.join());
+      Assert.areEqual(4, descendants.listedCount);
+      Assert.isTrue(descendants.isRootListed);
+      Assert.areEqual("12 under 11, gone or reused", descendants.brokenChains?.join("; "));
+    }
+    finally {
+      await tree.closeAsync();
+    }
+  }
+
+  @TestMethod
+  public async linksNoProcessWithAStartTimeToAParentMissingFromTheListingAsync(): Promise<void> {
+    const tree = ProcessTreeTests.startOneOffTree(["21 5 102", "22 21 103"]);
+    try {
+      const descendants = await tree.listDescendantsAsync(5);
+
+      Assert.areEqual(String.empty, descendants.processIds.join());
+      Assert.isFalse(descendants.isRootListed);
+      Assert.isUndefined(descendants.brokenChains);
+    }
+    finally {
+      await tree.closeAsync();
+    }
+  }
+
+  @TestMethod
+  public async namesTheProcessesStartedAfterTheRunUnderAParentThatHasGoneAsync(): Promise<void> {
+    const tree = ProcessTreeTests.startOneOffTree(["5 1 100", "30 99 105", "31 30 106", "40 5 107", "50 60 108", "60 1 109", "1 0 001", "70 8 110", "8 1 090"]);
+    try {
+      const descendants = await tree.listDescendantsAsync(5);
+
+      Assert.areEqual("40", descendants.processIds.join());
+      Assert.areEqual(9, descendants.listedCount);
+      Assert.areEqual("30 under 99, gone or reused; 31 under 30 under 99, gone or reused; 50 under 60, gone or reused", descendants.brokenChains?.join("; "));
     }
     finally {
       await tree.closeAsync();
@@ -305,6 +361,11 @@ export class ProcessTreeTests {
       Reflect.deleteProperty(process.env, variable);
     else
       process.env[variable] = value;
+  }
+
+  private static startOneOffTree(rows: readonly string[]): ProcessTree {
+    const script = `console.log(${JSON.stringify([...rows, "end"].join("\n"))});`;
+    return new ProcessTree("fake", new Map([["fake", new ProcessListing(process.execPath, ["--eval", script], "missing-lister", [])]]));
   }
 
   private static fakeListings(warmScript: string): ReadonlyMap<string, ProcessListing> {

@@ -92,8 +92,9 @@ export class TestRunEntryPoint {
     process.exitCode = 1;
     console.error(unendedWorkersMessage);
     try {
-      const processIds = await processTree.listDescendantsAsync(process.pid);
-      console.error(Resources.abandonedProcessesEnded(ProcessTree.end(processIds)));
+      const descendants = await processTree.listDescendantsAsync(process.pid);
+      console.error(Resources.abandonedProcessesEnded(ProcessTree.end(descendants.processIds)));
+      console.error(descendants.describe());
       return await supervisor.waitForUnendedWorkersAsync();
     }
     catch (error) {

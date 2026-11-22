@@ -198,6 +198,7 @@ declare module "@noldova/context.testing/services/execution/test-run-supervisor.
 
 declare module "@noldova/context.testing/services/execution/process-tree.js" {
   import type { IClock } from "@noldova/context.testing";
+  import type { ProcessDescendants } from "@noldova/context.testing/models/execution/process-descendants.js";
   import type { ProcessListing } from "@noldova/context.testing/models/execution/process-listing.js";
 
   export class ProcessTree {
@@ -205,8 +206,32 @@ declare module "@noldova/context.testing/services/execution/process-tree.js" {
     public get warming(): Promise<boolean>;
     public static end(processIds: readonly number[]): number;
     public warm(): void;
-    public listDescendantsAsync(rootProcessId: number): Promise<number[]>;
+    public listDescendantsAsync(rootProcessId: number): Promise<ProcessDescendants>;
     public closeAsync(): Promise<void>;
+  }
+}
+
+declare module "@noldova/context.testing/models/execution/process-descendants.js" {
+  export class ProcessDescendants {
+    public readonly processIds: readonly number[];
+    public readonly isWarm: boolean;
+    public readonly milliseconds: number;
+    public readonly listedCount: number;
+    public readonly isRootListed: boolean;
+    public readonly brokenChains: readonly string[] | undefined;
+    public constructor(processIds: readonly number[], isWarm: boolean, milliseconds: number, listedCount: number, isRootListed: boolean,
+      brokenChains: readonly string[] | undefined);
+    public describe(): string;
+  }
+}
+
+declare module "@noldova/context.testing/models/execution/process-row.js" {
+  export class ProcessRow {
+    public readonly processId: number;
+    public readonly parentId: number;
+    public readonly created: string | undefined;
+    public constructor(processId: number, parentId: number, created: string | undefined);
+    public static parse(line: string): ProcessRow | undefined;
   }
 }
 
