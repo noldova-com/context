@@ -539,9 +539,10 @@ declare module "@noldova/context.data.sql.postgresql/services/session-starter.js
   import type { ClientTimers } from "@noldova/context.data.sql.postgresql/models/client/client-timers.js";
   import type { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
   import type { StartedSession } from "@noldova/context.data.sql.postgresql/models/started-session.js";
+  import type { DerivedKeys } from "@noldova/context.data.sql.postgresql/services/derived-keys.js";
 
   export class SessionStarter {
-    public constructor(options: ConnectionOptions, cancelTimeout?: number, timers?: ClientTimers);
+    public constructor(options: ConnectionOptions, keys: DerivedKeys, cancelTimeout?: number, timers?: ClientTimers);
     public startAsync(): Promise<StartedSession>;
     public cancelAsync(backend: BackendKey, signal: AbortSignal): Promise<void>;
     public stop(): void;
@@ -872,6 +873,14 @@ declare module "@noldova/context.data.sql.postgresql/models/client/pool-lease.js
   }
 }
 
+declare module "@noldova/context.data.sql.postgresql/models/client/client-listener.js" {
+  import type { PostgreSQLPool } from "@noldova/context.data.sql.postgresql/models/client/postgresql-pool.js";
+
+  export class ClientListener {
+    public readonly pool: PostgreSQLPool | null;
+  }
+}
+
 declare module "@noldova/context.data.sql.postgresql/models/client/postgresql-pool.js" {
   import type { LeaseKind } from "@noldova/context.data.sql.postgresql/enums/lease-kind.js";
   import type { ConnectionClosedException } from "@noldova/context.data.sql.postgresql/exceptions/connection-closed.exception.js";
@@ -882,6 +891,7 @@ declare module "@noldova/context.data.sql.postgresql/models/client/postgresql-po
   import type { PoolLease } from "@noldova/context.data.sql.postgresql/models/client/pool-lease.js";
   import type { PostgreSQLConnection } from "@noldova/context.data.sql.postgresql/models/client/postgresql-connection.js";
   import type { Query } from "@noldova/context.data.sql.postgresql/models/client/query.js";
+  import type { DerivedKeys } from "@noldova/context.data.sql.postgresql/services/derived-keys.js";
   import type { SessionStarter } from "@noldova/context.data.sql.postgresql/services/session-starter.js";
   import type { TypeRegistry } from "@noldova/context.data.sql.postgresql/models/type-registry.js";
   import type { BinaryDecoder } from "@noldova/context.data.sql.postgresql/types/binary-decoder.js";
@@ -890,7 +900,8 @@ declare module "@noldova/context.data.sql.postgresql/models/client/postgresql-po
 
   export class PostgreSQLPool extends ConnectionEvents {
     public readonly parameters: Map<string, string>;
-    public constructor(options: ClientOptions, connection: ConnectionOptions, types: TypeRegistry, starter: (options: ConnectionOptions) => SessionStarter);
+    public readonly keys: DerivedKeys;
+    public constructor(options: ClientOptions, connection: ConnectionOptions, types: TypeRegistry, starter: (options: ConnectionOptions, keys: DerivedKeys) => SessionStarter);
     public get options(): ClientOptions;
     public get stats(): PoolStats;
     public override get typed(): boolean;
@@ -1078,17 +1089,27 @@ declare module "@noldova/context.data.sql.postgresql/services/protocol/frontend.
   }
 }
 
+declare module "@noldova/context.data.sql.postgresql/services/derived-keys.js" {
+  import type { Buffer } from "node:buffer";
+
+  export class DerivedKeys {
+    public readonly salted: ReadonlyMap<string, Buffer>;
+    public readonly deriving: ReadonlyMap<string, Promise<Buffer>>;
+    public deriveAsync(password: string, salt: string, iterations: number): Promise<Buffer>;
+    public clear(): void;
+  }
+}
+
 declare module "@noldova/context.data.sql.postgresql/services/authenticator.js" {
   import type { Buffer } from "node:buffer";
 
+  import type { DerivedKeys } from "@noldova/context.data.sql.postgresql/services/derived-keys.js";
   import type { Frontend } from "@noldova/context.data.sql.postgresql/services/protocol/frontend.js";
 
   export class Authenticator {
-    public constructor(user: string, password: string, binding: string, certificate: Buffer | null, frontend: Frontend);
+    public constructor(user: string, password: string, binding: string, certificate: Buffer | null, frontend: Frontend, keys: DerivedKeys);
     public get isAuthenticated(): boolean;
-    public static readonly deriving: ReadonlyMap<string, Promise<Buffer>>;
     public respondAsync(type: number, body: Buffer): Promise<Buffer | null>;
-    public static saltPasswordAsync(password: string, salt: string, iterations: number): Promise<Buffer>;
     public static computeHmac(key: Buffer, text: string): Buffer;
     public static computeSha256(data: Buffer): Buffer;
     public static computeXor(left: Buffer, right: Buffer): Buffer;
@@ -1375,7 +1396,9 @@ declare module "@noldova/context.data.sql.postgresql/models/client/postgresql-cl
   import type { ClientOptions } from "@noldova/context.data.sql.postgresql/models/client-options.js";
   import type { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
   import type { PoolStats } from "@noldova/context.data.sql.postgresql/models/pool-stats.js";
+  import type { ClientListener } from "@noldova/context.data.sql.postgresql/models/client/client-listener.js";
   import type { ListenSubscription } from "@noldova/context.data.sql.postgresql/models/client/listen-subscription.js";
+  import type { PostgreSQLPool } from "@noldova/context.data.sql.postgresql/models/client/postgresql-pool.js";
   import type { ReservedClient } from "@noldova/context.data.sql.postgresql/models/client/reserved-client.js";
   import { SqlRunner } from "@noldova/context.data.sql.postgresql/services/client/sql-runner.js";
   import type { TransactionScope } from "@noldova/context.data.sql.postgresql/models/client/transaction-scope.js";
@@ -1385,6 +1408,8 @@ declare module "@noldova/context.data.sql.postgresql/models/client/postgresql-cl
   export class PostgreSQLClient extends SqlRunner implements AsyncDisposable {
     public readonly options: ClientOptions;
     public readonly connection: ConnectionOptions;
+    public readonly pool: PostgreSQLPool;
+    public readonly listener: ClientListener;
     public get parameters(): ReadonlyMap<string, string>;
     public get stats(): PoolStats;
     public static create(location?: string | null, settings?: ClientSettings): PostgreSQLClient;

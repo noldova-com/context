@@ -37,7 +37,7 @@ export class RealPool implements AsyncDisposable {
     this.options = new ClientOptions({ maxLifetime: null, ...values });
     this.connection = new ConnectionOptions(server.host, server.port, server.database, server.user, "", SslMode.Disable, ChannelBinding.Prefer, 5, parameters, new SystemCertificates());
     this.registry = new TypeRegistry(this.options);
-    this.pool = new PostgreSQLPool(this.options, this.connection, this.registry, options => new SessionStarter(options, this.options.cancelTimeout));
+    this.pool = new PostgreSQLPool(this.options, this.connection, this.registry, (options, keys) => new SessionStarter(options, keys, this.options.cancelTimeout));
   }
 
   public static result(outcome: QueryOutcome): Result {

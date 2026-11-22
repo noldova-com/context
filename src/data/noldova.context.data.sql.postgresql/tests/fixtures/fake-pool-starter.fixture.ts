@@ -15,12 +15,14 @@ import { DataException } from "@noldova/context.data";
 import { BackendKey } from "@noldova/context.data.sql.postgresql/models/backend-key.js";
 import type { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
 import { StartedSession } from "@noldova/context.data.sql.postgresql/models/started-session.js";
+import type { DerivedKeys } from "@noldova/context.data.sql.postgresql/services/derived-keys.js";
 import { SessionStarter } from "@noldova/context.data.sql.postgresql/services/session-starter.js";
 
 import { FakeSocket } from "./fake-socket.fixture.js";
 
 export class FakePoolStarter extends SessionStarter {
   public readonly socket: FakeSocket = new FakeSocket();
+  public readonly keys: DerivedKeys;
   public readonly cancelled: BackendKey[] = [];
   public cancelError: Error | null = null;
   public cancelPending: Promise<void> | null = null;
@@ -29,8 +31,9 @@ export class FakePoolStarter extends SessionStarter {
   private resolver: (session: StartedSession) => void = () => undefined;
   private rejecter: (error: unknown) => void = () => undefined;
 
-  public constructor(options: ConnectionOptions) {
-    super(options);
+  public constructor(options: ConnectionOptions, keys: DerivedKeys) {
+    super(options, keys);
+    this.keys = keys;
     this.started = new Promise<StartedSession>((resolve, reject) => {
       this.resolver = resolve;
       this.rejecter = reject;

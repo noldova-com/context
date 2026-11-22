@@ -23,6 +23,7 @@ import type { PoolLease } from "@noldova/context.data.sql.postgresql/models/clie
 import { PostgreSQLPool } from "@noldova/context.data.sql.postgresql/models/client/postgresql-pool.js";
 import { Query } from "@noldova/context.data.sql.postgresql/models/client/query.js";
 import { TypeRegistry } from "@noldova/context.data.sql.postgresql/models/type-registry.js";
+import type { DerivedKeys } from "@noldova/context.data.sql.postgresql/services/derived-keys.js";
 
 import { BackendMessages as M } from "./backend-messages.fixture.js";
 import { FakePoolStarter } from "./fake-pool-starter.fixture.js";
@@ -42,7 +43,7 @@ export class PoolHarness {
     this.options = new ClientOptions({ fetchTypes: false, maxLifetime: null, backoff: 1, ...values, timers: this.timers });
     this.connection = new ConnectionOptions("localhost", 5432, "app", "app", "", SslMode.Disable, ChannelBinding.Disable, connectTimeout, new Map(), new SystemCertificates());
     this.registry = new TypeRegistry(this.options);
-    this.pool = new PostgreSQLPool(this.options, this.connection, this.registry, options => this.start(options));
+    this.pool = new PostgreSQLPool(this.options, this.connection, this.registry, (options, keys) => this.start(options, keys));
   }
 
   public static done(): Buffer[] {
@@ -93,8 +94,8 @@ export class PoolHarness {
     return this.starters.length > index ? this.socket(index).take() : "";
   }
 
-  private start(options: ConnectionOptions): FakePoolStarter {
-    const starter = new FakePoolStarter(options);
+  private start(options: ConnectionOptions, keys: DerivedKeys): FakePoolStarter {
+    const starter = new FakePoolStarter(options, keys);
     this.starters.push(starter);
     if (this.automatic)
       starter.open();

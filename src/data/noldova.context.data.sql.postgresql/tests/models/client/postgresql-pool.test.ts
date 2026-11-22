@@ -388,6 +388,23 @@ export class PostgreSQLPoolTests {
   }
 
   @TestMethod
+  public async startsItsSessionsWithItsKeysAndForgetsThemOnceItEndsAsync(): Promise<void> {
+    const harness = new PoolHarness();
+    const query = harness.query("select 1").execute();
+    Assert.areEqual("P,D,B,E,S", await harness.writtenAsync(0));
+    harness.answer(0, ...PoolHarness.prepared());
+    await query;
+    await harness.starter(0).keys.deriveAsync("pencil", "c2FsdA==", 1);
+    const derived = harness.pool.keys.salted.size;
+
+    await harness.pool.endAsync();
+
+    Assert.areEqual(harness.pool.keys, harness.starter(0).keys);
+    Assert.areEqual(1, derived);
+    Assert.areEqual(0, harness.pool.keys.salted.size);
+  }
+
+  @TestMethod
   public async dropsAConnectionThatOpensAfterTheEndAsync(): Promise<void> {
     const harness = new PoolHarness();
     harness.automatic = false;

@@ -22,6 +22,7 @@ import { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/c
 import { SystemCertificates } from "@noldova/context.data.sql.postgresql/models/system-certificates.js";
 import type { StartedSession } from "@noldova/context.data.sql.postgresql/models/started-session.js";
 import { PostgreSQLSocket } from "@noldova/context.data.sql.postgresql/models/postgresql-socket.js";
+import { DerivedKeys } from "@noldova/context.data.sql.postgresql/services/derived-keys.js";
 import { SessionStarter } from "@noldova/context.data.sql.postgresql/services/session-starter.js";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
@@ -40,7 +41,7 @@ export class SessionStarterTests {
   @TestMethod
   public async startsASessionWithTheServerAndCancelsOnItAsync(): Promise<void> {
     const server = PostgreSQLServerFixture.current();
-    const starter = new SessionStarter(SessionStarterTests.real(SslMode.Prefer, 5, new Map([["application_name", "noldova-tests"]])));
+    const starter = new SessionStarter(SessionStarterTests.real(SslMode.Prefer, 5, new Map([["application_name", "noldova-tests"]])), new DerivedKeys());
 
     const session = await starter.startAsync();
     const secure = SessionStarterTests.secure(session);
@@ -58,7 +59,7 @@ export class SessionStarterTests {
 
   @TestMethod
   public async startsWithoutAskingForSslWhenItIsDisabledAsync(): Promise<void> {
-    const starter = new SessionStarter(SessionStarterTests.real(SslMode.Disable, 0), 5);
+    const starter = new SessionStarter(SessionStarterTests.real(SslMode.Disable, 0), new DerivedKeys(), 5);
 
     const session = await starter.startAsync();
 
@@ -69,7 +70,7 @@ export class SessionStarterTests {
 
   @TestMethod
   public async refusesARequiredSslTheServerLacksAsync(): Promise<void> {
-    const starter = new SessionStarter(SessionStarterTests.real(SslMode.Require, 0));
+    const starter = new SessionStarter(SessionStarterTests.real(SslMode.Require, 0), new DerivedKeys());
 
     const error = await Assert.throwsAsync(() => starter.startAsync(), DataException);
     const cancel = await Assert.throwsAsync(() => starter.cancelAsync(new BackendKey(1, 2), new AbortController().signal), DataException);
@@ -85,7 +86,7 @@ export class SessionStarterTests {
     const options = new ConnectionOptions(
       server.host, server.port, "noldova_missing_database", server.user, "", SslMode.Disable, ChannelBinding.Prefer, 0, new Map(), new SystemCertificates());
 
-    const error = await Assert.throwsAsync(() => new SessionStarter(options).startAsync(), PostgreSQLException);
+    const error = await Assert.throwsAsync(() => new SessionStarter(options, new DerivedKeys()).startAsync(), PostgreSQLException);
 
     Assert.areEqual("3D000", error.sqlState);
     Assert.areEqual("FATAL", error.severity);
@@ -94,7 +95,7 @@ export class SessionStarterTests {
 
   @TestMethod
   public async reportsAStopDuringConnectAsATimeoutAsync(): Promise<void> {
-    const starter = new SessionStarter(SessionStarterTests.real(SslMode.Disable, 0));
+    const starter = new SessionStarter(SessionStarterTests.real(SslMode.Disable, 0), new DerivedKeys());
 
     const started = starter.startAsync();
     starter.stop();
@@ -109,7 +110,7 @@ export class SessionStarterTests {
     const server = await FakeServer.startAsync();
     server.ssl = "silent";
     const timers = new FakeTimers();
-    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Prefer, ChannelBinding.Prefer, "", 60), 0, timers);
+    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Prefer, ChannelBinding.Prefer, "", 60), new DerivedKeys(), 0, timers);
     let asked = Promise.withResolvers<void>();
     server.onNegotiate = () => asked.resolve();
 
@@ -135,7 +136,7 @@ export class SessionStarterTests {
     const kept = Promise.withResolvers<void>();
     server.onCancel = () => kept.resolve();
     const timers = new FakeTimers();
-    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Prefer, ChannelBinding.Prefer, "", 0), 60, timers);
+    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Prefer, ChannelBinding.Prefer, "", 0), new DerivedKeys(), 60, timers);
 
     const cancelling = starter.cancelAsync(new BackendKey(5, 6), new AbortController().signal);
     await kept.promise;
@@ -150,7 +151,7 @@ export class SessionStarterTests {
   public async closesACancelTheServerNeverAnswersOnceAbortedAsync(): Promise<void> {
     const server = await FakeServer.startAsync();
     server.onCancel = () => undefined;
-    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0), 0);
+    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0), new DerivedKeys(), 0);
     const abort = new AbortController();
     const reason = new Error("The pool was destroyed.");
 
@@ -170,7 +171,7 @@ export class SessionStarterTests {
     const options = SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0);
     await SessionStarterTests.closeAsync(server);
 
-    const error = await Assert.throwsAsync(() => new SessionStarter(options).cancelAsync(new BackendKey(1, 2), new AbortController().signal), Error);
+    const error = await Assert.throwsAsync(() => new SessionStarter(options, new DerivedKeys()).cancelAsync(new BackendKey(1, 2), new AbortController().signal), Error);
 
     Assert.areEqual("ECONNREFUSED", "code" in error ? error.code : undefined);
     Assert.isTrue(await Released.socketsAsync());
@@ -182,7 +183,7 @@ export class SessionStarterTests {
     const server = await FakeServer.startAsync(certificate);
     server.ssl = "accept";
     const scram = SessionStarterTests.scram(server, "pencil");
-    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Require, ChannelBinding.Require, "pencil", 0));
+    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Require, ChannelBinding.Require, "pencil", 0), new DerivedKeys());
 
     const session = await starter.startAsync();
 
@@ -209,7 +210,7 @@ export class SessionStarterTests {
     const scram = SessionStarterTests.scram(server, "pencil");
 
     const error = await Assert.throwsAsync(
-      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "crayon", 0)).startAsync(), PostgreSQLException);
+      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "crayon", 0), new DerivedKeys()).startAsync(), PostgreSQLException);
 
     Assert.isFalse(scram.verified);
     Assert.areEqual("28P01", error.sqlState);
@@ -222,7 +223,7 @@ export class SessionStarterTests {
     server.onStartup = peer => peer.send(M.readyForQuery());
 
     const error = await Assert.throwsAsync(
-      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0)).startAsync(), DataException);
+      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0), new DerivedKeys()).startAsync(), DataException);
 
     Assert.areEqual("The server was ready before it accepted the authentication.", error.message);
     await SessionStarterTests.closeAsync(server);
@@ -234,7 +235,7 @@ export class SessionStarterTests {
     server.onStartup = peer => peer.send(peer.authentication(7), M.readyForQuery());
 
     const error = await Assert.throwsAsync(
-      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0)).startAsync(), DataException);
+      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0), new DerivedKeys()).startAsync(), DataException);
 
     Assert.isTrue(error.message.includes("7"));
     await SessionStarterTests.closeAsync(server);
@@ -249,7 +250,7 @@ export class SessionStarterTests {
       passwords.push(`${type}:${body.toString("utf8", 0, body.length - 1)}`);
       peer.ready();
     };
-    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "pencil", 0));
+    const starter = new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "pencil", 0), new DerivedKeys());
 
     const session = await starter.startAsync();
 
@@ -264,7 +265,7 @@ export class SessionStarterTests {
     server.onStartup = peer => peer.send(
       peer.authentication(0), M.backendKeyData(1, 2), M.readyForQuery("I"), M.parameterStatus("TimeZone", "UTC"));
 
-    const session = await new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0)).startAsync();
+    const session = await new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0), new DerivedKeys()).startAsync();
 
     Assert.areEqual(M.parameterStatus("TimeZone", "UTC").toString("hex"), session.rest.toString("hex"));
     await SessionStarterTests.endAsync(session);
@@ -277,12 +278,12 @@ export class SessionStarterTests {
     const options = SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0);
 
     server.onStartup = peer => peer.socket.end();
-    const closed = await Assert.throwsAsync(() => new SessionStarter(options).startAsync(), ConnectionClosedException);
+    const closed = await Assert.throwsAsync(() => new SessionStarter(options, new DerivedKeys()).startAsync(), ConnectionClosedException);
     server.onStartup = peer => peer.send(Buffer.from([0x52, 0, 0, 0, 1]));
-    const broken = await Assert.throwsAsync(() => new SessionStarter(options).startAsync(), DataException);
+    const broken = await Assert.throwsAsync(() => new SessionStarter(options, new DerivedKeys()).startAsync(), DataException);
     server.ssl = "refuse";
     server.onStartup = () => undefined;
-    const answered = new SessionStarter(SessionStarterTests.fake(server, SslMode.Prefer, ChannelBinding.Prefer, "", 0)).startAsync();
+    const answered = new SessionStarter(SessionStarterTests.fake(server, SslMode.Prefer, ChannelBinding.Prefer, "", 0), new DerivedKeys()).startAsync();
     const reset = Assert.throwsAsync(() => answered, Error);
     await SessionStarterTests.untilAsync(() => server.peers.length === 3 && server.peers[2]?.parameters.has("user") === true);
     server.peers[2]?.socket.resetAndDestroy();
@@ -300,7 +301,7 @@ export class SessionStarterTests {
     server.ssl = "silent";
     const options = SessionStarterTests.fake(server, SslMode.Prefer, ChannelBinding.Prefer, "", 0);
 
-    const started = new SessionStarter(options).startAsync();
+    const started = new SessionStarter(options, new DerivedKeys()).startAsync();
     const closed = Assert.throwsAsync(() => started, ConnectionClosedException);
     await SessionStarterTests.untilAsync(() => server.peers.length === 1);
     server.peers[0]?.socket.end();
@@ -315,7 +316,7 @@ export class SessionStarterTests {
     server.ssl = "accept";
 
     const error = await Assert.throwsAsync(
-      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.VerifyFull, ChannelBinding.Prefer, "", 0)).startAsync(), Error);
+      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.VerifyFull, ChannelBinding.Prefer, "", 0), new DerivedKeys()).startAsync(), Error);
 
     Assert.areEqual("DEPTH_ZERO_SELF_SIGNED_CERT", "code" in error ? error.code : undefined);
     await SessionStarterTests.closeAsync(server);
@@ -330,7 +331,7 @@ export class SessionStarterTests {
     const timers = new FakeTimers();
 
     const starting = Assert.throwsAsync(
-      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Require, ChannelBinding.Prefer, "", 60), 0, timers).startAsync(), DataException);
+      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Require, ChannelBinding.Prefer, "", 60), new DerivedKeys(), 0, timers).startAsync(), DataException);
     await shaking.promise;
     timers.advance(60_000);
     const error = await starting;
@@ -342,7 +343,7 @@ export class SessionStarterTests {
   @TestMethod
   public async leavesAStartedSessionQuietUntilItIsTakenAsync(): Promise<void> {
     const server = await FakeServer.startAsync();
-    const session = await new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0)).startAsync();
+    const session = await new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0), new DerivedKeys()).startAsync();
     const peer = server.peers[0];
 
     session.socket.resume();
@@ -360,7 +361,7 @@ export class SessionStarterTests {
     server.onStartup = peer => peer.send(M.message("R"));
 
     const error = await Assert.throwsAsync(
-      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0)).startAsync(), RangeError);
+      () => new SessionStarter(SessionStarterTests.fake(server, SslMode.Disable, ChannelBinding.Prefer, "", 0), new DerivedKeys()).startAsync(), RangeError);
 
     Assert.isTrue(error.message.length > 0);
     await SessionStarterTests.closeAsync(server);

@@ -21,9 +21,38 @@ import { BackendMessages as M } from "../../fixtures/backend-messages.fixture.js
 import { type FakePeer, FakeServer } from "../../fixtures/fake-server.fixture.js";
 import { LiveTimers } from "../../fixtures/live-timers.fixture.js";
 import { Released } from "../../fixtures/released.fixture.js";
+import { ScramServer } from "../../fixtures/scram-server.fixture.js";
 
 @TestClass
 export class PostgreSQLClientFakeTests {
+  @TestMethod
+  public async keepsTheKeysItsPoolsDeriveToSignInUntilItEndsAsync(): Promise<void> {
+    const server = await FakeServer.startAsync();
+    const signIns = new Map<FakePeer, ScramServer>();
+    server.onStartup = peer => peer.send(peer.authentication(10, "SCRAM-SHA-256\0\0"));
+    server.onMessage = (peer, type, body) => PostgreSQLClientFakeTests.signIn(signIns, peer, type, body);
+    const client = PostgreSQLClient.create(`postgres://app:pencil@127.0.0.1:${String(server.port)}/app`, { fetchTypes: false, maxLifetime: null, connectTimeout: 5 });
+    try {
+      await client.beginAsync(() => 1);
+      await client.listenAsync("keys", () => undefined);
+      const listenerKeys = client.listener.pool?.keys;
+      const signedIn = [client.pool.keys.salted.size, listenerKeys?.salted.size];
+
+      await client.endAsync(0);
+
+      Assert.areEqual(JSON.stringify([1, 1]), JSON.stringify(signedIn));
+      Assert.areEqual(0, client.pool.keys.salted.size);
+      Assert.areEqual(0, listenerKeys?.salted.size);
+      Assert.areEqual(2, signIns.size);
+      Assert.isTrue([...signIns.values()].every(t => t.verified));
+    }
+    finally {
+      await client.endAsync(0);
+      await server.closeAsync();
+    }
+    Assert.isTrue(await Released.socketsAsync());
+  }
+
   @TestMethod
   public async failsWhenTheServerRollsBackInsteadOfCommittingAsync(): Promise<void> {
     const server = await FakeServer.startAsync();
@@ -187,6 +216,28 @@ export class PostgreSQLClientFakeTests {
 
   private static client(server: FakeServer, settings: ClientSettings = {}): PostgreSQLClient {
     return PostgreSQLClient.create(`postgres://app@127.0.0.1:${String(server.port)}/app`, { fetchTypes: false, maxLifetime: null, connectTimeout: 5, ...settings });
+  }
+
+  private static signIn(signIns: Map<FakePeer, ScramServer>, peer: FakePeer, type: string, body: Buffer): void {
+    if (type !== "p") {
+      PostgreSQLClientFakeTests.answer(peer, type, body, [], () => null);
+      return;
+    }
+
+    const scram = signIns.get(peer) ?? new ScramServer("pencil");
+    signIns.set(peer, scram);
+    if (scram.mechanism.length === 0) {
+      peer.send(peer.authentication(11, scram.first(body)));
+      return;
+    }
+
+    const signature = scram.final(body);
+    if (Object.isNull(signature))
+      peer.send(M.error("28P01", "password authentication failed", "FATAL"));
+    else {
+      peer.send(peer.authentication(12, signature));
+      peer.ready();
+    }
   }
 
   private static text(type: string, body: Buffer): string | null {

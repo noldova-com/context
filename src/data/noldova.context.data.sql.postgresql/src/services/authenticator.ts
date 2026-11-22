@@ -9,7 +9,7 @@
 // This file uses Node APIs and will change when we replace Node.
 
 import { Buffer } from "node:buffer";
-import { createHash, createHmac, randomBytes, webcrypto } from "node:crypto";
+import { createHash, createHmac, randomBytes } from "node:crypto";
 
 import "@noldova/context.core";
 import { DataException } from "@noldova/context.data";
@@ -17,6 +17,7 @@ import { DataException } from "@noldova/context.data";
 import { ChannelBinding } from "../enums/channel-binding.js";
 import { Resources } from "../resources.js";
 import { CertificateHash } from "./certificate-hash.js";
+import type { DerivedKeys } from "./derived-keys.js";
 import type { Frontend } from "./protocol/frontend.js";
 
 export class Authenticator {
@@ -28,9 +29,6 @@ export class Authenticator {
   private static readonly saslFinal: number = 12;
   private static readonly scram: string = "SCRAM-SHA-256";
   private static readonly scramPlus: string = "SCRAM-SHA-256-PLUS";
-  private static readonly salted: Map<string, Buffer> = new Map();
-  private static readonly saltedLimit: number = 64;
-  private static readonly deriving: Map<string, Promise<Buffer>> = new Map();
   private static readonly iterationLimit: number = 1_000_000;
 
   private readonly user: string;
@@ -38,6 +36,7 @@ export class Authenticator {
   private readonly binding: ChannelBinding;
   private readonly certificate: Buffer | null;
   private readonly frontend: Frontend;
+  private readonly keys: DerivedKeys;
   private nonce: string = "";
   private signature: string = "";
   private verified: boolean = true;
@@ -45,12 +44,13 @@ export class Authenticator {
   private header: string = "n,,";
   private authenticated: boolean = false;
 
-  public constructor(user: string, password: string, binding: ChannelBinding, certificate: Buffer | null, frontend: Frontend) {
+  public constructor(user: string, password: string, binding: ChannelBinding, certificate: Buffer | null, frontend: Frontend, keys: DerivedKeys) {
     this.user = user;
     this.password = password;
     this.binding = binding;
     this.certificate = certificate;
     this.frontend = frontend;
+    this.keys = keys;
   }
 
   public get isAuthenticated(): boolean {
@@ -109,7 +109,7 @@ export class Authenticator {
     if (count > Authenticator.iterationLimit)
       throw new DataException(Resources.formatSaslIterationsAboveLimit(count, Authenticator.iterationLimit));
 
-    const saltedPassword = await Authenticator.saltPasswordAsync(this.password, salt, count);
+    const saltedPassword = await this.keys.deriveAsync(this.password, salt, count);
     const clientKey = Authenticator.computeHmac(saltedPassword, Resources.clientKey);
     const channel = (Object.isNull(this.bound) ? Buffer.from(this.header) : Buffer.concat([Buffer.from(this.header), this.bound])).toString("base64");
     const message = `n=*,r=${this.nonce},r=${serverNonce},s=${salt},i=${iterations},c=${channel},r=${serverNonce}`;
@@ -135,38 +135,6 @@ export class Authenticator {
 
     this.authenticated = true;
     return null;
-  }
-
-  private static async saltPasswordAsync(password: string, salt: string, iterations: number): Promise<Buffer> {
-    const key = Authenticator.computeSha256(Buffer.from(password + "\0" + salt + "\0" + iterations.toString())).toString("base64");
-    const known = Authenticator.salted.get(key);
-    if (!Object.isUndefined(known))
-      return known;
-
-    const running = Authenticator.deriving.get(key);
-    if (!Object.isUndefined(running))
-      return running;
-
-    const derivation = Authenticator.derivePasswordAsync(key, password, salt, iterations);
-    const forget = (): void => {
-      Authenticator.deriving.delete(key);
-    };
-    Authenticator.deriving.set(key, derivation);
-    void derivation.then(forget, forget);
-    return derivation;
-  }
-
-  private static async derivePasswordAsync(key: string, password: string, salt: string, iterations: number): Promise<Buffer> {
-    const passwordKey = await webcrypto.subtle.importKey("raw", Buffer.from(password, "utf8"), "PBKDF2", false, ["deriveBits"]);
-    const salted = Buffer.from(await webcrypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: Buffer.from(salt, "base64"), iterations }, passwordKey, 256));
-    if (Authenticator.salted.size >= Authenticator.saltedLimit) {
-      const oldest = Authenticator.salted.keys().next();
-      if (oldest.done !== true)
-        Authenticator.salted.delete(oldest.value);
-    }
-
-    Authenticator.salted.set(key, salted);
-    return salted;
   }
 
   private static computeMd5Hex(data: Buffer): string {

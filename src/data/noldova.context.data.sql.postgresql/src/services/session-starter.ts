@@ -24,6 +24,7 @@ import type { ConnectionOptions } from "../models/connection-options.js";
 import { StartedSession } from "../models/started-session.js";
 import { Resources } from "../resources.js";
 import { Authenticator } from "./authenticator.js";
+import type { DerivedKeys } from "./derived-keys.js";
 import { PostgreSQLSocket } from "../models/postgresql-socket.js";
 import { Backend } from "./protocol/backend.js";
 import { FrameReader } from "./protocol/frame.reader.js";
@@ -35,14 +36,16 @@ export class SessionStarter {
   private static readonly keepAliveSeconds: number = 60;
 
   private readonly options: ConnectionOptions;
+  private readonly keys: DerivedKeys;
   private readonly cancelTimeout: number;
   private readonly timers: ClientTimers;
   private readonly frontend: Frontend = new Frontend();
   private readonly abort: AbortController = new AbortController();
   private socket: PostgreSQLSocket | null = null;
 
-  public constructor(options: ConnectionOptions, cancelTimeout: number = 0, timers: ClientTimers = new ClientTimers()) {
+  public constructor(options: ConnectionOptions, keys: DerivedKeys, cancelTimeout: number = 0, timers: ClientTimers = new ClientTimers()) {
     this.options = options;
+    this.keys = keys;
     this.cancelTimeout = cancelTimeout;
     this.timers = timers;
   }
@@ -129,7 +132,7 @@ export class SessionStarter {
   }
 
   private async runStartupAsync(socket: PostgreSQLSocket): Promise<StartedSession> {
-    const authenticator = new Authenticator(this.options.user, this.options.password, this.options.channelBinding, socket.readPeerCertificate(), this.frontend);
+    const authenticator = new Authenticator(this.options.user, this.options.password, this.options.channelBinding, socket.readPeerCertificate(), this.frontend, this.keys);
     const parameters = new Map<string, string>();
     let backend = new BackendKey(0, 0);
     return new Promise<StartedSession>((resolve, reject) => {

@@ -39,7 +39,7 @@ export class PostgreSQLClient extends SqlRunner implements AsyncDisposable {
     super(types);
     this.options = options;
     this.connection = connection;
-    this.pool = new PostgreSQLPool(options, connection, types, values => new SessionStarter(values, options.cancelTimeout, options.timers));
+    this.pool = new PostgreSQLPool(options, connection, types, (values, keys) => new SessionStarter(values, keys, options.cancelTimeout, options.timers));
     this.listener = new ClientListener(options, connection);
   }
 

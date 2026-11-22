@@ -12,6 +12,7 @@ import { SslMode } from "@noldova/context.data.sql.postgresql/enums/ssl-mode.js"
 import type { BackendKey } from "@noldova/context.data.sql.postgresql/models/backend-key.js";
 import { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
 import { SystemCertificates } from "@noldova/context.data.sql.postgresql/models/system-certificates.js";
+import { DerivedKeys } from "@noldova/context.data.sql.postgresql/services/derived-keys.js";
 import { SessionStarter } from "@noldova/context.data.sql.postgresql/services/session-starter.js";
 
 export class FakeSessionStarter extends SessionStarter {
@@ -20,7 +21,7 @@ export class FakeSessionStarter extends SessionStarter {
   public holding: Promise<void> | null = null;
 
   public constructor() {
-    super(new ConnectionOptions("localhost", 5432, "app", "app", "", SslMode.Disable, ChannelBinding.Disable, 0, new Map(), new SystemCertificates()));
+    super(new ConnectionOptions("localhost", 5432, "app", "app", "", SslMode.Disable, ChannelBinding.Disable, 0, new Map(), new SystemCertificates()), new DerivedKeys());
   }
 
   public override cancelAsync(backend: BackendKey, _signal: AbortSignal): Promise<void> {

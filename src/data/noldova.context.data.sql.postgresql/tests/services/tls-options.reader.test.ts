@@ -21,6 +21,7 @@ import { SslMode } from "@noldova/context.data.sql.postgresql/enums/ssl-mode.js"
 import { ConnectionOptions } from "@noldova/context.data.sql.postgresql/models/connection-options.js";
 import { SystemCertificates } from "@noldova/context.data.sql.postgresql/models/system-certificates.js";
 import { PostgreSQLSocket } from "@noldova/context.data.sql.postgresql/models/postgresql-socket.js";
+import { DerivedKeys } from "@noldova/context.data.sql.postgresql/services/derived-keys.js";
 import { SessionStarter } from "@noldova/context.data.sql.postgresql/services/session-starter.js";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
@@ -40,7 +41,7 @@ export class TlsOptionsReaderTests {
     try {
       await TlsOptionsReaderTests.connectAsync(TlsOptionsReaderTests.options(server, SslMode.VerifyFull, null, null, null, null, new FixedCertificates([root.certificate])));
       const refused = await Assert.throwsAsync(
-        () => new SessionStarter(TlsOptionsReaderTests.options(server, SslMode.VerifyFull, null, null, null, null, new FixedCertificates([]))).startAsync(), Error);
+        () => new SessionStarter(TlsOptionsReaderTests.options(server, SslMode.VerifyFull, null, null, null, null, new FixedCertificates([])), new DerivedKeys()).startAsync(), Error);
 
       Assert.areEqual("UNABLE_TO_VERIFY_LEAF_SIGNATURE", "code" in refused ? refused.code : undefined);
     }
@@ -73,7 +74,7 @@ export class TlsOptionsReaderTests {
     try {
       await TlsOptionsReaderTests.inFolderAsync(new Map([["root.pem", root.certificate]]), async path => {
         const error = await Assert.throwsAsync(
-          () => new SessionStarter(TlsOptionsReaderTests.options(other, SslMode.VerifyFull, path("root.pem"))).startAsync(), Error);
+          () => new SessionStarter(TlsOptionsReaderTests.options(other, SslMode.VerifyFull, path("root.pem")), new DerivedKeys()).startAsync(), Error);
         await TlsOptionsReaderTests.connectAsync(TlsOptionsReaderTests.options(named, SslMode.VerifyFull, path("root.pem")));
 
         Assert.areEqual("ERR_TLS_CERT_ALTNAME_INVALID", "code" in error ? error.code : undefined);
@@ -95,9 +96,9 @@ export class TlsOptionsReaderTests {
     try {
       await TlsOptionsReaderTests.inFolderAsync(new Map([["root.pem", root.certificate]]), async path => {
         const ca = await Assert.throwsAsync(
-          () => new SessionStarter(TlsOptionsReaderTests.options(server, SslMode.VerifyCa, path("root.pem"))).startAsync(), Error);
+          () => new SessionStarter(TlsOptionsReaderTests.options(server, SslMode.VerifyCa, path("root.pem")), new DerivedKeys()).startAsync(), Error);
         const full = await Assert.throwsAsync(
-          () => new SessionStarter(TlsOptionsReaderTests.options(server, SslMode.VerifyFull, path("root.pem"))).startAsync(), Error);
+          () => new SessionStarter(TlsOptionsReaderTests.options(server, SslMode.VerifyFull, path("root.pem")), new DerivedKeys()).startAsync(), Error);
 
         Assert.areEqual("UNABLE_TO_VERIFY_LEAF_SIGNATURE", "code" in ca ? ca.code : undefined);
         Assert.areEqual("UNABLE_TO_VERIFY_LEAF_SIGNATURE", "code" in full ? full.code : undefined);
@@ -131,7 +132,7 @@ export class TlsOptionsReaderTests {
       const files = new Map([["root.pem", root.certificate], ["client.pem", client.certificate], ["client.key", client.key]]);
       await TlsOptionsReaderTests.inFolderAsync(files, async path => {
         const options = TlsOptionsReaderTests.options(server, SslMode.VerifyFull, path("root.pem"), path("client.pem"), path("client.key"));
-        const starter = new SessionStarter(options);
+        const starter = new SessionStarter(options, new DerivedKeys());
         const session = await starter.startAsync();
         await starter.cancelAsync(session.backend, new AbortController().signal);
         session.socket.destroy();
@@ -158,7 +159,7 @@ export class TlsOptionsReaderTests {
         const wrong = "amber-kettle-19";
         const options = (password: string): ConnectionOptions => TlsOptionsReaderTests.options(
           server, SslMode.Require, null, path("client.pem"), path("client.key"), password);
-        const error = await Assert.throwsAsync(() => new SessionStarter(options(wrong)).startAsync(), DataException);
+        const error = await Assert.throwsAsync(() => new SessionStarter(options(wrong), new DerivedKeys()).startAsync(), DataException);
         await TlsOptionsReaderTests.connectAsync(options(TlsOptionsReaderTests.passphrase));
 
         Assert.areEqual(
@@ -183,7 +184,7 @@ export class TlsOptionsReaderTests {
     try {
       const files = new Map([["client.pem", client.certificate], ["client.key", client.key], ["junk.key", secret], ["junk.pem", secret]]);
       await TlsOptionsReaderTests.inFolderAsync(files, async path => {
-        const fail = (options: ConnectionOptions): Promise<DataException> => Assert.throwsAsync(() => new SessionStarter(options).startAsync(), DataException);
+        const fail = (options: ConnectionOptions): Promise<DataException> => Assert.throwsAsync(() => new SessionStarter(options, new DerivedKeys()).startAsync(), DataException);
         const missing = await fail(TlsOptionsReaderTests.options(server, SslMode.VerifyCa, path("missing.pem")));
         const key = await fail(TlsOptionsReaderTests.options(server, SslMode.Require, null, path("client.pem"), path("junk.key")));
         const certificate = await fail(TlsOptionsReaderTests.options(server, SslMode.Require, null, path("junk.pem"), path("client.key")));
@@ -227,7 +228,7 @@ export class TlsOptionsReaderTests {
   }
 
   private static async connectAsync(options: ConnectionOptions): Promise<void> {
-    const session = await new SessionStarter(options).startAsync();
+    const session = await new SessionStarter(options, new DerivedKeys()).startAsync();
     const secure = session.socket instanceof PostgreSQLSocket && session.socket.isSecure;
     session.socket.destroy();
     Assert.isTrue(secure);

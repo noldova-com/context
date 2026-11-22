@@ -36,6 +36,7 @@ import type { SessionStarter } from "../../services/session-starter.js";
 import type { TypeRegistry } from "../type-registry.js";
 import type { ClientTimers } from "./client-timers.js";
 import { ConnectionEvents } from "../../services/client/connection-events.js";
+import { DerivedKeys } from "../../services/derived-keys.js";
 import { PoolJob } from "./pool-job.js";
 import { PoolLease } from "./pool-lease.js";
 import { PoolQueue } from "./pool-queue.js";
@@ -54,7 +55,8 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
   private readonly clientOptions: ClientOptions;
   private readonly connection: ConnectionOptions;
   private readonly types: TypeRegistry;
-  private readonly starter: (options: ConnectionOptions) => SessionStarter;
+  private readonly starter: (options: ConnectionOptions, keys: DerivedKeys) => SessionStarter;
+  private readonly keys: DerivedKeys = new DerivedKeys();
   private readonly timers: ClientTimers;
   private readonly statements: StatementCache;
   private readonly connections: Set<PostgreSQLConnection> = new Set();
@@ -89,7 +91,7 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
   private typeRetries: number = 0;
   private typesFailing: number | null = null;
 
-  public constructor(options: ClientOptions, connection: ConnectionOptions, types: TypeRegistry, starter: (options: ConnectionOptions) => SessionStarter) {
+  public constructor(options: ClientOptions, connection: ConnectionOptions, types: TypeRegistry, starter: (options: ConnectionOptions, keys: DerivedKeys) => SessionStarter) {
     super();
     this.clientOptions = options;
     this.connection = connection;
@@ -684,7 +686,7 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
   }
 
   private async startAsync(): Promise<StartedSession> {
-    const starter = this.starter(this.connection);
+    const starter = this.starter(this.connection, this.keys);
     this.starting.add(starter);
     try {
       return await starter.startAsync();
@@ -1013,6 +1015,7 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
       this.timers.clearTimeout(this.retryTimer);
       this.timers.clearTimeout(this.retryTypes);
       this.ended = null;
+      this.keys.clear();
       ended();
     }
   }

@@ -346,7 +346,7 @@ export class PostgreSQLPoolServerTests {
     });
     const options = new ClientOptions({ max: 1, cancelTimeout: 0, fetchTypes: false, maxLifetime: null });
     const connection = new ConnectionOptions("127.0.0.1", server.port, "app", "app", "", SslMode.Disable, ChannelBinding.Prefer, 0, new Map(), new SystemCertificates());
-    const pool = new PostgreSQLPool(options, connection, new TypeRegistry(options), values => new SessionStarter(values, options.cancelTimeout));
+    const pool = new PostgreSQLPool(options, connection, new TypeRegistry(options), (values, keys) => new SessionStarter(values, keys, options.cancelTimeout));
     try {
       const query = new Query(new BuiltQuery("select pg_sleep(30)", [], []), pool);
       const failed = Assert.throwsAsync(async () => {

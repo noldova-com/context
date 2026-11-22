@@ -115,7 +115,7 @@ export class ClientListener {
       onclose: () => this.handleClose(),
       onnotify: (channel, payload) => this.handleNotification(channel, payload)
     });
-    this.pool = new PostgreSQLPool(options, this.connection, new TypeRegistry(options), values => new SessionStarter(values, options.cancelTimeout, options.timers));
+    this.pool = new PostgreSQLPool(options, this.connection, new TypeRegistry(options), (values, keys) => new SessionStarter(values, keys, options.cancelTimeout, options.timers));
     return this.pool;
   }
 
