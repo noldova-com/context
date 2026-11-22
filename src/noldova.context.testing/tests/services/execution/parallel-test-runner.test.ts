@@ -27,6 +27,8 @@ export class ParallelTestRunnerTests {
   private static readonly START_LIMIT_MILLISECONDS: number = 60_250;
   private static readonly HANGING_TEST_WATCHDOG: number = 6;
   private static readonly LOOPING_TEST_WATCHDOG: number = 20;
+  private static readonly FRAME_PREFIX: string = "at ";
+  private static readonly FIXTURE_FRAME_FILE: string = ".fixture.js:";
 
   @TestData(0)
   @TestData(2_147_483_647)
@@ -54,6 +56,7 @@ export class ParallelTestRunnerTests {
         .runAsync([project.testProject], [], progress);
 
       Assert.areEqual(ParallelTestRunnerTests.describe(inOneProcess), ParallelTestRunnerTests.describe(inWorkers));
+      Assert.isTrue(ParallelTestRunnerTests.describe(inWorkers).includes("      at MixedResultsFixtureTests.throwsAnError ("));
       Assert.areEqual(4, inWorkers.passed);
       Assert.areEqual(4, inWorkers.failed);
       Assert.areEqual(1, inWorkers.skipped);
@@ -183,7 +186,9 @@ export class ParallelTestRunnerTests {
         `${t.packageName}/${t.filePath} ${t.className}`,
         ...t.methodResults.flatMap(u => [
           `${u.displayName} ${u.outcome} ${String(u.skipReason)}`,
-          ...writer.formatMethodLines(u, false).map(v => v.replace(/\(\d+ ms\)/u, String.empty)),
+          ...writer.formatMethodLines(u, false)
+            .filter(v => !v.trimStart().startsWith(ParallelTestRunnerTests.FRAME_PREFIX) || v.includes(ParallelTestRunnerTests.FIXTURE_FRAME_FILE))
+            .map(v => v.replace(/\(\d+ ms\)/u, String.empty)),
         ]),
       ]),
     ].join("\n");

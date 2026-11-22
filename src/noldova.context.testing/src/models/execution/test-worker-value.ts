@@ -39,19 +39,7 @@ export class TestWorkerValue {
   }
 
   public static of(value: unknown): TestWorkerValue {
-    if (TestWorkerValue.isPlain(value))
-      return new TestWorkerValue(TestWorkerValueKind.Value, value, String.empty, String.empty, undefined, 0, []);
-
-    if (value instanceof TestTimeoutException)
-      return TestWorkerValue.ofError(TestWorkerValueKind.Timeout, value, value.timeoutMilliseconds, []);
-
-    if (value instanceof AssertFailedException)
-      return TestWorkerValue.ofError(TestWorkerValueKind.Assert, value, 0, [TestWorkerValue.of(value.expected), TestWorkerValue.of(value.actual)]);
-
-    if (value instanceof Error)
-      return TestWorkerValue.ofError(TestWorkerValueKind.Error, value, 0, []);
-
-    return new TestWorkerValue(TestWorkerValueKind.Text, undefined, String.empty, TestWorkerValue.print(value), undefined, 0, []);
+    return TestWorkerValue.ofValue(value, new Set());
   }
 
   public static from(value: unknown): TestWorkerValue {
@@ -59,7 +47,7 @@ export class TestWorkerValue {
     const kind = record.string(nameof<TestWorkerValue>(t => t.kind));
     const plain = record.value(nameof<TestWorkerValue>(t => t.value));
     const details = record.values(nameof<TestWorkerValue>(t => t.details)).map(t => TestWorkerValue.from(t));
-    if (!TestWorkerValue.isKind(kind) || !TestWorkerValue.isPlain(plain) || details.length !== (kind === TestWorkerValueKind.Assert ? 2 : 0))
+    if (!TestWorkerValue.isKind(kind) || !TestWorkerValue.isPlain(plain) || !TestWorkerValue.allowsDetails(kind, details.length))
       throw new TestingException(Resources.testWorkerDataInvalid);
 
     return new TestWorkerValue(
@@ -99,10 +87,47 @@ export class TestWorkerValue {
     return error;
   }
 
+  private static ofValue(value: unknown, path: ReadonlySet<unknown>): TestWorkerValue {
+    if (TestWorkerValue.isPlain(value))
+      return new TestWorkerValue(TestWorkerValueKind.Value, value, String.empty, String.empty, undefined, 0, []);
+
+    const inner = new Set([...path, value]);
+    if (value instanceof TestTimeoutException)
+      return TestWorkerValue.ofError(TestWorkerValueKind.Timeout, value, value.timeoutMilliseconds, []);
+
+    if (value instanceof AssertFailedException)
+      return TestWorkerValue.ofError(TestWorkerValueKind.Assert, value, 0,
+        [TestWorkerValue.ofValue(value.expected, inner), TestWorkerValue.ofValue(value.actual, inner)]);
+
+    if (value instanceof Error) {
+      const cause = TestWorkerValue.readSafely(() => value.cause);
+      return TestWorkerValue.ofError(TestWorkerValueKind.Error, value, 0,
+        Object.isUndefined(cause) || inner.has(cause) ? [] : [TestWorkerValue.ofValue(cause, inner)]);
+    }
+
+    return new TestWorkerValue(TestWorkerValueKind.Text, undefined, String.empty, TestWorkerValue.print(value), undefined, 0, []);
+  }
+
+  private static allowsDetails(kind: TestWorkerValueKind, count: number): boolean {
+    if (kind === TestWorkerValueKind.Assert)
+      return count === 2;
+
+    return count === 0 || (kind === TestWorkerValueKind.Error && count === 1);
+  }
+
   private static ofError(kind: TestWorkerValueKind, error: Error, timeoutMilliseconds: number, details: readonly TestWorkerValue[]): TestWorkerValue {
-    const stack: unknown = error.stack;
+    const stack = TestWorkerValue.readSafely(() => error.stack);
     return new TestWorkerValue(kind, undefined, TestWorkerValue.print(error.name), TestWorkerValue.print(error.message),
       Object.isString(stack) ? stack : undefined, timeoutMilliseconds, details);
+  }
+
+  private static readSafely(read: () => unknown): unknown {
+    try {
+      return read();
+    }
+    catch {
+      return undefined;
+    }
   }
 
   private static isPlain(value: unknown): boolean {
@@ -131,6 +156,7 @@ export class TestWorkerValue {
       return new AssertFailedException(this.message, expected, actual);
     }
 
-    return new Error(this.message);
+    const [cause] = this.details.map(t => t.toValue());
+    return this.details.length === 0 ? new Error(this.message) : new Error(this.message, { cause });
   }
 }

@@ -233,6 +233,9 @@ export class Resources {
   public static readonly expectedLabel: string = "expected:";
   public static readonly actualLabel: string = "actual:";
   public static readonly threwLabel: string = "threw:";
+  public static readonly causeLabel: string = "cause:";
+  public static readonly stackLineSeparator: string = "\n";
+  public static readonly stackFramePrefix: string = "at ";
 
   public static outcomeCannotCarryFailure(outcome: string): string {
     return `A ${outcome} result cannot carry a failure.`;

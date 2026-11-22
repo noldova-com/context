@@ -77,6 +77,51 @@ export class TestWorkerValueTests {
   }
 
   @TestMethod
+  public rebuildsEachCauseOfAnError(): void {
+    const middle = new TypeError("Sample middle.", { cause: "sample root" });
+    const error = new RangeError("Sample outer.", { cause: middle });
+
+    const crossed = TestWorkerValueTests.cross(error);
+
+    Assert.isInstanceOf(crossed, Error);
+    Assert.isInstanceOf(crossed.cause, Error);
+    Assert.areEqual("TypeError", crossed.cause.name);
+    Assert.areEqual("Sample middle.", crossed.cause.message);
+    Assert.areEqual(middle.stack, crossed.cause.stack);
+    Assert.areEqual("sample root", crossed.cause.cause);
+  }
+
+  @TestMethod
+  public dropsACauseThatLeadsBackToAnErrorOfTheChain(): void {
+    const first = new Error("Sample first.");
+    const second = new Error("Sample second.", { cause: first });
+    Object.defineProperty(first, "cause", { value: second });
+
+    const crossed = TestWorkerValueTests.cross(first);
+
+    Assert.isInstanceOf(crossed, Error);
+    Assert.isInstanceOf(crossed.cause, Error);
+    Assert.areEqual("Sample second.", crossed.cause.message);
+    Assert.isUndefined(crossed.cause.cause);
+  }
+
+  @TestMethod
+  public crossesAnErrorWhoseStackAndCauseCannotBeReadWithoutThem(): void {
+    const error = new Error("Sample unreadable.");
+    Object.defineProperties(error, {
+      stack: { get: (): never => { throw new Error("Sample unreadable stack."); } },
+      cause: { get: (): never => { throw new Error("Sample unreadable cause."); } },
+    });
+
+    const crossed = TestWorkerValueTests.cross(error);
+
+    Assert.isInstanceOf(crossed, Error);
+    Assert.areEqual("Sample unreadable.", crossed.message);
+    Assert.isUndefined(crossed.cause);
+    Assert.isTrue(Object.isString(crossed.stack));
+  }
+
+  @TestMethod
   public keepsTheRebuiltStackOfAnErrorThatHadNone(): void {
     const error = new Error("Sample without a stack.");
     Object.defineProperty(error, "stack", { value: undefined });
@@ -112,6 +157,16 @@ export class TestWorkerValueTests {
   @TestMethod
   public rejectsDataThatIsNoValue(change: object): void {
     Assert.throws(() => TestWorkerValue.from({ ...TestWorkerValue.of(1).toData(), ...change }), TestingException);
+  }
+
+  @TestData("Value", 1)
+  @TestData("Error", 2)
+  @TestData("Assert", 1)
+  @TestMethod
+  public rejectsAKindWithAnotherNumberOfDetails(kind: string, count: number): void {
+    const detail = TestWorkerValue.of(1).toData();
+
+    Assert.throws(() => TestWorkerValue.from({ ...TestWorkerValue.of(1).toData(), kind, details: Array.from({ length: count }, () => detail) }), TestingException);
   }
 
   private static cross(value: unknown): unknown {

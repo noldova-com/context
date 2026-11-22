@@ -69,6 +69,7 @@ export class TestReportWriterTests {
     Assert.isTrue(lines.some(t => t.includes("AssertFailedException: mismatch")));
     Assert.isTrue(lines.some(t => t.includes("expected: 1")));
     Assert.isTrue(lines.some(t => t.includes("actual:   2")));
+    Assert.areEqual(["    AssertFailedException: mismatch", "    expected: 1", "    actual:   2", ""].join("|"), TestReportWriterTests.failureLines(lines).join("|"));
   }
 
   @TestMethod
@@ -76,6 +77,61 @@ export class TestReportWriterTests {
     const lines = this.format(new TestMethodResult("TestPackage", "SampleTests", "fails", undefined, [], TestOutcome.Failed, 3, new Error("boom"), undefined));
 
     Assert.isTrue(lines.some(t => t.includes("Error: boom")));
+  }
+
+  @TestMethod
+  public formatsAnErrorFailureWithItsStackFrames(): void {
+    const error = new Error("boom\nat message (sample.js:9:9)");
+    Object.defineProperty(error, "stack", { value: "Error: boom\nat message (sample.js:9:9)\n    at first (sample.js:1:1)\n    at async second (sample.js:2:2)" });
+
+    const lines = this.format(new TestMethodResult("TestPackage", "SampleTests", "fails", undefined, [], TestOutcome.Failed, 3, error, undefined));
+
+    Assert.areEqual(
+      ["    Error: boom\nat message (sample.js:9:9)", "      at first (sample.js:1:1)", "      at async second (sample.js:2:2)", ""].join("|"),
+      TestReportWriterTests.failureLines(lines).join("|"));
+  }
+
+  @TestMethod
+  public formatsEachCauseOfAnErrorFailureWithItsOwnStackFrames(): void {
+    const middle = new TypeError("middle", { cause: "root" });
+    Object.defineProperty(middle, "stack", { value: "TypeError: middle\n    at middle (sample.js:2:2)" });
+    const error = new Error("outer", { cause: middle });
+    Object.defineProperty(error, "stack", { value: "Error: outer\n    at outer (sample.js:1:1)" });
+
+    const lines = this.format(new TestMethodResult("TestPackage", "SampleTests", "fails", undefined, [], TestOutcome.Failed, 3, error, undefined));
+
+    Assert.areEqual(
+      ["    Error: outer", "      at outer (sample.js:1:1)", "    cause: TypeError: middle", "      at middle (sample.js:2:2)", "    cause: \"root\"", ""].join("|"),
+      TestReportWriterTests.failureLines(lines).join("|"));
+  }
+
+  @TestMethod
+  public stopsAtACauseTheFailureAlreadyShowed(): void {
+    const first = new Error("first");
+    const second = new Error("second", { cause: first });
+    Object.defineProperty(first, "cause", { value: second });
+
+    const lines = this.format(new TestMethodResult("TestPackage", "SampleTests", "fails", undefined, [], TestOutcome.Failed, 3, first, undefined));
+
+    Assert.areEqual(1, lines.filter(t => t.includes("Error: first")).length);
+    Assert.areEqual(1, lines.filter(t => t.includes("cause: Error: second")).length);
+  }
+
+  @TestMethod
+  public formatsAnErrorFailureWhoseStackOrCauseCannotBeReadWithoutThem(): void {
+    const error = new Error("boom");
+    Object.defineProperties(error, {
+      stack: { get: (): never => { throw new Error("unreadable stack"); } },
+      cause: { get: (): never => { throw new Error("unreadable cause"); } },
+    });
+    const numbered = new Error("numbered");
+    Object.defineProperty(numbered, "stack", { value: 42 });
+
+    const unreadable = this.format(new TestMethodResult("TestPackage", "SampleTests", "fails", undefined, [], TestOutcome.Failed, 3, error, undefined));
+    const notText = this.format(new TestMethodResult("TestPackage", "SampleTests", "fails", undefined, [], TestOutcome.Failed, 3, numbered, undefined));
+
+    Assert.areEqual(["    Error: boom", ""].join("|"), TestReportWriterTests.failureLines(unreadable).join("|"));
+    Assert.areEqual(["    Error: numbered", ""].join("|"), TestReportWriterTests.failureLines(notText).join("|"));
   }
 
   @TestMethod
@@ -287,6 +343,11 @@ export class TestReportWriterTests {
     Object.defineProperty(failure, "expected", { get: () => { throw new Error("details getter"); } });
     const lines = this.format(new TestMethodResult("TestPackage", "SampleTests", "fails", undefined, [], TestOutcome.Failed, 1, failure, undefined));
     Assert.isTrue(lines.some(t => t.includes("threw: <unprintable value>")));
+  }
+
+  private static failureLines(lines: readonly string[]): string[] {
+    const start = lines.findIndex(t => t.includes("fails (3 ms)")) + 1;
+    return lines.slice(start, lines.indexOf("", start) + 1);
   }
 
   private format(methodResult: TestMethodResult): string[] {

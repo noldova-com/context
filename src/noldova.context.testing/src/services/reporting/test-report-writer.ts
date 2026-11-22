@@ -130,12 +130,48 @@ export class TestReportWriter {
       }
 
       if (failure instanceof Error)
-        return [`${Resources.reportIndent.repeat(2)}${this.formatValue(failure)}`];
+        return this.formatErrorLines(failure);
 
       return [`${Resources.reportIndent.repeat(2)}${Resources.threwLabel} ${this.formatValue(failure)}`];
     }
     catch {
       return [`${Resources.reportIndent.repeat(2)}${Resources.threwLabel} ${Resources.unprintableValue}`];
+    }
+  }
+
+  private formatErrorLines(error: Error): string[] {
+    const lines = [`${Resources.reportIndent.repeat(2)}${this.formatValue(error)}`, ...this.formatFrames(error)];
+    const seen = new Set<unknown>([error]);
+    for (let cause = this.readCause(error); !Object.isUndefined(cause) && !seen.has(cause); cause = this.readCause(cause)) {
+      seen.add(cause);
+      lines.push(`${Resources.reportIndent.repeat(2)}${Resources.causeLabel} ${this.formatValue(cause)}`, ...this.formatFrames(cause));
+    }
+
+    return lines;
+  }
+
+  private formatFrames(value: unknown): string[] {
+    const stack = value instanceof Error ? this.readSafely(() => value.stack) : undefined;
+    if (!Object.isString(stack))
+      return [];
+
+    return stack.split(Resources.stackLineSeparator)
+      .slice(this.formatValue(value).split(Resources.stackLineSeparator).length)
+      .map(t => t.trim())
+      .filter(t => t.startsWith(Resources.stackFramePrefix))
+      .map(t => `${Resources.reportIndent.repeat(3)}${t}`);
+  }
+
+  private readCause(value: unknown): unknown {
+    return value instanceof Error ? this.readSafely(() => value.cause) : undefined;
+  }
+
+  private readSafely(read: () => unknown): unknown {
+    try {
+      return read();
+    }
+    catch {
+      return undefined;
     }
   }
 

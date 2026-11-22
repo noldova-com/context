@@ -74,7 +74,7 @@ When no class is left, the main thread tells each worker, which closes its port 
 Each run makes one temporary folder and points `TMPDIR`, `TEMP` and `TMP` at it, so its workers' temporary files go there; anything a test leaves there fails the run, and the run removes the folder at the end; a folder it cannot remove fails the run as well.
 A test whose child process runs npm gives that child a temporary folder of its own under the test's folder, which the test removes, since npm turns on Node's compile cache, which writes into the temporary folder.
 A test class that leaves a timer, handle or request open in its worker fails the run, naming the class and what it left.
-An app runs tests in parallel workers the same way through the exported `ParallelTestRunner`, which returns the result objects `TestRunner` returns: test data, assertion values and thrown values that cannot cross between threads arrive as values that print as the originals did, and an error other than an `AssertFailedException` or a `TestTimeoutException` arrives as an `Error` with the original's name, message and stack.
+An app runs tests in parallel workers the same way through the exported `ParallelTestRunner`, which returns the result objects `TestRunner` returns: test data, assertion values and thrown values that cannot cross between threads arrive as values that print as the originals did, and an error other than an `AssertFailedException` or a `TestTimeoutException` arrives as an `Error` with the original's name, message and stack, and with its `cause` chain crossed the same way, up to a cause that leads back into the chain.
 It never calls a listener's `onMethodStarted`, because only its workers load the test modules, and it leaves the process's environment, temporary folder included, to the app.
 
 Execution order is deterministic: method-name order, then row order.
@@ -107,6 +107,7 @@ Additions require a present need.
 The run produces a structured, immutable result model with concrete classes: executed, passed, failed, and skipped tests, each with full identity and failure or skip detail, and per-row index, arguments, duration, timeout, and outcome.
 Totals reconcile exactly with discovery.
 Presentation is separate: console layout and color belong to the reporting boundary, a machine consumer never parses human-readable output, and reduced-detail modes may hide passing tests or fully covered files while failures, skips, incomplete coverage, and totals are always presented.
+A failed test's report shows an `AssertFailedException` as its message with its expected and actual values, and any other error as its name and message, its stack frames one step deeper, and then each `cause` in turn, as a `cause:` line with its own frames, until a cause the report already showed; a stack or cause that can't be read shows nothing.
 
 A skip is declared in source through `@Skip` with a required reason and is reported individually; class- and method-level skips apply to every row.
 An unreasoned or silent skip fails the run.
