@@ -46,6 +46,7 @@ Package size never justifies moving an unrelated responsibility into Core.
 | `noldova.context.text` | Additional text abstractions and accepted String augmentations; planned: ECMAScript URI encoding functions |
 | `noldova.context.json` | JSON reading; planned: serialization |
 | `noldova.context.processes` | Process identities and ending a process tree (section 8) |
+| `noldova.context` | The `ctx` command host: project-file reading and the command providers it runs (section 9) |
 | `noldova.context.query.expressions` | Expression trees: the immutable expression classes, their factories and operators, their source text and expression replacement; no evaluation or translation |
 | `noldova.context.query` | Queries built as expression trees, the query provider contract, and the in-memory provider that runs the trees on `Enumerable`; their results are asynchronous |
 | `noldova.context.data` | The provider-independent data model: data sources, connections, transactions, migrations and their history, the change feed, and `DbContext` with its options (section 7) |
@@ -73,6 +74,7 @@ The accepted direct library dependencies are:
 | Text | Core, Exceptions, Collections |
 | JSON | Core, Exceptions |
 | Processes | Core, Exceptions |
+| Context (the host) | Core, Exceptions, JSON |
 | Query.Expressions | Core, Exceptions |
 | Query | Core, Exceptions, Collections, Query.Expressions |
 | Data | Core, Exceptions |
@@ -117,7 +119,7 @@ The stable portable environment composes the accepted stable packages.
 Web and Worker environments are optional and share common Web packages rather than duplicating identities.
 ESNext behavior is experimental until explicitly adopted into the stable environment.
 Script Host is not an adopted Runtime environment; its vendored declarations remain conformance evidence.
-Node APIs are not TypeScript built-ins and require a separate future framework or package decision; sections 7 and 8 record the package decisions taken so far, the data providers' and Processes'.
+Node APIs are not TypeScript built-ins and require a separate future framework or package decision; sections 7, 8 and 9 record the package decisions taken so far, the data providers', Processes' and the command host's.
 The exact framework identities and the complete Web package topology remain deferred.
 
 Implementation of a standard-library global begins with the complete surface inventory defined by `TYPESCRIPT-COMPATIBILITY.md`.
@@ -227,3 +229,11 @@ It lists processes through one lister process per system listing, started on fir
 The lister gets ready within its own 60 s limit, apart from a call's limit, which starts once the lister is ready, since a fresh `powershell.exe` can take many seconds to start; one that ends is started again on the next call.
 A listing that leaves out the process that asked for it is incomplete: the lister lists again, three times at most within the call's limit, and then throws, so a partial listing never reads as an ended tree.
 When the Runtime owns processes, the package moves onto its contracts, and its public API doesn't change for it.
+
+## 9. The command host and its host boundary
+
+`noldova.context` is the `ctx` command host that `RUNTIME-AND-SDK.md` section 2 describes, and its npm package `@noldova/context` installs the `ctx` command.
+It depends on Core, Exceptions and JSON only, and its public API is `CommandHost`, `Command`, `CommandContext`, `CommandOutput`, `ConsoleOutput`, `Project`, `ProjectEntryPoint`, `ProjectKind` and its exceptions; providers such as the SDK depend on it for `Command`, and it depends on none of them.
+
+During the Node bootstrap it reads the project file through `node:fs/promises`, resolves each provider from the project file's folder with `node:module`'s `createRequire`, imports providers through `node:url`'s file URLs, builds paths with `node:path`, and writes through `process.stdout` and `process.stderr`; each file that does carries the Node note in `TESTING-CONTRACT.md` section 1.
+When the Runtime owns module loading and the console, the package moves onto its contracts, and its public API doesn't change for it.

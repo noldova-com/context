@@ -18,7 +18,7 @@ A path locates that authority; it does not replace it.
 
 ## 2. Canonical identity
 
-Every project has one fully qualified declared name of the form `noldova.context.<name>`, except the planned `ctx` command-host package, whose identity is reserved as exactly `noldova.context`.
+Every project has one fully qualified declared name of the form `noldova.context.<name>`, except the `ctx` command-host package, whose identity is reserved as exactly `noldova.context`.
 A name is lowercase ASCII letters and digits in dot-separated segments; a name with an uppercase letter is invalid, so no two identities differ only in case on any file system.
 `<name>` may contain further segments, such as `noldova.context.parsers.typescript`, when the responsibility is genuinely nested within a broader domain; nesting expresses ownership, not directory convenience.
 The npm package of `noldova.context.<name>` is `@noldova/context.<name>`.
@@ -34,7 +34,7 @@ noldova.context.collections/
     noldova.context.collections.tests.ctxp
 ```
 
-The command host, once it exists, will follow the same rule (`noldova.context/src/noldova.context.ctxp`).
+The command host follows the same rule (`noldova.context/src/noldova.context.ctxp`).
 Matching makes placement predictable; it never lets a consumer infer identity without reading and validating the manifest, and a name, directory, basename, or import with different casing is not an alias.
 Repository category directories such as `src/data/` and `src/parsers/` group package roots by responsibility and carry no semantic identity.
 
@@ -56,6 +56,17 @@ An installed-package dependency resolves through the declared installation mecha
 The manifest's `frameworks` field is a flat list.
 `FRAMEWORK-CONTRACT.md` owns its default selection, exact composition, exposure, and SDK resolution.
 
+The manifest's `sdk` field names the one SDK whose commands `ctx` offers for the project, `noldova.context.sdk` when left out, and its `tools` field lists further command providers, none when left out; each is an exact package identity installed for the project, a tool is named once and never names the SDK, and `RUNTIME-AND-SDK.md` owns how the host loads them.
+An executable's `entry` field picks what the SDK's `ctx run` starts: `source`, the `.ts` file relative to the manifest, `main.ts` when left out, and `class`, the exported class whose static `main` starts the app, which may be left out when the module exports exactly one class with a static `main`.
+A library has no entry, and the field is ignored there.
+
+```json
+"kind": "executable",
+"sdk": "noldova.context.sdk",
+"tools": ["noldova.context.data.tools"],
+"entry": { "source": "main.ts", "class": "Program" }
+```
+
 The manifest's parent directory is the complete source root; there is no configurable source path.
 A package project's manifest and sources live in the package root's `src/`; its test project's manifest and mirrored tests live in the sibling `tests/`.
 
@@ -63,7 +74,7 @@ A package project's manifest and sources live in the package root's `src/`; its 
 
 The dependency graph is derived from project manifests and their effective framework compositions, never duplicated in a root script, configuration array, or hand-maintained order list.
 The temporary Node bootstrap is the sole exception: its explicit ordered configuration builds npm forms before the SDK build provider exists and is not a semantic graph, resolver, or certification input.
-Package-local `package.json` files are temporary bootstrap manifests containing only `name`, `version`, `type`, `main`, `types`, and `license`, plus `peerDependencies` for the CONTEXT packages actually imported during the bootstrap, in the range [VERSIONING-AND-COMPATIBILITY.md](VERSIONING-AND-COMPATIBILITY.md) sets, and `repository`, `bugs`, `homepage` and `publishConfig`, which npm's provenance and the registry need; the build adds `gitHead`, the commit it built from, to the manifest it publishes.
+Package-local `package.json` files are temporary bootstrap manifests containing only `name`, `version`, `type`, `main`, `types`, and `license`, plus `peerDependencies` for the CONTEXT packages actually imported during the bootstrap, and for the command host only `bin`, which installs its `ctx` command, in the range [VERSIONING-AND-COMPATIBILITY.md](VERSIONING-AND-COMPATIBILITY.md) sets, and `repository`, `bugs`, `homepage` and `publishConfig`, which npm's provenance and the registry need; the build adds `gitHead`, the commit it built from, to the manifest it publishes.
 Other npm metadata requires a demonstrated bootstrap requirement.
 These manifests are removed with the bootstrap.
 

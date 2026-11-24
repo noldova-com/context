@@ -61,6 +61,12 @@ Each name opens the package's folder and its own README; each badge opens it on 
 | [`context.data.sql.sqlite`](src/data/noldova.context.data.sql.sqlite) | [![npm](https://badgen.net/npm/v/@noldova/context.data.sql.sqlite)](https://www.npmjs.com/package/@noldova/context.data.sql.sqlite) | The SQLite provider of the SQL data model, on the host's `node:sqlite` |
 | [`context.data.sql.postgresql`](src/data/noldova.context.data.sql.postgresql) | [![npm](https://badgen.net/npm/v/@noldova/context.data.sql.postgresql)](https://www.npmjs.com/package/@noldova/context.data.sql.postgresql) | The PostgreSQL provider of the SQL data model, ported from postgres.js |
 
+### Command line
+
+| Package | npm | What it is |
+|---|---|---|
+| [`context`](src/noldova.context) | [![npm](https://badgen.net/npm/v/@noldova/context)](https://www.npmjs.com/package/@noldova/context) | The `ctx` command: it reads the project file, and runs the commands of the SDK and tools the project names |
+
 ### Testing
 
 | Package | npm | What it is |
