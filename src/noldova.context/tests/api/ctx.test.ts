@@ -21,16 +21,22 @@ export class CtxTests {
       await folder.writeProviderAsync("noldova.context.testsdk", ProjectFolder.command("BuildCommand", "build", 3));
       const argv = process.argv;
       const exitCode = process.exitCode;
-      process.argv = [process.execPath, "ctx", "build", "--project", manifestPath];
+      const write = process.stdout.write;
+      const written: string[] = [];
+      process.argv = [process.execPath, "ctx", "build", "--project", manifestPath, "x"];
+      process.stdout.write = (chunk: string | Uint8Array): boolean => written.push(String(chunk)) > 0;
       try {
         await import("@noldova/context/api/ctx.js");
 
         Assert.areEqual(3, process.exitCode);
       }
       finally {
+        process.stdout.write = write;
         process.argv = argv;
         process.exitCode = exitCode;
       }
+
+      Assert.areEqual("noldova.context.app x\n", written.join(""));
     });
   }
 }

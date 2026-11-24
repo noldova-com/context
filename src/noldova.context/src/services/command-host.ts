@@ -60,7 +60,7 @@ export class CommandHost {
 
     const commands = await this.readCommandsAsync(await ProjectFileService.readAsync(manifestPath, directory));
     this.output.writeLine(Resources.commandsHeading);
-    for (const command of [...commands.values()].sort((first, second) => first.name < second.name ? -1 : 1))
+    for (const command of [...commands.values()].sort((first, second) => Number(first.name > second.name) - Number(first.name < second.name)))
       this.output.writeLine(Resources.formatCommandLine(command.name, command.description));
 
     return 0;
