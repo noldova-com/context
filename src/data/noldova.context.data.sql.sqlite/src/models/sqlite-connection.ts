@@ -33,9 +33,9 @@ export class SQLiteConnection extends SqlConnection {
       handle.exec(Resources.journalModePragma);
       handle.exec(Resources.foreignKeysPragma);
     }
-    catch (error) {
+    catch (exception) {
       handle.close();
-      throw error;
+      throw exception;
     }
 
     return new SQLiteConnection(dataSource, new SQLiteSession(handle));

@@ -25,9 +25,9 @@ export class DatabaseFacade<TConnection extends Connection, TMigration extends M
       this.migrator = options.provider.createMigrator(this.connection, migrations);
       this.changeFeed = options.provider.createChangeFeed(this.connection);
     }
-    catch (error) {
+    catch (exception) {
       this.connection.closeAsync().catch(() => undefined);
-      throw error;
+      throw exception;
     }
   }
 

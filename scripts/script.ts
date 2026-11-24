@@ -42,11 +42,11 @@ export default abstract class Script {
     try {
       await this.runAsync();
     }
-    catch (error) {
-      if (!(error instanceof CommandFailedException) && !(await Script.isJsonExceptionAsync(error)))
-        throw error;
+    catch (exception) {
+      if (!(exception instanceof CommandFailedException) && !(await Script.isJsonExceptionAsync(exception)))
+        throw exception;
 
-      console.error(error instanceof Error ? error.message : String(error));
+      console.error(exception instanceof Error ? exception.message : String(exception));
       process.exitCode = 1;
     }
   }
@@ -126,9 +126,9 @@ export default abstract class Script {
     try {
       await step();
     }
-    catch (error) {
+    catch (exception) {
       console.log(Script.STEP_FAILED);
-      throw error;
+      throw exception;
     }
     console.log(Script.STEP_DONE);
   }

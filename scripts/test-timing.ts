@@ -42,11 +42,11 @@ export class TestTiming extends SuiteScript {
       try {
         await this.runSuiteAsync(projects, environment);
       }
-      catch (error) {
-        if (!(error instanceof CommandFailedException))
-          throw error;
+      catch (exception) {
+        if (!(exception instanceof CommandFailedException))
+          throw exception;
 
-        await this.writeLogAsync(error.message);
+        await this.writeLogAsync(exception.message);
         await this.writeLogAsync(TestTiming.runFailed(run));
         process.exitCode = 1;
         return;

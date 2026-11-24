@@ -194,10 +194,10 @@ export class SourceParser {
         }
       }
     }
-    catch (error) {
-      if (!(error instanceof TypeScriptRecursionLimitException))
-        throw error;
-      this.recoverFromRecursionLimit(parser, statements, statementStartNode, error);
+    catch (exception) {
+      if (!(exception instanceof TypeScriptRecursionLimitException))
+        throw exception;
+      this.recoverFromRecursionLimit(parser, statements, statementStartNode, exception);
       isInterrupted = true;
     }
     finally {
@@ -238,10 +238,10 @@ export class SourceParser {
       if (parser.isEndOfFile)
         endOffset = reader.endOffset;
     }
-    catch (error) {
-      if (!(error instanceof TypeScriptRecursionLimitException))
-        throw error;
-      this.recoverFromRecursionLimit(parser, statements, statementStartNode, error);
+    catch (exception) {
+      if (!(exception instanceof TypeScriptRecursionLimitException))
+        throw exception;
+      this.recoverFromRecursionLimit(parser, statements, statementStartNode, exception);
       endOffset = reader.endOffset;
     }
     context.clearRecognitionCaches();

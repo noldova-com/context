@@ -57,8 +57,8 @@ export class TypeScriptExpectedProcessMemoryTests {
       try {
         memory.listingFor("aix");
       }
-      catch (error) {
-        console.log(error.name + ": " + error.message);
+      catch (exception) {
+        console.log(exception.name + ": " + exception.message);
       }
     `);
 
@@ -73,8 +73,8 @@ export class TypeScriptExpectedProcessMemoryTests {
       try {
         await memory.startAsync(new listing(process.execPath, [memory.SCRIPT_ARGUMENT], "process.exit(1);", 1));
       }
-      catch (error) {
-        console.log(error.name + ": " + error.message);
+      catch (exception) {
+        console.log(exception.name + ": " + exception.message);
       }
       console.log("left " + readdirSync(tmpdir()).length);
     `);

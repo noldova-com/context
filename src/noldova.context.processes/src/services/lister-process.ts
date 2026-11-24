@@ -58,10 +58,10 @@ export class ListerProcess {
       try {
         await lister.waitReadyAsync();
       }
-      catch (error) {
+      catch (exception) {
         lister.stop();
         await Promise.allSettled([lister.ended]);
-        throw error;
+        throw exception;
       }
 
       child.unref();

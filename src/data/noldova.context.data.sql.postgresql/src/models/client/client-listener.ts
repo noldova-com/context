@@ -49,22 +49,22 @@ export class ClientListener {
     try {
       state = await channel.result;
     }
-    catch (error) {
+    catch (exception) {
       channel.listeners.delete(listener);
       if (channel.listeners.size === 0)
         this.channels.delete(name);
       if (this.channels.size === 0)
         this.release();
-      throw error;
+      throw exception;
     }
 
     channel.state = state;
     try {
       listener.onlisten?.();
     }
-    catch (error) {
-      this.endListener(name, channel, listener, error);
-      throw error;
+    catch (exception) {
+      this.endListener(name, channel, listener, exception);
+      throw exception;
     }
 
     return new ListenSubscription(this, name, channel, listener);
@@ -85,9 +85,9 @@ export class ClientListener {
     try {
       await ClientListener.stopAsync(pool, name);
     }
-    catch (error) {
-      if (!(error instanceof ConnectionClosedException || error instanceof ConnectionEndedException))
-        throw error;
+    catch (exception) {
+      if (!(exception instanceof ConnectionClosedException || exception instanceof ConnectionEndedException))
+        throw exception;
     }
   }
 
@@ -144,8 +144,8 @@ export class ClientListener {
       try {
         action(listener);
       }
-      catch (error) {
-        this.endListener(name, channel, listener, error);
+      catch (exception) {
+        this.endListener(name, channel, listener, exception);
       }
     }
   }
@@ -189,9 +189,9 @@ export class ClientListener {
     try {
       seconds = Object.isFunction(backoff) ? backoff(retries) : backoff;
     }
-    catch (error) {
+    catch (exception) {
       for (const listener of channel.listeners)
-        listener.ended.reject(error);
+        listener.ended.reject(exception);
       channel.listeners.clear();
       this.drop(name, channel);
       return;

@@ -275,8 +275,8 @@ export class RegexParserTests {
     try {
       new RegExp(pattern, flags);
     }
-    catch (error) {
-      Assert.isInstanceOf(error, SyntaxError);
+    catch (exception) {
+      Assert.isInstanceOf(exception, SyntaxError);
       hostAccepts = false;
     }
 

@@ -214,8 +214,8 @@ export class JsonReader {
     try {
       return JSON.parse(text);
     }
-    catch (error) {
-      throw new JsonException(Resources.invalidJsonText, path, new ExceptionOptions(error));
+    catch (exception) {
+      throw new JsonException(Resources.invalidJsonText, path, new ExceptionOptions(exception));
     }
   }
 
