@@ -58,9 +58,9 @@ export class SessionStarter {
       this.socket = await PostgreSQLSocket.connectAsync(this.options.host, this.options.port, this.abort.signal);
       return await this.openAsync(this.socket);
     }
-    catch (error) {
+    catch (exception) {
       this.socket?.destroy();
-      throw this.abort.signal.aborted ? new DataException(Resources.connectTimeout, new ExceptionOptions(error)) : error;
+      throw this.abort.signal.aborted ? new DataException(Resources.connectTimeout, new ExceptionOptions(exception)) : exception;
     }
     finally {
       this.timers.clearTimeout(timer);
@@ -185,8 +185,8 @@ export class SessionStarter {
           else if (type !== BackendMessage.NoticeResponse)
             fail(new MalformedMessageException());
         }
-        catch (error) {
-          fail(error);
+        catch (exception) {
+          fail(exception);
         }
       }, fail);
       socket.onData = data => frames.push(data);

@@ -122,9 +122,9 @@ export declare class JsonReader {
    * try {
    *   JsonReader.parse("[1, 2]");
    * }
-   * catch (error) {
-   *   if (!(error instanceof JsonException))
-   *     throw error;
+   * catch (exception) {
+   *   if (!(exception instanceof JsonException))
+   *     throw exception;
    * }
    * ```
    */

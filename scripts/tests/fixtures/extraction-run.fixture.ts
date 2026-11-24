@@ -44,10 +44,10 @@ export class ExtractionRun {
       try {
         await TarArchive.extractAsync(readFileSync(path.join(folder, "${ExtractionRun.ARCHIVE_FILE_NAME}")), path.join(folder, "${ExtractionRun.FOLDER_NAME}"));
       }
-      catch (error) {
-        if (!(error instanceof CommandFailedException))
-          throw error;
-        outcome = error.message;
+      catch (exception) {
+        if (!(exception instanceof CommandFailedException))
+          throw exception;
+        outcome = exception.message;
       }
       console.log(JSON.stringify({ key, outcome, folder: readdirSync(folder).sort(), outside: readdirSync(path.join(folder, "${ExtractionRun.OUTSIDE_FOLDER_NAME}")).sort(),
         out: listEntries(path.join(folder, "${ExtractionRun.FOLDER_NAME}"), "") }));

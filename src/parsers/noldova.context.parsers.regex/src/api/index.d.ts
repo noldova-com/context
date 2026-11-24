@@ -1655,9 +1655,9 @@ export declare class RegexUnknownNode extends ValueNode {
  * try {
  *   parser.parse();
  * }
- * catch (error) {
- *   if (!(error instanceof ParserException))
- *     throw error;
+ * catch (exception) {
+ *   if (!(exception instanceof ParserException))
+ *     throw exception;
  *   rejected = true;
  * }
  * console.assert(rejected && first.rootNode.patternNode.value === "");

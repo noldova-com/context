@@ -24,10 +24,10 @@ export class ConfigTests {
       const { default: Config } = await import(new URL("config.ts", scriptsUrl).href);
       console.log(Config.UPPER_BOUND);
     }
-    catch (error) {
-      if (!(error instanceof CommandFailedException))
-        throw error;
-      console.log(error.message);
+    catch (exception) {
+      if (!(exception instanceof CommandFailedException))
+        throw exception;
+      console.log(exception.message);
     }
   `;
   private static readonly REMOVAL_RETRIES: number = 5;

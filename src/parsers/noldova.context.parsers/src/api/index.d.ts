@@ -46,10 +46,10 @@ export declare class ParserException extends Exception {
  * InvalidOffsetException.throwIfOutsideRange(5, 1, 5); // Both endpoints are valid.
  * try {
  *   InvalidOffsetException.throwIfOutsideRange(6, 1, 5);
- * } catch (error) {
- *   if (!(error instanceof InvalidOffsetException))
- *     throw error;
- *   console.assert(error.offset === 6 && error.maximumOffset === 5);
+ * } catch (exception) {
+ *   if (!(exception instanceof InvalidOffsetException))
+ *     throw exception;
+ *   console.assert(exception.offset === 6 && exception.maximumOffset === 5);
  * }
  * ```
  */
@@ -104,10 +104,10 @@ export declare class InvalidOffsetException extends ParserException {
  * InvalidSpanException.throwIfInvalid(5, 0, 5); // Empty at the source end.
  * try {
  *   InvalidSpanException.throwIfInvalid(4, 2, 5);
- * } catch (error) {
- *   if (!(error instanceof InvalidSpanException))
- *     throw error;
- *   console.assert(error.startOffset === 4 && error.length === 2);
+ * } catch (exception) {
+ *   if (!(exception instanceof InvalidSpanException))
+ *     throw exception;
+ *   console.assert(exception.startOffset === 4 && exception.length === 2);
  * }
  * ```
  */
@@ -161,10 +161,10 @@ export declare class InvalidSpanException extends ParserException {
  * LineOutOfBoundsException.throwIfOutOfBounds(1, 2);
  * try {
  *   LineOutOfBoundsException.throwIfOutOfBounds(2, 2);
- * } catch (error) {
- *   if (!(error instanceof LineOutOfBoundsException))
- *     throw error;
- *   console.assert(error.lineIndex === 2 && error.lineCount === 2);
+ * } catch (exception) {
+ *   if (!(exception instanceof LineOutOfBoundsException))
+ *     throw exception;
+ *   console.assert(exception.lineIndex === 2 && exception.lineCount === 2);
  * }
  * ```
  */

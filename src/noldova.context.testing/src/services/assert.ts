@@ -67,9 +67,9 @@ export class Assert {
     try {
       action();
     }
-    catch (error) {
+    catch (exception) {
       didThrow = true;
-      caught = error;
+      caught = exception;
     }
 
     if (!didThrow)
@@ -91,9 +91,9 @@ export class Assert {
     try {
       await action();
     }
-    catch (error) {
+    catch (exception) {
       didThrow = true;
-      caught = error;
+      caught = exception;
     }
 
     if (!didThrow)
@@ -109,8 +109,8 @@ export class Assert {
     try {
       action();
     }
-    catch (error) {
-      throw new AssertFailedException(message ?? Resources.expectedNoThrow, undefined, error);
+    catch (exception) {
+      throw new AssertFailedException(message ?? Resources.expectedNoThrow, undefined, exception);
     }
   }
 

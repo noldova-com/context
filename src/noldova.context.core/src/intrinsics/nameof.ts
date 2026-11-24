@@ -30,8 +30,8 @@ export function nameof<T>(value: (keyof T & string) | ((t: NameofSelector<T>) =>
   try {
     result = value(selector as NameofSelector<T>);
   }
-  catch (error) {
-    throw new TypeError(Resources.nameofArgumentInvalid, { cause: error });
+  catch (exception) {
+    throw new TypeError(Resources.nameofArgumentInvalid, { cause: exception });
   }
 
   if (Object.isUndefined(memberName) || result !== memberName)

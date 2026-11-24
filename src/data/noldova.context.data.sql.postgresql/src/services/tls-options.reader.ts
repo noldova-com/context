@@ -47,8 +47,8 @@ export class TlsOptionsReader {
     try {
       return createPrivateKey({ key: data, passphrase: passphrase ?? undefined }).export({ type: "pkcs8", format: "pem" });
     }
-    catch (error) {
-      throw new DataException(Resources.formatSslKeyUnreadable(path), new ExceptionOptions(error));
+    catch (exception) {
+      throw new DataException(Resources.formatSslKeyUnreadable(path), new ExceptionOptions(exception));
     }
   }
 
@@ -56,8 +56,8 @@ export class TlsOptionsReader {
     try {
       return await readFile(path);
     }
-    catch (error) {
-      throw new DataException(Resources.formatSslFileUnreadable(option, path), new ExceptionOptions(error));
+    catch (exception) {
+      throw new DataException(Resources.formatSslFileUnreadable(option, path), new ExceptionOptions(exception));
     }
   }
 
@@ -65,8 +65,8 @@ export class TlsOptionsReader {
     try {
       return createSecureContext(files);
     }
-    catch (error) {
-      throw new DataException(Resources.sslFilesUnusable, new ExceptionOptions(error));
+    catch (exception) {
+      throw new DataException(Resources.sslFilesUnusable, new ExceptionOptions(exception));
     }
   }
 }

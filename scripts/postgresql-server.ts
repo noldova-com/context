@@ -79,14 +79,14 @@ export default class PostgreSQLServer implements AsyncDisposable {
       await server.initializeAsync();
       return server;
     }
-    catch (error) {
+    catch (exception) {
       try {
         await server[Symbol.asyncDispose]();
       }
-      catch (stopError) {
-        throw new PostgreSQLStartFailedException(PostgreSQLServer.startAndStopFailed(error, stopError), error, stopError);
+      catch (stopException) {
+        throw new PostgreSQLStartFailedException(PostgreSQLServer.startAndStopFailed(exception, stopException), exception, stopException);
       }
-      throw error;
+      throw exception;
     }
   }
 
@@ -96,16 +96,16 @@ export default class PostgreSQLServer implements AsyncDisposable {
       if (this.started)
         await this.runAsync("pg_ctl", ["-D", this.dataFolder, "-m", "fast", "-w", "stop"]);
     }
-    catch (error) {
-      stopFailures.push(error);
+    catch (exception) {
+      stopFailures.push(exception);
     }
 
     this.started = false;
     try {
       await fs.rm(this.temporaryFolder, { recursive: true, force: true, maxRetries: PostgreSQLServer.REMOVAL_RETRIES });
     }
-    catch (error) {
-      const messages = [...stopFailures.map(t => PostgreSQLServer.describe(t)), PostgreSQLServer.folderNotRemoved(this.temporaryFolder, error)];
+    catch (exception) {
+      const messages = [...stopFailures.map(t => PostgreSQLServer.describe(t)), PostgreSQLServer.folderNotRemoved(this.temporaryFolder, exception)];
       throw new CommandFailedException(messages.join(PostgreSQLServer.NEW_LINE));
     }
 
@@ -130,10 +130,10 @@ export default class PostgreSQLServer implements AsyncDisposable {
         await this.runAsync("pg_ctl", ["-D", this.dataFolder, "-l", this.logFile, "-w", "-t", "120", "start"]);
         return;
       }
-      catch (error) {
+      catch (exception) {
         const log = await fs.readFile(this.logFile, PostgreSQLServer.TEXT_ENCODING);
         if (attempt === PostgreSQLServer.START_ATTEMPTS || !log.includes(PostgreSQLServer.BIND_FAILURE))
-          throw error;
+          throw exception;
 
         this.started = false;
       }

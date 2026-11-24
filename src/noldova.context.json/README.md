@@ -23,10 +23,10 @@ reader.readOptionalString("detail"); // undefined: the field is absent.
 try {
   reader.readString("version");
 }
-catch (error) {
-  if (!(error instanceof JsonException))
-    throw error;
-  error.path; // "$.version"
+catch (exception) {
+  if (!(exception instanceof JsonException))
+    throw exception;
+  exception.path; // "$.version"
 }
 ```
 

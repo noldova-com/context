@@ -85,8 +85,8 @@ export class TypeScriptExpectedWorkerSupervisorTests {
         await new supervisor(fileIn("${TypeScriptExpectedWorkerSupervisorTests.WORKER_FILE_NAME}"), gatePath, 60_000, ${TypeScriptExpectedWorkerSupervisorTests.BUDGET_BYTES}, memory)
           .runAsync(() => undefined);
       }
-      catch (error) {
-        console.log(error.name + ": " + error.message);
+      catch (exception) {
+        console.log(exception.name + ": " + exception.message);
       }
       const workerId = Number(readFileSync(pidPath, "utf8"));
       const isRunning = () => { try { process.kill(workerId, 0); return true; } catch { return false; } };

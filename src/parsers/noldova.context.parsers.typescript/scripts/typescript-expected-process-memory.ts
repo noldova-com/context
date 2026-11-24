@@ -49,7 +49,7 @@ export default class TypeScriptExpectedProcessMemory {
     `list(); WScript.StdOut.WriteLine('${TypeScriptExpectedProcessMemory.READY_LINE}'); ` +
     "while (!WScript.StdIn.AtEndOfStream) { WScript.StdIn.ReadLine(); " +
     `WScript.StdOut.Write(list()); WScript.StdOut.WriteLine('${TypeScriptExpectedProcessMemory.END_LINE}'); } } ` +
-    "catch (error) { WScript.StdErr.WriteLine(error.message); WScript.Quit(1); }";
+    "catch (exception) { WScript.StdErr.WriteLine(exception.message); WScript.Quit(1); }";
   private static readonly WINDOWS_LISTING: TypeScriptExpectedProcessListing = new TypeScriptExpectedProcessListing("cscript.exe",
     ["//nologo", "//B", "//E:jscript", TypeScriptExpectedProcessMemory.SCRIPT_ARGUMENT], TypeScriptExpectedProcessMemory.WINDOWS_SCRIPT, 1);
   private static readonly LISTINGS: ReadonlyMap<string, TypeScriptExpectedProcessListing> = new Map([

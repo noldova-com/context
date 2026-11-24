@@ -215,9 +215,9 @@ export class Frontend {
     try {
       build(this.writer);
     }
-    catch (error) {
+    catch (exception) {
       this.writer.truncate(0);
-      throw error;
+      throw exception;
     }
 
     return this.writer.take();
