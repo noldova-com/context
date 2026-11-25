@@ -20,22 +20,14 @@ export class SuiteScriptTests {
   private static readonly DIRECTORY_PREFIX: string = "noldova-suite-script-";
   private static readonly DRIVER: string = `
     const [scriptsUrl] = process.argv.slice(1);
-    const { default: PostgreSQLServer } = await import(new URL("postgresql-server.ts", scriptsUrl).href);
-    const { default: SuiteScript } = await import(new URL("suite-script.ts", scriptsUrl).href);
-    delete process.env[PostgreSQLServer.URL_VARIABLE];
-    PostgreSQLServer.startAsync = async () => ({ url: "started", [Symbol.asyncDispose]: async () => {} });
-    class Probe extends SuiteScript {
-      async runAsync() {}
-      async writeLogAsync() {}
-      async executeProcessAsync(command, arguments_, directory, silent, environment) {
-        this.url = environment[PostgreSQLServer.URL_VARIABLE] ?? "none";
-      }
-    }
-    const probe = new Probe();
-    const projects = await probe.listTestProjectsAsync();
-    await probe.runSuiteAsync(projects, {});
-    console.log([...projects.map(t => t.name), probe.url].join(" "));
+    const { default: SuiteScriptProbe } = await import(new URL("tests/fakes/suite-script.probe.ts", scriptsUrl).href);
+    await new SuiteScriptProbe().runAsync();
   `;
+  private static readonly FAKES_PATH: string = path.join("tests", "fakes");
+  private static readonly FAKES_FOLDER: string = path.join(ScriptRunner.SCRIPTS_FOLDER, SuiteScriptTests.FAKES_PATH);
+  private static readonly POSTGRESQL_SERVER_FAKE_FILE_NAME: string = "postgresql-server.fake.ts";
+  private static readonly POSTGRESQL_SERVER_FILE_NAME: string = "postgresql-server.ts";
+  private static readonly PROBE_FILE_NAME: string = "suite-script.probe.ts";
   private static readonly REMOVAL_RETRIES: number = 5;
   private static readonly SCRIPT_EXTENSION: string = ".ts";
   private static readonly SCRIPTS_FOLDER_NAME: string = "scripts";
@@ -65,10 +57,13 @@ export class SuiteScriptTests {
     const directory = await mkdtemp(path.join(tmpdir(), SuiteScriptTests.DIRECTORY_PREFIX));
     try {
       const scriptsFolder = path.join(directory, SuiteScriptTests.SCRIPTS_FOLDER_NAME);
-      await mkdir(scriptsFolder);
+      const fakesFolder = path.join(scriptsFolder, SuiteScriptTests.FAKES_PATH);
+      await mkdir(fakesFolder, { recursive: true });
       for (const name of await readdir(ScriptRunner.SCRIPTS_FOLDER))
-        if (name.endsWith(SuiteScriptTests.SCRIPT_EXTENSION) && name !== SuiteScriptTests.CONFIG_FILE_NAME)
+        if (name.endsWith(SuiteScriptTests.SCRIPT_EXTENSION) && name !== SuiteScriptTests.CONFIG_FILE_NAME && name !== SuiteScriptTests.POSTGRESQL_SERVER_FILE_NAME)
           await copyFile(path.join(ScriptRunner.SCRIPTS_FOLDER, name), path.join(scriptsFolder, name));
+      await copyFile(path.join(SuiteScriptTests.FAKES_FOLDER, SuiteScriptTests.POSTGRESQL_SERVER_FAKE_FILE_NAME), path.join(scriptsFolder, SuiteScriptTests.POSTGRESQL_SERVER_FILE_NAME));
+      await copyFile(path.join(SuiteScriptTests.FAKES_FOLDER, SuiteScriptTests.PROBE_FILE_NAME), path.join(fakesFolder, SuiteScriptTests.PROBE_FILE_NAME));
       await writeFile(path.join(scriptsFolder, SuiteScriptTests.CONFIG_FILE_NAME),
         `export default class Config {\n  static readonly BUILD_FOLDER = "_build/node";\n  static readonly PACKAGES_INFO = [];\n${settings.map(t => `  static readonly ${t};\n`).join("")}}\n`);
 
