@@ -12,6 +12,7 @@ import { createInterface } from "node:readline";
 import type { Readable } from "node:stream";
 
 import "@noldova/context.core";
+import type { IReadOnlyList } from "@noldova/context.collections";
 import { ProcessIdentity } from "@noldova/context.processes";
 import type { ProcessEntry } from "@noldova/context.processes/models/process-entry.js";
 import { ProcessLister } from "@noldova/context.processes/services/process-lister.js";
@@ -104,7 +105,7 @@ export class StartedTree {
     return Array.isArray(value) && value.every((t: unknown) => Object.isNumber(t) && Number.isInteger(t));
   }
 
-  private static listsAny(entries: readonly ProcessEntry[], processIds: readonly number[]): boolean {
-    return entries.some(t => !t.isZombie && processIds.includes(t.processId));
+  private static listsAny(entries: IReadOnlyList<ProcessEntry>, processIds: readonly number[]): boolean {
+    return entries.any(t => !t.isZombie && processIds.includes(t.processId));
   }
 }

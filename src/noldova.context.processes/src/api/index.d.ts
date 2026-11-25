@@ -6,11 +6,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type { IReadOnlyList } from "@noldova/context.collections";
 import { Exception, type ExceptionOptions } from "@noldova/context.exceptions";
 
 /**
  * Raised when processes can't be listed or ended: on a system other than Linux, macOS or
- * Windows, or when the process lister ends before it answers.
+ * Windows, when the process lister ends before it answers, or when it answers a line that is not
+ * a process.
  */
 export declare class ProcessesException extends Exception {
   /**
@@ -30,7 +32,7 @@ export declare class ProcessTreeEndException extends ProcessesException {
    * The processes still listed when the limit passed, each ended once more just before the
    * exception.
    */
-  public readonly survivors: readonly ProcessIdentity[];
+  public readonly survivors: IReadOnlyList<ProcessIdentity>;
 
   /**
    * Initializes the exception. The message counts and names the survivors and gives the limit.
@@ -38,7 +40,7 @@ export declare class ProcessTreeEndException extends ProcessesException {
    * @param survivors The processes still listed when the limit passed.
    * @param limitMilliseconds The limit that passed.
    */
-  public constructor(survivors: readonly ProcessIdentity[], limitMilliseconds: number);
+  public constructor(survivors: IReadOnlyList<ProcessIdentity>, limitMilliseconds: number);
 }
 
 /**
@@ -80,7 +82,8 @@ export declare class ProcessIdentity {
    * @returns The identity, or `undefined` when no process has the id or it has ended and waits
    * for its parent to collect it.
    * @throws ArgumentOutOfRangeException When the id is not a positive integer.
-   * @throws ProcessesException When processes can't be listed on this system.
+   * @throws ProcessesException When processes can't be listed on this system, or the process lister
+   * answers a line that is not a process.
    * @example
    * ```ts
    * import { spawn } from "node:child_process";
@@ -167,8 +170,8 @@ export declare class ProcessTree {
    * @throws ProcessTreeEndException When processes of the tree are still listed when the limit
    * passes.
    * @throws ProcessesException When processes can't be listed on this system, the process lister
-   * is not ready within 60 seconds, or it ends before it answers, which it does when it takes 5
-   * seconds past the limit.
+   * is not ready within 60 seconds, ends before it answers, which it does when it takes 5 seconds
+   * past the limit, or answers a line that is not a process.
    * @example
    * ```ts
    * import { spawn } from "node:child_process";
@@ -182,7 +185,7 @@ export declare class ProcessTree {
    *   await ProcessTree.endAsync(identity, new ProcessTreeEndOptions(2000));
    * ```
    */
-  public static endAsync(root: ProcessIdentity, options?: ProcessTreeEndOptions): Promise<readonly ProcessIdentity[]>;
+  public static endAsync(root: ProcessIdentity, options?: ProcessTreeEndOptions): Promise<IReadOnlyList<ProcessIdentity>>;
 
   /**
    * Ends every process a process started, and waits until they are gone, leaving the process
@@ -195,8 +198,8 @@ export declare class ProcessTree {
    * @throws ProcessTreeEndException When descendants of the root are still listed when the limit
    * passes.
    * @throws ProcessesException When processes can't be listed on this system, the process lister
-   * is not ready within 60 seconds, or it ends before it answers, which it does when it takes 5
-   * seconds past the limit.
+   * is not ready within 60 seconds, ends before it answers, which it does when it takes 5 seconds
+   * past the limit, or answers a line that is not a process.
    * @example
    * ```ts
    * import "@noldova/context.core";
@@ -207,5 +210,5 @@ export declare class ProcessTree {
    *   await ProcessTree.endDescendantsAsync(identity);
    * ```
    */
-  public static endDescendantsAsync(root: ProcessIdentity, options?: ProcessTreeEndOptions): Promise<readonly ProcessIdentity[]>;
+  public static endDescendantsAsync(root: ProcessIdentity, options?: ProcessTreeEndOptions): Promise<IReadOnlyList<ProcessIdentity>>;
 }

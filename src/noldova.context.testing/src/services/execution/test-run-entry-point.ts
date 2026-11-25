@@ -87,7 +87,7 @@ export class TestRunEntryPoint {
     console.error(unendedWorkersMessage);
     try {
       const ended = await RunProcesses.endDescendantsAsync();
-      console.error(Resources.abandonedProcessesEnded(ended.map(t => t.processId)));
+      console.error(Resources.abandonedProcessesEnded(ended.select(t => t.processId).toArray()));
       return await supervisor.waitForUnendedWorkersAsync();
     }
     catch (exception) {

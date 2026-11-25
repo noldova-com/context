@@ -6,15 +6,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { Dictionary, type IReadOnlyDictionary, type IReadOnlyList, KeyValuePair } from "@noldova/context.collections";
+
 import { ProcessListing } from "./models/process-listing.js";
 import { ProcessSignals } from "./models/process-signals.js";
 
 export class Resources {
   public static readonly endLine: string = "end";
   public static readonly refusedPrefix: string = "refused ";
-  public static readonly targetSeparator: string = "/";
   public static readonly lineSeparator: string = "\n";
-  public static readonly fieldSeparator: RegExp = /\s+/u;
+  public static readonly entryPattern: RegExp = /^(?<processId>\d+)\s+(?<parentId>\d+)\s+(?<groupId>\d+)\s+(?<state>\S+)\s+(?<startTime>\d+)$/u;
+  public static readonly processIdGroup: string = "processId";
+  public static readonly parentIdGroup: string = "parentId";
+  public static readonly groupIdGroup: string = "groupId";
+  public static readonly stateGroup: string = "state";
+  public static readonly startTimeGroup: string = "startTime";
   public static readonly zombieState: string = "Z";
   public static readonly listSeparator: string = ", ";
   public static readonly textEncoding: BufferEncoding = "utf8";
@@ -87,11 +93,10 @@ export class Resources {
     `while ($null -ne [Console]::In.ReadLine()) { [Console]::Out.Write((Get-Listing)); [Console]::Out.WriteLine('${Resources.endLine}') }`,
     ""
   ].join(Resources.lineSeparator);
-  public static readonly listings: ReadonlyMap<string, ProcessListing> = new Map([
-    ["linux", new ProcessListing("sh", [], "list-processes.sh", Resources.posixListingScript, new ProcessSignals("SIGSTOP", "SIGCONT", "SIGTERM", "SIGKILL"), 10, Resources.listerReadyMilliseconds)],
-    ["darwin", new ProcessListing("sh", [], "list-processes.sh", Resources.posixListingScript, new ProcessSignals("SIGSTOP", "SIGCONT", "SIGTERM", "SIGKILL"), 10, Resources.listerReadyMilliseconds)],
-    ["win32", new ProcessListing("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File"], "list-processes.ps1",
-      Resources.windowsListingScript, new ProcessSignals(0, 0, 0, "SIGKILL"), 1, Resources.listerReadyMilliseconds)]
+  public static readonly listings: IReadOnlyDictionary<string, ProcessListing> = new Dictionary([
+    new KeyValuePair("linux", new ProcessListing("sh", [], "list-processes.sh", Resources.posixListingScript, new ProcessSignals("SIGSTOP", "SIGCONT", "SIGTERM", "SIGKILL"), 10, Resources.listerReadyMilliseconds)),
+    new KeyValuePair("darwin", new ProcessListing("sh", [], "list-processes.sh", Resources.posixListingScript, new ProcessSignals("SIGSTOP", "SIGCONT", "SIGTERM", "SIGKILL"), 10, Resources.listerReadyMilliseconds)),
+    new KeyValuePair("win32", new ProcessListing("powershell.exe", ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File"], "list-processes.ps1", Resources.windowsListingScript, new ProcessSignals(0, 0, 0, "SIGKILL"), 1, Resources.listerReadyMilliseconds))
   ]);
 
   public static formatPlatformUnsupported(platform: string): string {
@@ -114,8 +119,12 @@ export class Resources {
     return `The process lister "${file}" left the process that called it out of every listing, so each was incomplete; listings made: ${tries}.`;
   }
 
-  public static formatTreeNotEnded(survivors: readonly string[], limitMilliseconds: number): string {
-    return `The process tree still had ${survivors.length} processes when its ${limitMilliseconds} ms limit passed: ${survivors.join(Resources.listSeparator)}.`;
+  public static formatEntryInvalid(line: string): string {
+    return `The process lister answered "${line}", which is not a process id, parent id, group id, state and start time.`;
+  }
+
+  public static formatTreeNotEnded(survivors: IReadOnlyList<string>, limitMilliseconds: number): string {
+    return `The process tree still had ${survivors.count()} processes when its ${limitMilliseconds} ms limit passed: ${survivors.toArray().join(Resources.listSeparator)}.`;
   }
 
   public static formatSurvivor(processId: number, startTime: number): string {

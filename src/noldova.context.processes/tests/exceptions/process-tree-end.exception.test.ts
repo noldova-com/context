@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { List } from "@noldova/context.collections";
 import { ProcessesException, ProcessIdentity, ProcessTreeEndException } from "@noldova/context.processes";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
@@ -13,7 +14,7 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 export class ProcessTreeEndExceptionTests {
   @TestMethod
   public namesEachSurvivorAndTheLimit(): void {
-    const survivors = [new ProcessIdentity(12, 0), new ProcessIdentity(34, 1_763_806_000_123)];
+    const survivors = new List([new ProcessIdentity(12, 0), new ProcessIdentity(34, 1_763_806_000_123)]);
 
     const exception = new ProcessTreeEndException(survivors, 250);
 

@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { type IReadOnlyList, List } from "@noldova/context.collections";
 import { ProcessIdentity } from "@noldova/context.processes";
 import { ProcessEntry } from "@noldova/context.processes/models/process-entry.js";
 import { ProcessTreeMembers } from "@noldova/context.processes/models/process-tree-members.js";
@@ -60,11 +61,11 @@ export class ProcessTreeMembersTests {
     Assert.areEqual("100/10 200/20 300/30", ProcessTreeMembersTests.describe(members));
   }
 
-  private static entries(...lines: readonly string[]): readonly ProcessEntry[] {
-    return lines.map(t => ProcessEntry.parse(t));
+  private static entries(...lines: readonly string[]): IReadOnlyList<ProcessEntry> {
+    return new List(lines.map(t => ProcessEntry.parse(t)));
   }
 
   private static describe(members: ProcessTreeMembers): string {
-    return members.identities.map(t => `${t.processId}/${t.startTime}`).join(" ");
+    return members.identities.select(t => `${t.processId}/${t.startTime}`).toArray().join(" ");
   }
 }

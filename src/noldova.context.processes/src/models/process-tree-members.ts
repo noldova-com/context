@@ -6,42 +6,47 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { ProcessEntry } from "./process-entry.js";
+import { Dictionary, type Enumerable, type IReadOnlyList } from "@noldova/context.collections";
+
+import type { IProcessIdentity } from "../interfaces/i-process-identity.js";
+import type { ProcessEntry } from "./process-entry.js";
 import type { ProcessIdentity } from "./process-identity.js";
+import { ProcessIdentityComparer } from "./process-identity-comparer.js";
 
 export class ProcessTreeMembers {
   private readonly root: ProcessIdentity;
-  private readonly members: Map<string, ProcessIdentity>;
+  private readonly members: Dictionary<IProcessIdentity, ProcessIdentity>;
 
   public constructor(root: ProcessIdentity) {
     this.root = root;
-    this.members = new Map([[ProcessEntry.keyOf(root.processId, root.startTime), root]]);
+    this.members = new Dictionary<IProcessIdentity, ProcessIdentity>([], ProcessIdentityComparer.instance);
+    this.members.set(root, root);
   }
 
   public get size(): number {
-    return this.members.size;
+    return this.members.count();
   }
 
-  public get identities(): readonly ProcessIdentity[] {
-    return [...this.members.values()];
+  public get identities(): Enumerable<ProcessIdentity> {
+    return this.members.values();
   }
 
   public has(entry: ProcessEntry): boolean {
-    return this.members.has(entry.key);
+    return this.members.containsKey(entry);
   }
 
-  public collect(entries: readonly ProcessEntry[]): void {
-    for (const entry of entries.toSorted((first, second) => first.startTime - second.startTime))
+  public collect(entries: IReadOnlyList<ProcessEntry>): void {
+    for (const entry of entries.orderBy(t => t.startTime))
       if (this.belongs(entry, entries))
-        this.members.set(entry.key, entry.identity);
+        this.members.set(entry, entry.identity);
   }
 
-  private belongs(entry: ProcessEntry, entries: readonly ProcessEntry[]): boolean {
+  private belongs(entry: ProcessEntry, entries: IReadOnlyList<ProcessEntry>): boolean {
     return entry.groupId === this.root.processId ||
-      this.members.values().some(t => t.processId === entry.parentId && t.startTime <= entry.startTime && !ProcessTreeMembers.isReused(t, entry, entries));
+      this.members.values().any(t => t.processId === entry.parentId && t.startTime <= entry.startTime && !ProcessTreeMembers.isReused(t, entry, entries));
   }
 
-  private static isReused(member: ProcessIdentity, entry: ProcessEntry, entries: readonly ProcessEntry[]): boolean {
-    return entries.some(t => t.processId === member.processId && t.startTime > member.startTime && t.startTime <= entry.startTime);
+  private static isReused(member: ProcessIdentity, entry: ProcessEntry, entries: IReadOnlyList<ProcessEntry>): boolean {
+    return entries.any(t => t.processId === member.processId && t.startTime > member.startTime && t.startTime <= entry.startTime);
   }
 }

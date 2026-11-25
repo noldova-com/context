@@ -173,11 +173,12 @@ declare module "@noldova/context.testing/services/timing/system-clock.js" {
 }
 
 declare module "@noldova/context.testing/services/execution/run-processes.js" {
+  import type { IReadOnlyList } from "@noldova/context.collections";
   import type { ProcessIdentity } from "@noldova/context.processes";
 
   export class RunProcesses {
     public static startLister(): void;
-    public static endDescendantsAsync(): Promise<readonly ProcessIdentity[]>;
+    public static endDescendantsAsync(): Promise<IReadOnlyList<ProcessIdentity>>;
     public static requireListed(identity: ProcessIdentity | undefined): ProcessIdentity;
   }
 }

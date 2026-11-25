@@ -35,39 +35,44 @@ declare module "@noldova/context.processes/models/process-listing.js" {
 }
 
 declare module "@noldova/context.processes/models/process-entry.js" {
+  import type { ProcessIdentity } from "@noldova/context.processes";
+
   export class ProcessEntry {
     public readonly processId: number;
     public readonly parentId: number;
     public readonly groupId: number;
     public readonly isZombie: boolean;
     public readonly startTime: number;
+    public readonly identity: ProcessIdentity;
 
     public static parse(line: string): ProcessEntry;
   }
 }
 
 declare module "@noldova/context.processes/models/process-tree-members.js" {
+  import type { Enumerable, IReadOnlyList } from "@noldova/context.collections";
   import type { ProcessIdentity } from "@noldova/context.processes";
   import type { ProcessEntry } from "@noldova/context.processes/models/process-entry.js";
 
   export class ProcessTreeMembers {
-    public readonly identities: readonly ProcessIdentity[];
+    public readonly identities: Enumerable<ProcessIdentity>;
 
     public constructor(root: ProcessIdentity);
 
-    public collect(entries: readonly ProcessEntry[]): void;
+    public collect(entries: IReadOnlyList<ProcessEntry>): void;
   }
 }
 
 declare module "@noldova/context.processes/services/process-lister.js" {
+  import type { IReadOnlyDictionary, IReadOnlyList } from "@noldova/context.collections";
   import type { ProcessEntry } from "@noldova/context.processes/models/process-entry.js";
   import type { ProcessListing } from "@noldova/context.processes/models/process-listing.js";
 
   export class ProcessLister {
     public readonly listing: ProcessListing;
 
-    public static useAsync<T>(limitMilliseconds: number, action: (lister: ProcessLister) => Promise<T>, listings?: ReadonlyMap<string, ProcessListing>): Promise<T>;
+    public static useAsync<T>(limitMilliseconds: number, action: (lister: ProcessLister) => Promise<T>, listings?: IReadOnlyDictionary<string, ProcessListing>): Promise<T>;
 
-    public listAsync(): Promise<readonly ProcessEntry[]>;
+    public listAsync(): Promise<IReadOnlyList<ProcessEntry>>;
   }
 }

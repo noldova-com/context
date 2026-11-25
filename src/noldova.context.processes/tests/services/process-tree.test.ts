@@ -10,6 +10,7 @@ import { mkdtemp, rmdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import type { IReadOnlyList } from "@noldova/context.collections";
 import { ProcessesException, ProcessIdentity, ProcessTree, ProcessTreeEndException, ProcessTreeEndOptions } from "@noldova/context.processes";
 import { ProcessLister } from "@noldova/context.processes/services/process-lister.js";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
@@ -67,12 +68,12 @@ export class ProcessTreeTests {
     await StartedTree.waitUntilGoneAsync(tree.processIds.slice(1, isWindows ? 3 : 2));
 
     const group = await ProcessLister.useAsync(ProcessTreeTests.LISTING_LIMIT_MILLISECONDS,
-      async t => (await t.listAsync()).filter(entry => entry.groupId === tree.identity.processId));
+      async t => (await t.listAsync()).where(entry => entry.groupId === tree.identity.processId).toList());
 
     const expected = isWindows ? [] : [tree.identity.processId, tree.processIdAt(2)];
-    Assert.areEqual(expected.length, group.length);
-    Assert.isTrue(expected.every(processId => group.some(t => t.processId === processId)));
-    Assert.isTrue(group.every(t => t.startTime >= tree.identity.startTime));
+    Assert.areEqual(expected.length, group.count());
+    Assert.isTrue(expected.every(processId => group.any(t => t.processId === processId)));
+    Assert.isTrue(group.all(t => t.startTime >= tree.identity.startTime));
     await ProcessTree.endAsync(tree.identity);
     await tree.waitUntilClosedAsync();
   }
@@ -84,7 +85,7 @@ export class ProcessTreeTests {
     const ended = await ProcessTree.endAsync(tree.identity);
 
     ProcessTreeTests.assertEndedEach(tree.processIds, ended);
-    Assert.isTrue(await StartedTree.areGoneAsync(ended.map(t => t.processId)));
+    Assert.isTrue(await StartedTree.areGoneAsync(ended.select(t => t.processId).toArray()));
     await tree.waitUntilClosedAsync();
   }
 
@@ -105,7 +106,7 @@ export class ProcessTreeTests {
 
     const ended = await ProcessTree.endAsync(new ProcessIdentity(tree.identity.processId, tree.identity.startTime + 1000));
 
-    Assert.areEqual(0, ended.length);
+    Assert.areEqual(0, ended.count());
     Assert.isDefined(await ProcessIdentity.readAsync(tree.identity.processId));
     await ProcessTree.endAsync(tree.identity);
     await tree.waitUntilClosedAsync();
@@ -140,7 +141,7 @@ export class ProcessTreeTests {
     const error = await Assert.throwsAsync(() => ProcessTree.endAsync(tree.identity, new ProcessTreeEndOptions(0, 0)), ProcessTreeEndException);
 
     ProcessTreeTests.assertEndedEach(tree.processIds, error.survivors);
-    Assert.isTrue(error.message.startsWith(`The process tree still had ${error.survivors.length} processes when its 0 ms limit passed: `));
+    Assert.isTrue(error.message.startsWith(`The process tree still had ${error.survivors.count()} processes when its 0 ms limit passed: `));
     Assert.isTrue(error.message.includes(`${tree.identity.processId} started at ${new Date(tree.identity.startTime).toISOString()}`));
     await ProcessTree.endAsync(tree.identity);
     Assert.isTrue(await StartedTree.areGoneAsync(tree.processIds));
@@ -154,7 +155,7 @@ export class ProcessTreeTests {
     const ended = await ProcessTree.endDescendantsAsync(tree.identity);
 
     ProcessTreeTests.assertEndedEach(tree.processIds.slice(1), ended);
-    Assert.isFalse(ended.some(t => t.processId === tree.identity.processId));
+    Assert.isFalse(ended.any(t => t.processId === tree.identity.processId));
     Assert.isTrue(await StartedTree.areGoneAsync(tree.processIds.slice(1)));
     Assert.areEqual(tree.identity.startTime, (await ProcessIdentity.readAsync(tree.identity.processId))?.startTime);
     await ProcessTree.endAsync(tree.identity);
@@ -167,7 +168,7 @@ export class ProcessTreeTests {
 
     const ended = await ProcessTree.endDescendantsAsync(tree.identity);
 
-    Assert.areEqual(0, ended.length);
+    Assert.areEqual(0, ended.count());
     Assert.isDefined(await ProcessIdentity.readAsync(tree.identity.processId));
     await ProcessTree.endAsync(tree.identity);
     await tree.waitUntilClosedAsync();
@@ -180,7 +181,7 @@ export class ProcessTreeTests {
     const error = await Assert.throwsAsync(() => ProcessTree.endDescendantsAsync(tree.identity, new ProcessTreeEndOptions(0, 0)), ProcessTreeEndException);
 
     ProcessTreeTests.assertEndedEach(tree.processIds.slice(1), error.survivors);
-    Assert.isFalse(error.survivors.some(t => t.processId === tree.identity.processId));
+    Assert.isFalse(error.survivors.any(t => t.processId === tree.identity.processId));
     await ProcessTree.endAsync(tree.identity);
     Assert.isTrue(await StartedTree.areGoneAsync(tree.processIds));
     await tree.waitUntilClosedAsync();
@@ -191,7 +192,7 @@ export class ProcessTreeTests {
     const platform = Object.getOwnPropertyDescriptor(process, ProcessTreeTests.PLATFORM_PROPERTY);
     Assert.isDefined(platform);
     Object.defineProperty(process, ProcessTreeTests.PLATFORM_PROPERTY, { ...platform, value: ProcessTreeTests.UNSUPPORTED_PLATFORM });
-    let ending: Promise<readonly ProcessIdentity[]>;
+    let ending: Promise<IReadOnlyList<ProcessIdentity>>;
     try {
       ending = ProcessTree.endAsync(new ProcessIdentity(process.pid, 0));
     }
@@ -204,8 +205,8 @@ export class ProcessTreeTests {
     Assert.areEqual("Processes can't be listed on \"aix\"; Linux, macOS and Windows are supported.", error.message);
   }
 
-  private static assertEndedEach(processIds: readonly number[], ended: readonly ProcessIdentity[]): void {
+  private static assertEndedEach(processIds: readonly number[], ended: IReadOnlyList<ProcessIdentity>): void {
     for (const processId of processIds)
-      Assert.isTrue(ended.some(t => t.processId === processId), String(processId));
+      Assert.isTrue(ended.any(t => t.processId === processId), String(processId));
   }
 }

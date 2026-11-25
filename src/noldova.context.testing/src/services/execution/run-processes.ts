@@ -9,6 +9,7 @@
 // This file uses Node APIs and will change when we replace Node.
 
 import "@noldova/context.core";
+import type { IReadOnlyList } from "@noldova/context.collections";
 import { ProcessIdentity, ProcessTree } from "@noldova/context.processes";
 
 import { TestingException } from "../../exceptions/testing.exception.js";
@@ -19,7 +20,7 @@ export class RunProcesses {
     void Promise.allSettled([ProcessIdentity.readAsync(process.pid)]);
   }
 
-  public static async endDescendantsAsync(): Promise<readonly ProcessIdentity[]> {
+  public static async endDescendantsAsync(): Promise<IReadOnlyList<ProcessIdentity>> {
     return await ProcessTree.endDescendantsAsync(RunProcesses.requireListed(await ProcessIdentity.readAsync(process.pid)));
   }
 
