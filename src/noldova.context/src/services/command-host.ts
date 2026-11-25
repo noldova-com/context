@@ -6,7 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+// This file uses Node APIs and will change when we replace Node.
+
+import { readFile } from "node:fs/promises";
+
 import "@noldova/context.core";
+import { JsonReader } from "@noldova/context.json";
 
 import { CommandCollisionException } from "../exceptions/command-collision.exception.js";
 import { CommandHostException } from "../exceptions/command-host.exception.js";
@@ -32,13 +37,17 @@ export class CommandHost {
       const commandName = arguments_.at(0);
       if (Object.isUndefined(commandName) || Resources.helpOptions.includes(commandName))
         return await this.helpAsync(directory);
+      if (Resources.versionOptions.includes(commandName)) {
+        this.output.writeLine(Resources.formatVersion(await CommandHost.readVersionAsync()));
+        return 0;
+      }
 
       const project = await CommandHost.readProjectAsync(directory);
       const command = (await this.readCommandsAsync(project)).get(commandName);
       if (Object.isUndefined(command))
         throw new CommandUnknownException(commandName);
 
-      return await command.runAsync(new CommandContext(project, arguments_.slice(1), this.output));
+      return await command.runAsync(new CommandContext(project.manifestPath, arguments_.slice(1), this.output));
     }
     catch (exception) {
       if (!(exception instanceof CommandHostException))
@@ -80,6 +89,11 @@ export class CommandHost {
       }
 
     return commands;
+  }
+
+  private static async readVersionAsync(): Promise<string> {
+    const text = await readFile(new URL(Resources.hostManifestPath, import.meta.url), Resources.textEncoding);
+    return JsonReader.parse(text).readNonBlankString(Resources.versionField);
   }
 
   private static async readProjectAsync(directory: string): Promise<Project> {

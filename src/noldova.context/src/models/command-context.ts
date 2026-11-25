@@ -7,15 +7,14 @@
  */
 
 import type { CommandOutput } from "./command-output.js";
-import type { Project } from "./project.js";
 
 export class CommandContext {
-  public readonly project: Project;
+  public readonly projectFilePath: string;
   public readonly arguments: readonly string[];
   public readonly output: CommandOutput;
 
-  public constructor(project: Project, arguments_: readonly string[], output: CommandOutput) {
-    this.project = project;
+  public constructor(projectFilePath: string, arguments_: readonly string[], output: CommandOutput) {
+    this.projectFilePath = projectFilePath;
     this.arguments = arguments_;
     this.output = output;
   }
