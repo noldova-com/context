@@ -71,7 +71,7 @@ export class TextCopyTests {
 
   private static async runAsync(directory: string, first: string, second: string): Promise<string> {
     const scriptPath = join(directory, "load.js");
-    await writeFile(scriptPath, `try {\n  ${first}\n  ${second}\n}\ncatch (error) {\n  process.stdout.write(error.message);\n}\n`);
+    await writeFile(scriptPath, `try {\n  ${first}\n  ${second}\n}\ncatch (exception) {\n  process.stdout.write(exception.message);\n}\n`);
     const { stdout } = await promisify(execFile)(process.execPath, [scriptPath], { cwd: directory, windowsHide: true });
 
     return stdout;

@@ -176,8 +176,8 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
     try {
       built = query.build();
     }
-    catch (error) {
-      this.rejectUnbuilt(query, PostgreSQLPool.toError(error), lease);
+    catch (exception) {
+      this.rejectUnbuilt(query, PostgreSQLPool.toError(exception), lease);
       return;
     }
 
@@ -432,8 +432,8 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
       try {
         part.build();
       }
-      catch (error) {
-        this.rejectUnbuilt(query, new BatchException(index, PostgreSQLPool.toError(error)), lease);
+      catch (exception) {
+        this.rejectUnbuilt(query, new BatchException(index, PostgreSQLPool.toError(exception)), lease);
         return;
       }
     }
@@ -738,8 +738,8 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
       onclose(connection.id);
       return null;
     }
-    catch (error) {
-      return PostgreSQLPool.toError(error);
+    catch (exception) {
+      return PostgreSQLPool.toError(exception);
     }
   }
 
@@ -780,9 +780,9 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
         this.onParameter(name, value);
       life = this.readLifetime();
     }
-    catch (error) {
+    catch (exception) {
       session.socket.destroy();
-      this.failOpened(PostgreSQLPool.toError(error));
+      this.failOpened(PostgreSQLPool.toError(exception));
       return;
     }
 
@@ -867,8 +867,8 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
     try {
       seconds = this.computeBackoff(this.typeRetries);
     }
-    catch (error) {
-      this.dropPaused(PostgreSQLPool.toError(error));
+    catch (exception) {
+      this.dropPaused(PostgreSQLPool.toError(exception));
       return;
     }
 
@@ -1011,9 +1011,9 @@ export class PostgreSQLPool extends ConnectionEvents implements QueryHandler {
     try {
       this.nextAttempt = now + 1000 * this.computeBackoff(this.retries);
     }
-    catch (failure) {
+    catch (exception) {
       for (const job of this.waiting.take())
-        this.reject(job, PostgreSQLPool.toError(failure));
+        this.reject(job, PostgreSQLPool.toError(exception));
     }
 
     const transient = (error instanceof ConnectionClosedException && !error.destroyed)

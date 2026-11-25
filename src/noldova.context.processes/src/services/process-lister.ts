@@ -10,6 +10,8 @@
 
 import "@noldova/context.core";
 
+import { Dictionary, type IReadOnlyDictionary, type IReadOnlyList } from "@noldova/context.collections";
+
 import { ProcessesException } from "../exceptions/processes.exception.js";
 import { ProcessEntry } from "../models/process-entry.js";
 import type { ProcessListing } from "../models/process-listing.js";
@@ -17,7 +19,7 @@ import { Resources } from "../resources.js";
 import { ListerProcess } from "./lister-process.js";
 
 export class ProcessLister {
-  private static readonly started: Map<ProcessListing, Promise<ListerProcess>> = new Map();
+  private static readonly started: Dictionary<ProcessListing, Promise<ListerProcess>> = new Dictionary<ProcessListing, Promise<ListerProcess>>();
   public readonly listing: ProcessListing;
   private readonly lister: ListerProcess;
   private readonly deadline: number;
@@ -29,8 +31,8 @@ export class ProcessLister {
   }
 
   public static async useAsync<T>(limitMilliseconds: number, action: (lister: ProcessLister) => Promise<T>,
-    listings: ReadonlyMap<string, ProcessListing> = Resources.listings): Promise<T> {
-    const listing = listings.get(process.platform);
+    listings: IReadOnlyDictionary<string, ProcessListing> = Resources.listings): Promise<T> {
+    const listing = listings.tryGet(process.platform);
     if (Object.isUndefined(listing))
       throw new ProcessesException(Resources.formatPlatformUnsupported(process.platform));
 
@@ -45,10 +47,10 @@ export class ProcessLister {
     }
   }
 
-  public async listAsync(): Promise<readonly ProcessEntry[]> {
+  public async listAsync(): Promise<IReadOnlyList<ProcessEntry>> {
     for (let tries = 1; ; tries++) {
       const entries = await this.lister.listAsync();
-      if (entries.some(t => t.processId === process.pid))
+      if (entries.any(t => t.processId === process.pid))
         return entries;
 
       if (tries === Resources.listingTries || performance.now() >= this.deadline)
@@ -57,7 +59,7 @@ export class ProcessLister {
   }
 
   private static startAsync(listing: ProcessListing): Promise<ListerProcess> {
-    const started = ProcessLister.started.get(listing);
+    const started = ProcessLister.started.tryGet(listing);
     if (!Object.isUndefined(started))
       return started;
 
@@ -68,7 +70,7 @@ export class ProcessLister {
   }
 
   private static forget(listing: ProcessListing, starting: Promise<ListerProcess>): void {
-    if (ProcessLister.started.get(listing) === starting)
-      ProcessLister.started.delete(listing);
+    if (ProcessLister.started.tryGet(listing) === starting)
+      ProcessLister.started.remove(listing);
   }
 }

@@ -131,8 +131,8 @@ export class FileCoverageAnalyzer {
       this.validateSourceMapData(data);
       return new SourceMap(data, dirname(filePath));
     }
-    catch (error) {
-      throw new TestingException(Resources.sourceMapMalformed(filePath), new ExceptionOptions(error));
+    catch (exception) {
+      throw new TestingException(Resources.sourceMapMalformed(filePath), new ExceptionOptions(exception));
     }
   }
 

@@ -314,8 +314,8 @@ export class TestRunSupervisor {
         else
           replace(message);
       }
-      catch (error) {
-        fail(error);
+      catch (exception) {
+        fail(exception);
       }
     });
     worker.on(Resources.errorEvent, (error: unknown) => {

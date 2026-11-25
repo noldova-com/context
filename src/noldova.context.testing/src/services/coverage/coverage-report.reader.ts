@@ -46,10 +46,10 @@ export class CoverageReportReader {
       try {
         report = JSON.parse(await readFile(reportFilePath, Resources.textEncoding));
       }
-      catch (error) {
+      catch (exception) {
         const writer = this.profileWriters.get(reportFileName);
         const message = Object.isUndefined(writer) ? Resources.coverageReportMalformed(reportFilePath) : Resources.coverageReportMalformedFrom(reportFilePath, writer);
-        throw new TestingException(message, new ExceptionOptions(error));
+        throw new TestingException(message, new ExceptionOptions(exception));
       }
 
       this.appendReport(report, reportFilePath, scriptEntriesByFile);
@@ -141,8 +141,8 @@ export class CoverageReportReader {
     try {
       filePath = fileURLToPath(url).replaceAll(Resources.windowsDirectorySeparator, Resources.directorySeparator);
     }
-    catch (error) {
-      throw new TestingException(Resources.coverageFileUrlInvalid(reportFilePath, url), new ExceptionOptions(error));
+    catch (exception) {
+      throw new TestingException(Resources.coverageFileUrlInvalid(reportFilePath, url), new ExceptionOptions(exception));
     }
 
     return this.includedDirectories.some(t => filePath.startsWith(t)) ? filePath : undefined;

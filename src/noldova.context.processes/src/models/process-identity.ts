@@ -8,10 +8,11 @@
 
 import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
 
+import type { IProcessIdentity } from "../interfaces/i-process-identity.js";
 import { Resources } from "../resources.js";
 import { ProcessLister } from "../services/process-lister.js";
 
-export class ProcessIdentity {
+export class ProcessIdentity implements IProcessIdentity {
   public readonly processId: number;
   public readonly startTime: number;
 
@@ -28,6 +29,6 @@ export class ProcessIdentity {
     ArgumentOutOfRangeException.throwIfNotPositiveInteger(processId, Resources.processIdParameterName);
 
     const entries = await ProcessLister.useAsync(Resources.readLimitMilliseconds, t => t.listAsync());
-    return entries.filter(t => t.processId === processId && !t.isZombie).map(t => t.identity).at(0);
+    return entries.firstOrDefault(t => t.processId === processId && !t.isZombie)?.identity;
   }
 }

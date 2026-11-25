@@ -31,12 +31,12 @@ export abstract class Transaction implements AsyncDisposable {
     try {
       return await action(this);
     }
-    catch (error) {
+    catch (exception) {
       if (!this.rollbackOnly)
-        this.firstFailureValue = error;
+        this.firstFailureValue = exception;
 
       this.rollbackOnly = true;
-      throw error;
+      throw exception;
     }
   }
 

@@ -20,11 +20,11 @@ export class HostLocatorService {
     try {
       entryPath = createRequire(ownEntryPath).resolve(Resources.hostEntryModule, { paths: [directory] });
     }
-    catch (error: unknown) {
-      if (error instanceof Error && "code" in error && error.code === Resources.moduleNotFoundErrorCode)
+    catch (exception: unknown) {
+      if (exception instanceof Error && "code" in exception && exception.code === Resources.moduleNotFoundErrorCode)
         return undefined;
 
-      throw error;
+      throw exception;
     }
 
     return realpathSync(entryPath) === realpathSync(ownEntryPath) ? undefined : entryPath;

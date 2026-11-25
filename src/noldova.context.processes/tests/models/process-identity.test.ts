@@ -52,7 +52,7 @@ export class ProcessIdentityTests {
   @TestMethod
   public async readsNothingForAProcessThatEndedAsync(): Promise<void> {
     const environment = { ...process.env };
-    Reflect.deleteProperty(environment, ProcessIdentityTests.COVERAGE_VARIABLE);
+    delete environment[ProcessIdentityTests.COVERAGE_VARIABLE];
     const child = spawn(process.execPath, ["--eval", ""], { env: environment, stdio: "ignore", windowsHide: true });
     await once(child, ProcessIdentityTests.EXIT_EVENT);
 

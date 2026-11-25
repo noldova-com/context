@@ -164,9 +164,9 @@ export class TestExecutor {
         failure = strayFailures[0];
       }
     }
-    catch (error) {
+    catch (exception) {
       didFail = true;
-      failure = error;
+      failure = exception;
     }
 
     const methodResult = new TestMethodResult(

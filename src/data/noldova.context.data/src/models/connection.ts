@@ -67,14 +67,14 @@ export abstract class Connection<TTransaction extends Transaction = Transaction>
       await transaction.commitAsync();
       return result;
     }
-    catch (error) {
+    catch (exception) {
       try {
         await transaction[Symbol.asyncDispose]();
       }
-      catch (rollbackError) {
-        throw new SuppressedError(rollbackError, error, Resources.transactionRollbackFailed);
+      catch (rollbackException) {
+        throw new SuppressedError(rollbackException, exception, Resources.transactionRollbackFailed);
       }
-      throw error;
+      throw exception;
     }
     finally {
       this.activeTransaction = null;

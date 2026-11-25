@@ -72,11 +72,11 @@ export class Test extends SuiteScript {
     try {
       await this.runSuiteAsync(projects, environment);
     }
-    catch (error) {
-      if (!(error instanceof CommandFailedException))
-        throw error;
+    catch (exception) {
+      if (!(exception instanceof CommandFailedException))
+        throw exception;
 
-      await this.writeLogAsync(error.message);
+      await this.writeLogAsync(exception.message);
       process.exitCode = 1;
     }
 
@@ -96,11 +96,11 @@ export class Test extends SuiteScript {
     try {
       coverage = await new testing.CoverageAnalyzer().analyzeAsync(Config.COVERAGE_FOLDER, coverageProjects);
     }
-    catch (error) {
-      if (!(error instanceof testing.TestingException))
-        throw error;
+    catch (exception) {
+      if (!(exception instanceof testing.TestingException))
+        throw exception;
 
-      await this.writeLogAsync(error.message);
+      await this.writeLogAsync(exception.message);
       process.exitCode = 1;
       return;
     }

@@ -63,9 +63,9 @@ export class TestRunEntryPoint {
 
       process.exitCode = Math.min(totals.failed + Number(totals.total === 0), 1);
     }
-    catch (error) {
+    catch (exception) {
       reporter.stop();
-      console.error(String(error));
+      console.error(String(exception));
       process.exitCode = 1;
     }
 
@@ -87,11 +87,11 @@ export class TestRunEntryPoint {
     console.error(unendedWorkersMessage);
     try {
       const ended = await RunProcesses.endDescendantsAsync();
-      console.error(Resources.abandonedProcessesEnded(ended.map(t => t.processId)));
+      console.error(Resources.abandonedProcessesEnded(ended.select(t => t.processId).toArray()));
       return await supervisor.waitForUnendedWorkersAsync();
     }
-    catch (error) {
-      this.writeError(new TestingException(Resources.abandonedProcessesNotEnded, new ExceptionOptions(error)));
+    catch (exception) {
+      this.writeError(new TestingException(Resources.abandonedProcessesNotEnded, new ExceptionOptions(exception)));
       return false;
     }
   }
@@ -132,9 +132,9 @@ export class TestRunEntryPoint {
         process.exitCode = 1;
       }
     }
-    catch (error) {
+    catch (exception) {
       console.error(Resources.formatTemporaryFolderNotRemoved(directory));
-      console.error(String(error));
+      console.error(String(exception));
       process.exitCode = 1;
     }
   }
@@ -147,8 +147,8 @@ export class TestRunEntryPoint {
     try {
       value = JSON.parse(text);
     }
-    catch (error) {
-      throw new TestingException(Resources.testFiltersInvalid, new ExceptionOptions(error));
+    catch (exception) {
+      throw new TestingException(Resources.testFiltersInvalid, new ExceptionOptions(exception));
     }
 
     if (!Array.isArray(value))

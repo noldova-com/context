@@ -484,8 +484,8 @@ export class PostgreSQLConnection implements CopyHost {
     try {
       outcome = exchange.write(exchange);
     }
-    catch (error) {
-      exchange.own = PostgreSQLConnection.toError(error);
+    catch (exception) {
+      exchange.own = PostgreSQLConnection.toError(exception);
       outcome = WriteOutcome.Skipped;
     }
 
@@ -836,9 +836,9 @@ export class PostgreSQLConnection implements CopyHost {
       else
         Frontend.writeRun(this.out, exchange.portal, name, exchange.values, exchange.rows, exchange.flushing, exchange.formats);
     }
-    catch (error) {
+    catch (exception) {
       this.out.truncate(mark);
-      throw error;
+      throw exception;
     }
 
     if (!exchange.flushing)
@@ -916,8 +916,8 @@ export class PostgreSQLConnection implements CopyHost {
       exchange.values = this.serialize(params, built, entry);
       this.run(exchange, statement.name);
     }
-    catch (error) {
-      exchange.own = PostgreSQLConnection.toError(error);
+    catch (exception) {
+      exchange.own = PostgreSQLConnection.toError(exception);
       if (!Object.isNull(exchange.batch)) {
         Frontend.writeParse(this.out, "", Resources.refusedQuery);
         exchange.parses.push("");
@@ -1142,9 +1142,9 @@ export class PostgreSQLConnection implements CopyHost {
 
       this.handleMessage(type, data, start, end);
     }
-    catch (error) {
-      if (error instanceof MalformedMessageException) {
-        this.fatal = error;
+    catch (exception) {
+      if (exception instanceof MalformedMessageException) {
+        this.fatal = exception;
         this.frames.pause();
         this.socket.destroy();
         return;
@@ -1152,9 +1152,9 @@ export class PostgreSQLConnection implements CopyHost {
 
       const head = this.sent.peek();
       if (Object.isUndefined(head))
-        this.destroy(PostgreSQLConnection.toError(error));
+        this.destroy(PostgreSQLConnection.toError(exception));
       else
-        this.fail(head, PostgreSQLConnection.toError(error));
+        this.fail(head, PostgreSQLConnection.toError(exception));
     }
 
     if (!Object.isNull(this.blocker) && !this.blocker.isHolding()) {
@@ -1419,11 +1419,11 @@ export class PostgreSQLConnection implements CopyHost {
         this.schedule();
       }
     }
-    catch (error) {
+    catch (exception) {
       exchange.awaiting = false;
       if (!Object.isNull(this.closedError) || exchange.synced || this.sent.peek() !== exchange)
         return;
-      this.fail(exchange, PostgreSQLConnection.toError(error));
+      this.fail(exchange, PostgreSQLConnection.toError(exception));
     }
 
     this.refresh();

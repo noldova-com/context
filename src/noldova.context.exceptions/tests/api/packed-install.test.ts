@@ -110,7 +110,7 @@ export class PackedInstallTests {
   }
 
   private static loadingScript(first: string, second: string): string {
-    return `try {\n  ${first}\n  ${second}\n}\ncatch (error) {\n  process.stdout.write(error.message);\n}\n`;
+    return `try {\n  ${first}\n  ${second}\n}\ncatch (exception) {\n  process.stdout.write(exception.message);\n}\n`;
   }
 
   private static async readCoreVersionInRangeAsync(): Promise<string> {

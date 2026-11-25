@@ -120,14 +120,14 @@ export class TransactionScope extends SqlRunner implements QueryHandler {
       if (!Object.isNull(lease.error))
         throw lease.error;
     }
-    catch (error) {
+    catch (exception) {
       if (!this.stopped) {
         if (Object.isNull(lease.connection.closed))
           await TransactionScope.runControl(lease, this.rollbackText());
       }
       else if (!Object.isNull(this.rolled))
         await this.rolled.catch(() => undefined);
-      throw error instanceof PostgreSQLException && error.sqlState === Resources.transactionAbortedState && !Object.isNull(this.uncaught) ? this.uncaught : error;
+      throw exception instanceof PostgreSQLException && exception.sqlState === Resources.transactionAbortedState && !Object.isNull(this.uncaught) ? this.uncaught : exception;
     }
 
     if (this.stopped) {

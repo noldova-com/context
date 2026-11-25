@@ -57,3 +57,4 @@ Localization is deferred.
 Core-owned ECMAScript Error identities remain available to Core APIs without a dependency on this package; such an API throws the exact Core Error subtype its contract declares.
 Other repository code throws CONTEXT exceptions for its own failures; host built-in errors arise only from the platform itself.
 Guards validate untrusted input at the owning boundary.
+A `catch` clause names what it caught `exception`, whatever was thrown; one inside another names it for what failed, such as `rollbackException`.

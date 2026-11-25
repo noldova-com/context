@@ -116,11 +116,11 @@ export default class TarArchive {
     try {
       return gunzipSync(archive, { maxOutputLength: TarArchive.ARCHIVE_LIMIT_BYTES });
     }
-    catch (error) {
-      if (error instanceof RangeError)
+    catch (exception) {
+      if (exception instanceof RangeError)
         throw new CommandFailedException(TarArchive.archiveTooLarge(TarArchive.ARCHIVE_LIMIT_BYTES));
 
-      throw error;
+      throw exception;
     }
   }
 
@@ -138,11 +138,11 @@ export default class TarArchive {
     try {
       real = await fs.realpath(target);
     }
-    catch (error) {
-      if (error instanceof Error && "code" in error && error.code === TarArchive.MISSING_FILE_CODE)
+    catch (exception) {
+      if (exception instanceof Error && "code" in exception && exception.code === TarArchive.MISSING_FILE_CODE)
         throw new CommandFailedException(TarArchive.hardLinkTargetMissing(name, link));
 
-      throw error;
+      throw exception;
     }
 
     TarArchive.resolveInside(root, real, name);

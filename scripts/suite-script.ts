@@ -51,14 +51,14 @@ export default abstract class SuiteScript extends Script {
         false,
         environment);
     }
-    catch (error) {
+    catch (exception) {
       try {
         await server?.[Symbol.asyncDispose]();
       }
-      catch (cleanupError) {
-        throw new CommandFailedException(SuiteScript.describe(error) + SuiteScript.NEW_LINE + SuiteScript.describe(cleanupError));
+      catch (cleanupException) {
+        throw new CommandFailedException(SuiteScript.describe(exception) + SuiteScript.NEW_LINE + SuiteScript.describe(cleanupException));
       }
-      throw error;
+      throw exception;
     }
 
     await server?.[Symbol.asyncDispose]();
