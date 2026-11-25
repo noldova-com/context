@@ -11,6 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { setImmediate } from "node:timers/promises";
 
+import { Dictionary, type IReadOnlyDictionary, KeyValuePair } from "@noldova/context.collections";
 import { ProcessesException } from "@noldova/context.processes";
 import { ProcessListing } from "@noldova/context.processes/models/process-listing.js";
 import { ProcessSignals } from "@noldova/context.processes/models/process-signals.js";
@@ -32,9 +33,9 @@ export class ProcessListerTests {
   public async listsAgainWhenAListingLeavesOutItsCallerAsync(): Promise<void> {
     const entries = await ProcessLister.useAsync(10_000, t => t.listAsync(), ProcessListerTests.answering(2));
 
-    Assert.areEqual(1, entries.length);
-    Assert.areEqual(process.pid, entries[0]?.processId);
-    Assert.areEqual(2, entries[0]?.startTime);
+    Assert.areEqual(1, entries.count());
+    Assert.areEqual(process.pid, entries.get(0).processId);
+    Assert.areEqual(2, entries.get(0).startTime);
   }
 
   @TestMethod
@@ -59,8 +60,8 @@ export class ProcessListerTests {
     const first = await ProcessLister.useAsync(10_000, t => t.listAsync(), listings);
     const second = await ProcessLister.useAsync(10_000, t => t.listAsync(), listings);
 
-    Assert.areEqual(1, first[0]?.startTime);
-    Assert.areEqual(2, second[0]?.startTime);
+    Assert.areEqual(1, first.get(0).startTime);
+    Assert.areEqual(2, second.get(0).startTime);
   }
 
   @TestMethod
@@ -73,9 +74,9 @@ export class ProcessListerTests {
     const error = await Assert.throwsAsync(() => ProcessLister.useAsync(10_000, t => t.listAsync(), listings), ProcessesException);
     const third = await ProcessLister.useAsync(10_000, t => t.listAsync(), listings);
 
-    Assert.areEqual(1, first[0]?.startTime);
+    Assert.areEqual(1, first.get(0).startTime);
     Assert.areEqual(`The process lister "${process.execPath}" ended before it answered.`, error.message);
-    Assert.areEqual(1, third[0]?.startTime);
+    Assert.areEqual(1, third.get(0).startTime);
   }
 
   @TestMethod
@@ -141,8 +142,8 @@ export class ProcessListerTests {
       const third = await ProcessLister.useAsync(10_000, t => t.listAsync(), listings);
 
       Assert.isFalse(isFailedSettledAtSecondStart);
-      Assert.areEqual(1, second[0]?.startTime);
-      Assert.areEqual(2, third[0]?.startTime);
+      Assert.areEqual(1, second.get(0).startTime);
+      Assert.areEqual(2, third.get(0).startTime);
     }
     finally {
       await rm(folder, { recursive: true, force: true });
@@ -153,14 +154,14 @@ export class ProcessListerTests {
     return process.getActiveResourcesInfo().filter(t => t === type).length;
   }
 
-  private static answering(completeFrom: number): ReadonlyMap<string, ProcessListing> {
+  private static answering(completeFrom: number): IReadOnlyDictionary<string, ProcessListing> {
     return ProcessListerTests.fakeListings("let answers = 0; console.log(\"end\"); require(\"node:readline\").createInterface({ input: process.stdin }).on(\"line\", () => { answers++; " +
       `if (answers >= ${completeFrom}) console.log(process.ppid + " 1 0 R " + answers); console.log("end"); });`, ProcessListerTests.READY_MILLISECONDS);
   }
 
-  private static fakeListings(script: string, readyMilliseconds: number): ReadonlyMap<string, ProcessListing> {
+  private static fakeListings(script: string, readyMilliseconds: number): IReadOnlyDictionary<string, ProcessListing> {
     const signals = new ProcessSignals("SIGSTOP", "SIGCONT", "SIGTERM", "SIGKILL");
-    return new Map([[process.platform, new ProcessListing(process.execPath, [], "list-processes.cjs", ProcessListerTests.STOP_COVERAGE + script, signals, 1,
-      readyMilliseconds)]]);
+    return new Dictionary([new KeyValuePair(process.platform, new ProcessListing(process.execPath, [], "list-processes.cjs", ProcessListerTests.STOP_COVERAGE + script, signals, 1,
+      readyMilliseconds))]);
   }
 }

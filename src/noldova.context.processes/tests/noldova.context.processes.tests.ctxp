@@ -8,6 +8,7 @@
       "../src/noldova.context.processes.ctxp"
     ],
     "packages": [
+      "noldova.context.collections",
       "noldova.context.core",
       "noldova.context.exceptions",
       "noldova.context.testing"

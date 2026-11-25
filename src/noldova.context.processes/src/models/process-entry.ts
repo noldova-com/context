@@ -6,10 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { ProcessesException } from "../exceptions/processes.exception.js";
+import type { IProcessIdentity } from "../interfaces/i-process-identity.js";
 import { Resources } from "../resources.js";
 import { ProcessIdentity } from "./process-identity.js";
 
-export class ProcessEntry {
+export class ProcessEntry implements IProcessIdentity {
   public readonly processId: number;
   public readonly parentId: number;
   public readonly groupId: number;
@@ -24,20 +26,16 @@ export class ProcessEntry {
     this.startTime = startTime;
   }
 
-  public get key(): string {
-    return ProcessEntry.keyOf(this.processId, this.startTime);
-  }
-
   public get identity(): ProcessIdentity {
     return new ProcessIdentity(this.processId, this.startTime);
   }
 
   public static parse(line: string): ProcessEntry {
-    const fields = line.split(Resources.fieldSeparator);
-    return new ProcessEntry(Number(fields[0]), Number(fields[1]), Number(fields[2]), String(fields[3]).startsWith(Resources.zombieState), Number(fields[4]));
-  }
+    const fields = Resources.entryPattern.exec(line)?.groups;
+    if (Object.isUndefined(fields))
+      throw new ProcessesException(Resources.formatEntryInvalid(line));
 
-  public static keyOf(processId: number, startTime: number): string {
-    return `${processId}${Resources.targetSeparator}${startTime}`;
+    return new ProcessEntry(Number(fields[Resources.processIdGroup]), Number(fields[Resources.parentIdGroup]), Number(fields[Resources.groupIdGroup]),
+      String(fields[Resources.stateGroup]).startsWith(Resources.zombieState), Number(fields[Resources.startTimeGroup]));
   }
 }

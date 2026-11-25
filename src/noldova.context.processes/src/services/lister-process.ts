@@ -19,6 +19,8 @@ import type { Readable, Writable } from "node:stream";
 
 import "@noldova/context.core";
 
+import { Enumerable, type IReadOnlyList } from "@noldova/context.collections";
+
 import { ProcessesException } from "../exceptions/processes.exception.js";
 import { ProcessEntry } from "../models/process-entry.js";
 import type { ProcessListing } from "../models/process-listing.js";
@@ -76,7 +78,7 @@ export class ListerProcess {
     }
   }
 
-  public listAsync(): Promise<readonly ProcessEntry[]> {
+  public listAsync(): Promise<IReadOnlyList<ProcessEntry>> {
     const listed = this.turn.then(() => this.listOnceAsync());
     this.turn = listed.catch(() => undefined);
     return listed;
@@ -94,11 +96,11 @@ export class ListerProcess {
       throw new ProcessesException(Resources.formatListerNotReady(this.listing.file, this.listing.readyMilliseconds));
   }
 
-  private async listOnceAsync(): Promise<readonly ProcessEntry[]> {
+  private async listOnceAsync(): Promise<IReadOnlyList<ProcessEntry>> {
     this.answer = Promise.withResolvers<readonly string[]>();
     this.child.stdin.write(Resources.lineSeparator);
     const lines = await this.waitAsync();
-    return lines.map(t => ProcessEntry.parse(t)).filter(t => t.processId !== this.child.pid && t.parentId !== this.child.pid);
+    return Enumerable.from(lines).select(t => ProcessEntry.parse(t)).where(t => t.processId !== this.child.pid && t.parentId !== this.child.pid).toList();
   }
 
   private waitAsync(): Promise<readonly string[]> {

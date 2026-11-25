@@ -6,15 +6,17 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type { IReadOnlyList } from "@noldova/context.collections";
+
 import type { ProcessIdentity } from "../models/process-identity.js";
 import { Resources } from "../resources.js";
 import { ProcessesException } from "./processes.exception.js";
 
 export class ProcessTreeEndException extends ProcessesException {
-  public readonly survivors: readonly ProcessIdentity[];
+  public readonly survivors: IReadOnlyList<ProcessIdentity>;
 
-  public constructor(survivors: readonly ProcessIdentity[], limitMilliseconds: number) {
-    super(Resources.formatTreeNotEnded(survivors.map(t => Resources.formatSurvivor(t.processId, t.startTime)), limitMilliseconds));
+  public constructor(survivors: IReadOnlyList<ProcessIdentity>, limitMilliseconds: number) {
+    super(Resources.formatTreeNotEnded(survivors.select(t => Resources.formatSurvivor(t.processId, t.startTime)).toList(), limitMilliseconds));
 
     this.survivors = survivors;
   }

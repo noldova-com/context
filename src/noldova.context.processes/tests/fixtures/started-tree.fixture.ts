@@ -12,6 +12,7 @@ import { createInterface } from "node:readline";
 import type { Readable } from "node:stream";
 
 import "@noldova/context.core";
+import type { IReadOnlyList } from "@noldova/context.collections";
 import { ProcessIdentity } from "@noldova/context.processes";
 import type { ProcessEntry } from "@noldova/context.processes/models/process-entry.js";
 import { ProcessLister } from "@noldova/context.processes/services/process-lister.js";
@@ -62,7 +63,7 @@ export class StartedTree {
 
   public static async startAsync(shape: TreeShape): Promise<StartedTree> {
     const environment = { ...process.env };
-    Reflect.deleteProperty(environment, StartedTree.COVERAGE_VARIABLE);
+    delete environment[StartedTree.COVERAGE_VARIABLE];
     const root = spawn(process.execPath, ["--input-type=module", "--eval", StartedTree.SCRIPT, StartedTree.SCRIPT, JSON.stringify(shape), String(process.pid)],
       { detached: true, env: environment, stdio: ["ignore", "pipe", "ignore"], windowsHide: true });
     const closed = once(root, StartedTree.CLOSE_EVENT);
@@ -104,7 +105,7 @@ export class StartedTree {
     return Array.isArray(value) && value.every((t: unknown) => Object.isNumber(t) && Number.isInteger(t));
   }
 
-  private static listsAny(entries: readonly ProcessEntry[], processIds: readonly number[]): boolean {
-    return entries.some(t => !t.isZombie && processIds.includes(t.processId));
+  private static listsAny(entries: IReadOnlyList<ProcessEntry>, processIds: readonly number[]): boolean {
+    return entries.any(t => !t.isZombie && processIds.includes(t.processId));
   }
 }

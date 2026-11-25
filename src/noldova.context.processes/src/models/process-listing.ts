@@ -17,7 +17,13 @@ export class ProcessListing {
   public readonly freezeRounds: number;
   public readonly readyMilliseconds: number;
 
-  public constructor(file: string, arguments_: readonly string[], scriptFileName: string, script: string, signals: ProcessSignals, freezeRounds: number,
+  public constructor(
+    file: string,
+    arguments_: readonly string[],
+    scriptFileName: string,
+    script: string,
+    signals: ProcessSignals,
+    freezeRounds: number,
     readyMilliseconds: number) {
     this.file = file;
     this.arguments = arguments_;
