@@ -9,9 +9,15 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
-import "@noldova/context.core";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { ConsoleOutput } from "../models/console-output.js";
-import { CommandHost } from "../services/command-host.js";
+import { HostLocatorService } from "../services/host-locator.service.js";
 
-process.exitCode = await new CommandHost(new ConsoleOutput()).runAsync(process.argv.slice(2), process.cwd());
+const projectEntryPath = HostLocatorService.locate(process.cwd(), fileURLToPath(import.meta.url));
+if (projectEntryPath === undefined) {
+  const { ConsoleOutput } = await import("../models/console-output.js");
+  const { CommandHost } = await import("../services/command-host.js");
+  process.exitCode = await new CommandHost(new ConsoleOutput()).runAsync(process.argv.slice(2), process.cwd());
+}
+else
+  await import(pathToFileURL(projectEntryPath).href);

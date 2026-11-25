@@ -30,25 +30,32 @@ export class ProviderLoaderService {
       throw new ProviderException(identity, Resources.formatProviderMissing(identity, project.manifestPath), new ExceptionOptions(exception));
     }
 
-    let loaded: object;
+    let loaded: Readonly<Record<string, unknown>>;
     try {
       loaded = await import(pathToFileURL(modulePath).href);
     }
     catch (exception) {
-      throw new ProviderException(identity, Resources.formatProviderUnloadable(identity), new ExceptionOptions(exception));
+      throw new ProviderException(identity, Resources.formatProviderUnloadable(identity, exception), new ExceptionOptions(exception));
     }
 
-    const commands = ProviderLoaderService.readCommandClasses(loaded).map(t => new t());
+    const commands: Command[] = [];
+    for (const commandClass of ProviderLoaderService.readCommandClasses(loaded))
+      try {
+        commands.push(new commandClass());
+      }
+      catch (exception) {
+        throw new ProviderException(identity, Resources.formatCommandUnconstructible(identity, commandClass.name, exception), new ExceptionOptions(exception));
+      }
     if (commands.length === 0)
       throw new ProviderException(identity, Resources.formatProviderEmpty(identity));
 
     return commands;
   }
 
-  private static readCommandClasses(loaded: object): readonly CommandClass[] {
+  private static readCommandClasses(loaded: Readonly<Record<string, unknown>>): readonly CommandClass[] {
     const classes: CommandClass[] = [];
     for (const name of Object.keys(loaded).sort()) {
-      const value: unknown = Reflect.get(loaded, name);
+      const value = loaded[name];
       if (ProviderLoaderService.isCommandClass(value))
         classes.push(value);
     }

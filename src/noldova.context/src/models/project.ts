@@ -98,7 +98,13 @@ export class Project {
     const source = entry.readOptionalString(Resources.sourceField) ?? Resources.defaultEntrySource;
     if (!source.endsWith(Resources.sourceExtension) || source.length === Resources.sourceExtension.length)
       throw new ProjectFileException(manifestPath, Resources.formatProjectInvalid(manifestPath, Resources.formatEntrySourceInvalid(source)));
+    if (Resources.outsidePathPattern.test(source))
+      throw new ProjectFileException(manifestPath, Resources.formatProjectInvalid(manifestPath, Resources.formatEntrySourceOutside(source)));
 
-    return new ProjectEntryPoint(source, entry.readOptionalString(Resources.classField));
+    const className = entry.readOptionalString(Resources.classField);
+    if (!Object.isUndefined(className) && String.isNullOrWhitespace(className))
+      throw new ProjectFileException(manifestPath, Resources.formatProjectInvalid(manifestPath, Resources.formatEntryClassBlank(className)));
+
+    return new ProjectEntryPoint(source, className);
   }
 }

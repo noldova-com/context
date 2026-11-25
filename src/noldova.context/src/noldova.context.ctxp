@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "kind": "library",
   "frameworks": [],
+  "internalsVisibleTo": [
+    "noldova.context.tests"
+  ],
   "dependencies": {
     "projects": [],
     "packages": [

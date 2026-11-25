@@ -7,3 +7,9 @@
  */
 
 declare module "@noldova/context/api/ctx.js" { }
+
+declare module "@noldova/context/services/host-locator.service.js" {
+  export class HostLocatorService {
+    public static locate(directory: string, ownEntryPath: string): string | undefined;
+  }
+}

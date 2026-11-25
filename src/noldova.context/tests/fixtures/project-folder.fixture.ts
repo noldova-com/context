@@ -17,6 +17,7 @@ export class ProjectFolder {
   private static readonly FOLDER_PREFIX: string = "noldova-context-";
   private static readonly PROJECT_FILE_NAME: string = "app.ctxp";
   private static readonly IDENTITY_PREFIX: string = "noldova.";
+  private static readonly HOST_FOLDER: string = join("node_modules", "@noldova", "context");
 
   public readonly directory: string;
 
@@ -53,6 +54,12 @@ export class ProjectFolder {
 
   public writeProjectAsync(fields: object, fileName: string = ProjectFolder.PROJECT_FILE_NAME): Promise<string> {
     return this.writeAsync(fileName, JSON.stringify(fields));
+  }
+
+  public async writeHostAsync(source: string): Promise<string> {
+    await this.writeAsync(join(ProjectFolder.HOST_FOLDER, "package.json"), JSON.stringify({ name: "@noldova/context", type: "module", main: "api/index.js" }));
+
+    return this.writeAsync(join(ProjectFolder.HOST_FOLDER, "api", "ctx.js"), source);
   }
 
   public async writeProviderAsync(identity: string, source: string): Promise<void> {

@@ -36,7 +36,7 @@ export class ProjectFileService {
       text = await readFile(path, Resources.textEncoding);
     }
     catch (exception) {
-      throw new ProjectFileException(path, Resources.formatProjectUnreadable(path), new ExceptionOptions(exception));
+      throw new ProjectFileException(path, Resources.formatProjectUnreadable(path, exception), new ExceptionOptions(exception));
     }
 
     return Project.parse(text, path, dirname(path));

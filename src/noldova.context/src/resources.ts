@@ -11,6 +11,7 @@ export class Resources {
   public static readonly identityPattern: RegExp = /^noldova\.context(?:\.[a-z0-9]+)+$/u;
   public static readonly identityPrefix: string = "noldova.";
   public static readonly packageScope: string = "@noldova/";
+  public static readonly hostEntryModule: string = "@noldova/context/api/ctx.js";
   public static readonly manifestExtension: string = ".ctxp";
   public static readonly sourceExtension: string = ".ts";
   public static readonly defaultEntrySource: string = "main.ts";
@@ -24,6 +25,7 @@ export class Resources {
   public static readonly entryField: string = "entry";
   public static readonly sourceField: string = "source";
   public static readonly classField: string = "class";
+  public static readonly outsidePathPattern: RegExp = /^(?:[\\/]|[A-Za-z]:)|(?:^|[\\/])\.\.(?:[\\/]|$)/u;
   public static readonly listSeparator: string = ", ";
   public static readonly lineSeparator: string = "\n";
   public static readonly textEncoding: BufferEncoding = "utf8";
@@ -49,8 +51,8 @@ export class Resources {
     return `"${directory}" holds ${fileNames.length} project files (${fileNames.join(Resources.listSeparator)}); name one with --project <file>.`;
   }
 
-  public static formatProjectUnreadable(manifestPath: string): string {
-    return `The project file "${manifestPath}" can't be read.`;
+  public static formatProjectUnreadable(manifestPath: string, cause: unknown): string {
+    return `The project file "${manifestPath}" can't be read: ${Resources.formatCause(cause)}`;
   }
 
   public static formatProjectInvalid(manifestPath: string, reason: string): string {
@@ -73,12 +75,24 @@ export class Resources {
     return `"entry.source" is "${source}", not a TypeScript source such as main.ts.`;
   }
 
+  public static formatEntrySourceOutside(source: string): string {
+    return `"entry.source" is "${source}", which is outside the project file's folder.`;
+  }
+
+  public static formatEntryClassBlank(className: string): string {
+    return `"entry.class" is "${className}", not a class name.`;
+  }
+
   public static formatProviderMissing(identity: string, manifestPath: string): string {
     return `The project "${manifestPath}" names "${identity}", but ${Resources.formatPackageName(identity)} is not installed for it.`;
   }
 
-  public static formatProviderUnloadable(identity: string): string {
-    return `"${identity}" could not be loaded.`;
+  public static formatProviderUnloadable(identity: string, cause: unknown): string {
+    return `"${identity}" could not be loaded: ${Resources.formatCause(cause)}`;
+  }
+
+  public static formatCommandUnconstructible(identity: string, className: string, cause: unknown): string {
+    return `"${identity}" could not make its command ${className}: ${Resources.formatCause(cause)}`;
   }
 
   public static formatProviderEmpty(identity: string): string {
@@ -91,5 +105,9 @@ export class Resources {
 
   public static formatCommandUnknown(name: string): string {
     return `"${name}" is not a command of this project; ctx --help lists them.`;
+  }
+
+  private static formatCause(cause: unknown): string {
+    return cause instanceof Error ? cause.message : String(cause);
   }
 }

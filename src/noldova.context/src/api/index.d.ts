@@ -323,7 +323,7 @@ export declare abstract class Command {
  * The host has no command of its own: every command, and `ctx --help` in a project's folder,
  * loads the SDK and the tools, and two of them offering the same command is an error. The
  * project file is the one `--project` names, or the one `.ctxp` in the folder; none or several
- * is an error, except for `ctx --help`, which then lists no command.
+ * is an error; with none, `ctx --help` lists no command.
  */
 export declare class CommandHost {
   /**

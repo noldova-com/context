@@ -7,8 +7,14 @@ of its own: `build`, `run` and the others come from the SDK and the tools.
 ## Install
 
 ```bash
+npm install --global @noldova/context
 npm install @noldova/context
 ```
+
+The first gives the `ctx` command; the second installs the host in the project,
+beside the SDK and tools the project names, since they extend its `Command` and
+need that copy. A global `ctx` hands each command to the host installed for the
+folder it runs in, and runs the command itself only when the folder has none.
 
 ## Use
 

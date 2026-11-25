@@ -123,6 +123,36 @@ export class ProjectTests {
   }
 
   @TestMethod
+  public readsAnEntrySourceInASubfolder(): void {
+    Assert.areEqual("app/..main.ts", ProjectTests.parse({ name: "noldova.context.app", kind: "executable", entry: { source: "app/..main.ts" } }).entryPoint?.source);
+  }
+
+  @TestMethod
+  public refusesAnEntrySourceInAParentFolder(): void {
+    ProjectTests.assertRefused({ name: "noldova.context.app", kind: "executable", entry: { source: "../other/main.ts" } },
+      "\"entry.source\" is \"../other/main.ts\", which is outside the project file's folder.");
+  }
+
+  @TestMethod
+  public refusesAnEntrySourceThatLeavesThroughASubfolder(): void {
+    ProjectTests.assertRefused({ name: "noldova.context.app", kind: "executable", entry: { source: "app\\..\\..\\main.ts" } },
+      "\"entry.source\" is \"app\\..\\..\\main.ts\", which is outside the project file's folder.");
+  }
+
+  @TestMethod
+  public refusesAnAbsoluteEntrySource(): void {
+    ProjectTests.assertRefused({ name: "noldova.context.app", kind: "executable", entry: { source: "/app/main.ts" } },
+      "\"entry.source\" is \"/app/main.ts\", which is outside the project file's folder.");
+    ProjectTests.assertRefused({ name: "noldova.context.app", kind: "executable", entry: { source: "C:main.ts" } },
+      "\"entry.source\" is \"C:main.ts\", which is outside the project file's folder.");
+  }
+
+  @TestMethod
+  public refusesABlankEntryClass(): void {
+    ProjectTests.assertRefused({ name: "noldova.context.app", kind: "executable", entry: { class: " " } }, "\"entry.class\" is \" \", not a class name.");
+  }
+
+  @TestMethod
   public refusesAnEntryThatIsNotAnObject(): void {
     ProjectTests.assertRefused({ name: "noldova.context.app", kind: "executable", entry: "main.ts" }, undefined);
   }
