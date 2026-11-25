@@ -17,6 +17,9 @@ export class Resources {
   public static readonly sourceExtension: string = ".ts";
   public static readonly defaultEntrySource: string = "main.ts";
   public static readonly helpOptions: readonly string[] = ["-h", "--help"];
+  public static readonly versionOptions: readonly string[] = ["-v", "--version"];
+  public static readonly hostManifestPath: string = "../package.json";
+  public static readonly versionField: string = "version";
   public static readonly nameField: string = "name";
   public static readonly kindField: string = "kind";
   public static readonly sdkField: string = "sdk";
@@ -29,9 +32,13 @@ export class Resources {
   public static readonly lineSeparator: string = "\n";
   public static readonly textEncoding: BufferEncoding = "utf8";
   public static readonly commandColumnWidth: number = 12;
-  public static readonly usage: string = "Usage: ctx <command> [arguments]";
+  public static readonly usage: string = "Usage: ctx <command> [arguments], ctx --help or ctx --version";
   public static readonly commandsHeading: string = "Commands:";
   public static readonly noProjectNote: string = "No project file (.ctxp) is in this folder; the commands come from the SDK and tools a project names.";
+
+  public static formatVersion(version: string): string {
+    return `Context ${version}`;
+  }
 
   public static formatPackageName(identity: string): string {
     return `${Resources.packageScope}${identity.substring(Resources.identityPrefix.length)}`;

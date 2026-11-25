@@ -253,9 +253,10 @@ export declare class Project {
  */
 export declare class CommandContext {
   /**
-   * The project the command runs for.
+   * The full path of the project file the command runs for; the command reads what it needs
+   * from it.
    */
-  public readonly project: Project;
+  public readonly projectFilePath: string;
 
   /**
    * The arguments after the command's name, as given.
@@ -270,11 +271,11 @@ export declare class CommandContext {
   /**
    * Initializes the context.
    *
-   * @param project The project the command runs for.
+   * @param projectFilePath The full path of the project file the command runs for.
    * @param arguments_ The arguments after the command's name.
    * @param output Where the command writes what it reports.
    */
-  public constructor(project: Project, arguments_: readonly string[], output: CommandOutput);
+  public constructor(projectFilePath: string, arguments_: readonly string[], output: CommandOutput);
 }
 
 /**
@@ -289,7 +290,7 @@ export declare class CommandContext {
  *     public override readonly description = "Says hello.";
  *
  *     public override async runAsync(context: CommandContext): Promise<number> {
- *       context.output.writeLine(`Hello from ${context.project.name}.`);
+ *       context.output.writeLine(`Hello from ${context.projectFilePath}.`);
  *       return 0;
  *     }
  *   }
@@ -308,7 +309,7 @@ export declare abstract class Command {
   /**
    * Runs the command.
    *
-   * @param context The project, the arguments and the output.
+   * @param context The project file's path, the arguments and the output.
    * @returns The exit code, 0 when it succeeded.
    */
   public abstract runAsync(context: CommandContext): Promise<number>;
@@ -336,7 +337,8 @@ export declare class CommandHost {
    * Runs `ctx` with its arguments.
    *
    * @param arguments_ The arguments after `ctx`, such as `["run", "--", "--port", "80"]`; none,
-   * `-h` or `--help` list the project's commands.
+   * `-h` or `--help` list the project's commands, and `-v` or `--version` print the host's
+   * version, such as `Context 0.0.13`.
    * @param directory The folder `ctx` runs in, where the project file is looked for.
    * @returns The command's exit code; 1 when a `CommandHostException` was raised, whose message
    * goes to the error output.

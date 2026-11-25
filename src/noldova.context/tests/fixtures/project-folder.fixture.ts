@@ -37,7 +37,7 @@ export class ProjectFolder {
 
   public static command(className: string, name: string, exitCode: number): string {
     return `export class ${className} extends Command {\n  name = "${name}";\n  description = "Runs ${name}.";\n` +
-      `  async runAsync(context) {\n    context.output.writeLine([context.project.name, ...context.arguments].join(" "));\n    return ${exitCode};\n  }\n}\n`;
+      `  async runAsync(context) {\n    context.output.writeLine([context.projectFilePath, ...context.arguments].join(" "));\n    return ${exitCode};\n  }\n}\n`;
   }
 
   public path(relativePath: string): string {

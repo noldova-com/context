@@ -20,12 +20,14 @@ folder it runs in, and runs the command itself only when the folder has none.
 
 ```bash
 ctx --help
+ctx --version
 ctx run -- --port 8080
 ```
 
 `ctx` reads the one `.ctxp` in the folder it runs in; none or several is an
-error. A command gets every argument after its name, as given. With no command, or `-h` or
-`--help`, it lists the commands.
+error. A command gets the project file's full path and every argument after its
+name, as given. With no command, or `-h` or `--help`, it lists the commands;
+`-v` or `--version` prints its version.
 
 The project's `sdk` names the one SDK, `noldova.context.sdk` when left out, and
 `tools` names the other providers:
@@ -61,7 +63,7 @@ export class HelloCommand extends Command {
   public override readonly description = "Says hello.";
 
   public override async runAsync(context: CommandContext): Promise<number> {
-    context.output.writeLine(`Hello from ${context.project.name}.`);
+    context.output.writeLine(`Hello from ${context.projectFilePath}.`);
     return 0;
   }
 }

@@ -6,8 +6,12 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+
 import "@noldova/context.core";
 import { CommandHost } from "@noldova/context";
+import { JsonReader } from "@noldova/context.json";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { ProjectFolder } from "../fixtures/project-folder.fixture.js";
@@ -29,7 +33,7 @@ export class CommandHostTests {
       const exitCode = await new CommandHost(output).runAsync([], folder.directory);
 
       Assert.areEqual(0, exitCode);
-      Assert.areEqual("Usage: ctx <command> [arguments]|" +
+      Assert.areEqual("Usage: ctx <command> [arguments], ctx --help or ctx --version|" +
         "No project file (.ctxp) is in this folder; the commands come from the SDK and tools a project names.", output.lines.join("|"));
     });
   }
@@ -45,7 +49,7 @@ export class CommandHostTests {
       const exitCode = await new CommandHost(output).runAsync(["--help"], folder.directory);
 
       Assert.areEqual(0, exitCode);
-      Assert.areEqual("Usage: ctx <command> [arguments]|Commands:|  build       Runs build.|  migrate     Runs migrate.", output.lines.join("|"));
+      Assert.areEqual("Usage: ctx <command> [arguments], ctx --help or ctx --version|Commands:|  build       Runs build.|  migrate     Runs migrate.", output.lines.join("|"));
     });
   }
 
@@ -61,23 +65,39 @@ export class CommandHostTests {
       const deployExitCode = await new CommandHost(output).runAsync(["deploy"], folder.directory);
 
       Assert.areEqual(0, helpExitCode);
-      Assert.areEqual("Usage: ctx <command> [arguments]|Commands:|  build       Runs build.", output.lines.join("|"));
+      Assert.areEqual("Usage: ctx <command> [arguments], ctx --help or ctx --version|Commands:|  build       Runs build.", output.lines.join("|"));
       Assert.areEqual(1, deployExitCode);
       Assert.areEqual("\"deploy\" is not a command of this project; ctx --help lists them.", output.errorLines.join("|"));
     });
   }
 
   @TestMethod
+  public printsTheHostsVersionAsync(): Promise<void> {
+    return ProjectFolder.useAsync(async folder => {
+      const version = JsonReader.parse(await readFile(fileURLToPath(import.meta.resolve("@noldova/context/package.json")), "utf8")).readNonBlankString("version");
+
+      for (const option of ["-v", "--version"]) {
+        const output = new RecordingOutput();
+
+        const exitCode = await new CommandHost(output).runAsync([option], folder.directory);
+
+        Assert.areEqual(0, exitCode);
+        Assert.areEqual(`Context ${version}`, output.lines.join("|"));
+      }
+    });
+  }
+
+  @TestMethod
   public runsAProvidersCommandWithItsArgumentsAsync(): Promise<void> {
     return ProjectFolder.useAsync(async folder => {
-      await folder.writeProjectAsync(CommandHostTests.LIBRARY);
+      const manifestPath = await folder.writeProjectAsync(CommandHostTests.LIBRARY);
       await folder.writeProviderAsync(CommandHostTests.SDK, ProjectFolder.command("BuildCommand", "build", 3));
       const output = new RecordingOutput();
 
       const exitCode = await new CommandHost(output).runAsync(["build", "--release", "--", "--project", "x"], folder.directory);
 
       Assert.areEqual(3, exitCode);
-      Assert.areEqual("noldova.context.app --release -- --project x", output.lines.join("|"));
+      Assert.areEqual(`${manifestPath} --release -- --project x`, output.lines.join("|"));
     });
   }
 
