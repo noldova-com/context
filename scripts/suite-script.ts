@@ -21,7 +21,9 @@ export default abstract class SuiteScript extends Script {
   private static readonly POSTGRESQL_STARTED: string = "Started a PostgreSQL server for the data tests.";
   private static readonly SOURCE_MAPS_OPTION: string = "--enable-source-maps";
   private static readonly TEST_ENTRY_PATH: string = "node_modules/@noldova/context.testing/services/execution/test-run-entry-point.js";
-  private static readonly SCRIPTS_TEST_PROJECT: TestProject = new TestProject("scripts", "scripts");
+  private static readonly SCRIPTS_TEST_PROJECT: TestProject = new TestProject("scripts", "scripts", "scripts/tsconfig.json");
+  private static readonly STARTS_POSTGRESQL: boolean = "START_POSTGRESQL" in Config && Config.START_POSTGRESQL === true;
+  private static readonly TESTS_SCRIPTS: boolean = "TEST_SCRIPTS" in Config && Config.TEST_SCRIPTS === true;
 
   protected async listTestProjectsAsync(): Promise<TestProject[]> {
     const projects: TestProject[] = [];
@@ -31,13 +33,14 @@ export default abstract class SuiteScript extends Script {
         projects.push(project);
     }
 
-    projects.push(SuiteScript.SCRIPTS_TEST_PROJECT);
+    if (SuiteScript.TESTS_SCRIPTS)
+      projects.push(SuiteScript.SCRIPTS_TEST_PROJECT);
     return projects;
   }
 
   protected async runSuiteAsync(projects: readonly TestProject[], environment: Record<string, string>): Promise<void> {
     environment[SuiteScript.TIMEOUT_VARIABLE] = String(SuiteScript.HANG_LIMIT_MILLISECONDS);
-    const server = process.env[PostgreSQLServer.URL_VARIABLE] === undefined ? await PostgreSQLServer.startAsync() : null;
+    const server = SuiteScript.STARTS_POSTGRESQL && process.env[PostgreSQLServer.URL_VARIABLE] === undefined ? await PostgreSQLServer.startAsync() : null;
     try {
       if (server !== null) {
         environment[PostgreSQLServer.URL_VARIABLE] = server.url;

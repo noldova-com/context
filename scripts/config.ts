@@ -23,6 +23,8 @@ export default class Config {
   public static readonly BUILD_FOLDER: string = "_build/node";
   public static readonly COVERAGE_FOLDER: string = "_build/coverage";
   public static readonly PACKAGES_FOLDER: string = "_packages";
+  public static readonly START_POSTGRESQL: boolean = true;
+  public static readonly TEST_SCRIPTS: boolean = true;
 
   public static readonly PACKAGES_INFO: readonly PackageInfo[] = [
     new PackageInfo("noldova.context.core", "noldova.context.core", "@noldova/context.core"),

@@ -51,6 +51,8 @@ export class Test extends SuiteScript {
       await this.runStepAsync(Test.compilingProject(project.projectName), async () => {
         await this.removeDirectoryAsync(project.buildDirectory);
         await this.executeTypeScriptCompilerAsync([Test.TYPESCRIPT_PROJECT_OPTION, project.tsconfigPath]);
+        if (project.sourceTsconfigPath !== undefined)
+          await this.executeTypeScriptCompilerAsync([Test.TYPESCRIPT_PROJECT_OPTION, project.sourceTsconfigPath]);
       });
 
     await this.writeLogAsync(Test.BLANK_LINE);

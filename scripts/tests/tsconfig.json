@@ -9,5 +9,8 @@
     "types": [
       "node"
     ]
-  }
+  },
+  "exclude": [
+    "fakes"
+  ]
 }
