@@ -12,11 +12,10 @@ export class Resources {
   public static readonly identityPrefix: string = "noldova.";
   public static readonly packageScope: string = "@noldova/";
   public static readonly hostEntryModule: string = "@noldova/context/api/ctx.js";
+  public static readonly moduleNotFoundErrorCode: string = "MODULE_NOT_FOUND";
   public static readonly manifestExtension: string = ".ctxp";
   public static readonly sourceExtension: string = ".ts";
   public static readonly defaultEntrySource: string = "main.ts";
-  public static readonly projectOption: string = "--project";
-  public static readonly argumentsSeparator: string = "--";
   public static readonly helpOptions: readonly string[] = ["-h", "--help"];
   public static readonly nameField: string = "name";
   public static readonly kindField: string = "kind";
@@ -30,10 +29,9 @@ export class Resources {
   public static readonly lineSeparator: string = "\n";
   public static readonly textEncoding: BufferEncoding = "utf8";
   public static readonly commandColumnWidth: number = 12;
-  public static readonly usage: string = "Usage: ctx <command> [--project <file>] [arguments]";
+  public static readonly usage: string = "Usage: ctx <command> [arguments]";
   public static readonly commandsHeading: string = "Commands:";
   public static readonly noProjectNote: string = "No project file (.ctxp) is in this folder; the commands come from the SDK and tools a project names.";
-  public static readonly projectOptionValueMissing: string = "--project needs the project file (.ctxp) to use.";
 
   public static formatPackageName(identity: string): string {
     return `${Resources.packageScope}${identity.substring(Resources.identityPrefix.length)}`;
@@ -44,11 +42,11 @@ export class Resources {
   }
 
   public static formatProjectNotFound(directory: string): string {
-    return `No project file (.ctxp) is in "${directory}"; name one with --project <file>.`;
+    return `No project file (.ctxp) is in "${directory}".`;
   }
 
   public static formatProjectAmbiguous(directory: string, fileNames: readonly string[]): string {
-    return `"${directory}" holds ${fileNames.length} project files (${fileNames.join(Resources.listSeparator)}); name one with --project <file>.`;
+    return `"${directory}" holds ${fileNames.length} project files (${fileNames.join(Resources.listSeparator)}).`;
   }
 
   public static formatProjectUnreadable(manifestPath: string, cause: unknown): string {

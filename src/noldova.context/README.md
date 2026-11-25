@@ -21,11 +21,10 @@ folder it runs in, and runs the command itself only when the folder has none.
 ```bash
 ctx --help
 ctx run -- --port 8080
-ctx build --project app.ctxp
 ```
 
-`ctx` reads the project file `--project` names, or the one `.ctxp` in the
-folder it runs in; none or several is an error. With no command, or `-h` or
+`ctx` reads the one `.ctxp` in the folder it runs in; none or several is an
+error. A command gets every argument after its name, as given. With no command, or `-h` or
 `--help`, it lists the commands.
 
 The project's `sdk` names the one SDK, `noldova.context.sdk` when left out, and

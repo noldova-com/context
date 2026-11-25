@@ -25,7 +25,7 @@ The Runtime distribution owns the public `ctx` command host, whose reserved iden
 The host obtains commands from exact declared providers: Runtime providers are available in a Runtime-only installation, and installing the SDK adds development providers without replacing the host or creating a Runtime dependency on the SDK.
 Provider discovery is deterministic and identity-based; it never selects the first loadable file, scans arbitrary native libraries, or depends on an SDK fallback.
 
-The host is the package `noldova.context`, whose `ctx` command reads the project file: the one `--project` names, or the one `.ctxp` in the folder it runs in.
+The host is the package `noldova.context`, whose `ctx` command reads the project file, the one `.ctxp` in the folder it runs in, and passes every argument after the command's name to the command as given.
 A `ctx` installed globally hands each command to the host installed for the folder it runs in, since the project's providers extend that copy's `Command`, and runs the command itself only when the folder has no host.
 Its providers are the project's `sdk`, `noldova.context.sdk` when left out, then its `tools`, in their `.ctxp` order, each resolved by identity from the project's installed packages, with no provider manifest; a provider offers a command by exporting a class that extends `Command` from its public API.
 The host has no command of its own: every command comes from the project's providers.

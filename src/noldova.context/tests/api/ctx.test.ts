@@ -19,10 +19,10 @@ export class CtxTests {
   @TestMethod
   public runsTheHostWithTheProcessArgumentsAsync(): Promise<void> {
     return ProjectFolder.useAsync(async folder => {
-      const manifestPath = await folder.writeProjectAsync({ name: "noldova.context.app", kind: "library", sdk: "noldova.context.testsdk" });
+      await folder.writeProjectAsync({ name: "noldova.context.app", kind: "library", sdk: "noldova.context.testsdk" });
       await folder.writeProviderAsync("noldova.context.testsdk", ProjectFolder.command("BuildCommand", "build", 3));
 
-      const written = await CtxTests.runAsync(folder.directory, ["build", "--project", manifestPath, "x"], "own", 3);
+      const written = await CtxTests.runAsync(folder.directory, ["build", "x"], "own", 3);
 
       Assert.areEqual("noldova.context.app x\n", written);
     });

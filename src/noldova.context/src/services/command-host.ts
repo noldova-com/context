@@ -31,15 +31,14 @@ export class CommandHost {
     try {
       const commandName = arguments_.at(0);
       if (Object.isUndefined(commandName) || Resources.helpOptions.includes(commandName))
-        return await this.helpAsync(arguments_.slice(1), directory);
+        return await this.helpAsync(directory);
 
-      const rest = arguments_.slice(1);
-      const project = await CommandHost.readProjectAsync(rest, directory);
+      const project = await CommandHost.readProjectAsync(directory);
       const command = (await this.readCommandsAsync(project)).get(commandName);
       if (Object.isUndefined(command))
         throw new CommandUnknownException(commandName);
 
-      return await command.runAsync(new CommandContext(project, CommandHost.removeProjectOption(rest), this.output));
+      return await command.runAsync(new CommandContext(project, arguments_.slice(1), this.output));
     }
     catch (exception) {
       if (!(exception instanceof CommandHostException))
@@ -50,8 +49,8 @@ export class CommandHost {
     }
   }
 
-  private async helpAsync(arguments_: readonly string[], directory: string): Promise<number> {
-    const manifestPath = CommandHost.readProjectOption(arguments_) ?? await ProjectFileService.findAsync(directory);
+  private async helpAsync(directory: string): Promise<number> {
+    const manifestPath = await ProjectFileService.findAsync(directory);
     this.output.writeLine(Resources.usage);
     if (Object.isUndefined(manifestPath)) {
       this.output.writeLine(Resources.noProjectNote);
@@ -83,34 +82,11 @@ export class CommandHost {
     return commands;
   }
 
-  private static async readProjectAsync(arguments_: readonly string[], directory: string): Promise<Project> {
-    const manifestPath = CommandHost.readProjectOption(arguments_) ?? await ProjectFileService.findAsync(directory);
+  private static async readProjectAsync(directory: string): Promise<Project> {
+    const manifestPath = await ProjectFileService.findAsync(directory);
     if (Object.isUndefined(manifestPath))
       throw new ProjectFileException(directory, Resources.formatProjectNotFound(directory));
 
     return ProjectFileService.readAsync(manifestPath, directory);
-  }
-
-  private static readProjectOption(arguments_: readonly string[]): string | undefined {
-    const index = CommandHost.indexOfProjectOption(arguments_);
-    if (index === -1)
-      return undefined;
-
-    const value = arguments_.at(index + 1);
-    if (Object.isUndefined(value) || value === Resources.argumentsSeparator)
-      throw new ProjectFileException(Resources.projectOption, Resources.projectOptionValueMissing);
-
-    return value;
-  }
-
-  private static removeProjectOption(arguments_: readonly string[]): readonly string[] {
-    const index = CommandHost.indexOfProjectOption(arguments_);
-    return index === -1 ? arguments_ : [...arguments_.slice(0, index), ...arguments_.slice(index + 2)];
-  }
-
-  private static indexOfProjectOption(arguments_: readonly string[]): number {
-    const separator = arguments_.indexOf(Resources.argumentsSeparator);
-    const options = separator === -1 ? arguments_ : arguments_.slice(0, separator);
-    return options.indexOf(Resources.projectOption);
   }
 }

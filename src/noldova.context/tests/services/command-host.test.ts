@@ -29,7 +29,7 @@ export class CommandHostTests {
       const exitCode = await new CommandHost(output).runAsync([], folder.directory);
 
       Assert.areEqual(0, exitCode);
-      Assert.areEqual("Usage: ctx <command> [--project <file>] [arguments]|" +
+      Assert.areEqual("Usage: ctx <command> [arguments]|" +
         "No project file (.ctxp) is in this folder; the commands come from the SDK and tools a project names.", output.lines.join("|"));
     });
   }
@@ -45,7 +45,7 @@ export class CommandHostTests {
       const exitCode = await new CommandHost(output).runAsync(["--help"], folder.directory);
 
       Assert.areEqual(0, exitCode);
-      Assert.areEqual("Usage: ctx <command> [--project <file>] [arguments]|Commands:|  build       Runs build.|  migrate     Runs migrate.", output.lines.join("|"));
+      Assert.areEqual("Usage: ctx <command> [arguments]|Commands:|  build       Runs build.|  migrate     Runs migrate.", output.lines.join("|"));
     });
   }
 
@@ -61,23 +61,9 @@ export class CommandHostTests {
       const deployExitCode = await new CommandHost(output).runAsync(["deploy"], folder.directory);
 
       Assert.areEqual(0, helpExitCode);
-      Assert.areEqual("Usage: ctx <command> [--project <file>] [arguments]|Commands:|  build       Runs build.", output.lines.join("|"));
+      Assert.areEqual("Usage: ctx <command> [arguments]|Commands:|  build       Runs build.", output.lines.join("|"));
       Assert.areEqual(1, deployExitCode);
       Assert.areEqual("\"deploy\" is not a command of this project; ctx --help lists them.", output.errorLines.join("|"));
-    });
-  }
-
-  @TestMethod
-  public listsTheCommandsOfTheProjectNamedByProjectAsync(): Promise<void> {
-    return ProjectFolder.useAsync(async folder => {
-      await folder.writeProjectAsync(CommandHostTests.LIBRARY, "app/app.ctxp");
-      await folder.writeProviderAsync(CommandHostTests.SDK, ProjectFolder.command("BuildCommand", "build", 0));
-      const output = new RecordingOutput();
-
-      const exitCode = await new CommandHost(output).runAsync(["-h", "--project", "app/app.ctxp"], folder.directory);
-
-      Assert.areEqual(0, exitCode);
-      Assert.areEqual("  build       Runs build.", output.lines.at(2));
     });
   }
 
@@ -88,35 +74,11 @@ export class CommandHostTests {
       await folder.writeProviderAsync(CommandHostTests.SDK, ProjectFolder.command("BuildCommand", "build", 3));
       const output = new RecordingOutput();
 
-      const exitCode = await new CommandHost(output).runAsync(["build", "--release", "--", "x"], folder.directory);
+      const exitCode = await new CommandHost(output).runAsync(["build", "--release", "--", "--project", "x"], folder.directory);
 
       Assert.areEqual(3, exitCode);
-      Assert.areEqual("noldova.context.app --release -- x", output.lines.join("|"));
+      Assert.areEqual("noldova.context.app --release -- --project x", output.lines.join("|"));
     });
-  }
-
-  @TestMethod
-  public runsTheProjectNamedByProjectWithoutPassingTheOptionOnAsync(): Promise<void> {
-    return ProjectFolder.useAsync(async folder => {
-      await folder.writeProjectAsync(CommandHostTests.LIBRARY, "app/app.ctxp");
-      await folder.writeProjectAsync({ ...CommandHostTests.LIBRARY, name: "noldova.context.other" }, "other.ctxp");
-      await folder.writeProviderAsync(CommandHostTests.SDK, ProjectFolder.command("BuildCommand", "build", 0));
-      const output = new RecordingOutput();
-
-      await new CommandHost(output).runAsync(["build", "--project", "app/app.ctxp", "--", "--project", "y"], folder.directory);
-
-      Assert.areEqual("noldova.context.app -- --project y", output.lines.join("|"));
-    });
-  }
-
-  @TestMethod
-  public refusesProjectWithoutAFileAsync(): Promise<void> {
-    return CommandHostTests.assertFailsAsync([], ["build", "--project"], "--project needs the project file (.ctxp) to use.");
-  }
-
-  @TestMethod
-  public refusesProjectFollowedBySeparatorAsync(): Promise<void> {
-    return CommandHostTests.assertFailsAsync([], ["build", "--project", "--"], "--project needs the project file (.ctxp) to use.");
   }
 
   @TestMethod
@@ -127,7 +89,7 @@ export class CommandHostTests {
       const exitCode = await new CommandHost(output).runAsync(["build"], folder.directory);
 
       Assert.areEqual(1, exitCode);
-      Assert.areEqual(`No project file (.ctxp) is in "${folder.directory}"; name one with --project <file>.`, output.errorLines.join("|"));
+      Assert.areEqual(`No project file (.ctxp) is in "${folder.directory}".`, output.errorLines.join("|"));
     });
   }
 
@@ -142,19 +104,7 @@ export class CommandHostTests {
       const exitCode = await new CommandHost(output).runAsync(["--help"], folder.directory);
 
       Assert.areEqual(1, exitCode);
-      Assert.areEqual(`"${folder.directory}" holds 2 project files (a.ctxp, b.ctxp); name one with --project <file>.`, output.errorLines.join("|"));
-    });
-  }
-
-  @TestMethod
-  public refusesAProjectFileThatDoesNotExistAsync(): Promise<void> {
-    return ProjectFolder.useAsync(async folder => {
-      const output = new RecordingOutput();
-
-      const exitCode = await new CommandHost(output).runAsync(["build", "--project", "missing.ctxp"], folder.directory);
-
-      Assert.areEqual(1, exitCode);
-      Assert.isTrue(output.errorLines.join("|").startsWith(`The project file "${folder.path("missing.ctxp")}" can't be read: ENOENT`), output.errorLines.join("|"));
+      Assert.areEqual(`"${folder.directory}" holds 2 project files (a.ctxp, b.ctxp).`, output.errorLines.join("|"));
     });
   }
 

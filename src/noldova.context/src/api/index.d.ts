@@ -38,8 +38,7 @@ export declare class CommandHostException extends Exception {
 }
 
 /**
- * Raised when the project file is missing, ambiguous, unreadable or invalid, or `--project`
- * has no file.
+ * Raised when the project file is missing, ambiguous, unreadable or invalid.
  */
 export declare class ProjectFileException extends CommandHostException {
   /**
@@ -259,7 +258,7 @@ export declare class CommandContext {
   public readonly project: Project;
 
   /**
-   * The arguments after the command's name, without `--project` and its file.
+   * The arguments after the command's name, as given.
    */
   public readonly arguments: readonly string[];
 
@@ -322,8 +321,8 @@ export declare abstract class Command {
  * @remarks
  * The host has no command of its own: every command, and `ctx --help` in a project's folder,
  * loads the SDK and the tools, and two of them offering the same command is an error. The
- * project file is the one `--project` names, or the one `.ctxp` in the folder; none or several
- * is an error; with none, `ctx --help` lists no command.
+ * project file is the one `.ctxp` in the folder; none or several is an error; with none,
+ * `ctx --help` lists no command.
  */
 export declare class CommandHost {
   /**

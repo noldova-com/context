@@ -8,6 +8,8 @@
  */
 
 // This file uses Node APIs and will change when we replace Node.
+// It writes its checks out instead of using @noldova/context.core: it runs beside the project host's copy of core
+// and loads none of the context packages before it knows which copy to use.
 
 import { fileURLToPath, pathToFileURL } from "node:url";
 

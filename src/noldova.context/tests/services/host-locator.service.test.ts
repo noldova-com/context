@@ -9,6 +9,7 @@
 // This file uses Node APIs and will change when we replace Node.
 
 import { realpathSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import "@noldova/context.core";
@@ -45,6 +46,19 @@ export class HostLocatorServiceTests {
   public findsNoHostWhenNoneIsInstalledAsync(): Promise<void> {
     return ProjectFolder.useAsync(async folder => {
       Assert.isUndefined(HostLocatorService.locate(folder.directory, HostLocatorServiceTests.OWN_ENTRY_PATH));
+    });
+  }
+
+  @TestMethod
+  public rethrowsAFailureOtherThanAMissingHostAsync(): Promise<void> {
+    return ProjectFolder.useAsync(async folder => {
+      await folder.writeHostAsync("");
+      await folder.writeAsync(join("node_modules", "@noldova", "context", "package.json"),
+        JSON.stringify({ name: "@noldova/context", type: "module", exports: { ".": "./api/index.js" } }));
+
+      const exception = Assert.throws(() => HostLocatorService.locate(folder.directory, HostLocatorServiceTests.OWN_ENTRY_PATH), Error);
+
+      Assert.isTrue("code" in exception && exception.code === "ERR_PACKAGE_PATH_NOT_EXPORTED");
     });
   }
 }
