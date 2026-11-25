@@ -59,6 +59,8 @@ declare module "@noldova/context.processes/models/process-tree-members.js" {
 
     public constructor(root: ProcessIdentity);
 
+    public has(entry: ProcessEntry): boolean;
+
     public collect(entries: IReadOnlyList<ProcessEntry>): void;
   }
 }

@@ -61,6 +61,15 @@ export class ProcessTreeMembersTests {
     Assert.areEqual("100/10 200/20 300/30", ProcessTreeMembersTests.describe(members));
   }
 
+  @TestMethod
+  public tellsAMemberFromALaterProcessHoldingItsId(): void {
+    const members = new ProcessTreeMembers(new ProcessIdentity(100, 10));
+    members.collect(ProcessTreeMembersTests.entries("100 1 1 S 10", "200 100 1 S 20"));
+
+    Assert.isTrue(members.has(ProcessEntry.parse("200 100 1 S 20")));
+    Assert.isFalse(members.has(ProcessEntry.parse("200 1 1 S 40")));
+  }
+
   private static entries(...lines: readonly string[]): IReadOnlyList<ProcessEntry> {
     return new List(lines.map(t => ProcessEntry.parse(t)));
   }

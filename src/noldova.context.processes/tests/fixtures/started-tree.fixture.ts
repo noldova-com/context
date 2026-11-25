@@ -63,7 +63,7 @@ export class StartedTree {
 
   public static async startAsync(shape: TreeShape): Promise<StartedTree> {
     const environment = { ...process.env };
-    Reflect.deleteProperty(environment, StartedTree.COVERAGE_VARIABLE);
+    delete environment[StartedTree.COVERAGE_VARIABLE];
     const root = spawn(process.execPath, ["--input-type=module", "--eval", StartedTree.SCRIPT, StartedTree.SCRIPT, JSON.stringify(shape), String(process.pid)],
       { detached: true, env: environment, stdio: ["ignore", "pipe", "ignore"], windowsHide: true });
     const closed = once(root, StartedTree.CLOSE_EVENT);
