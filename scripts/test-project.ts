@@ -16,11 +16,13 @@ export default class TestProject {
   public readonly projectName: string;
   public readonly tsconfigPath: string;
   public readonly buildDirectory: string;
+  public readonly sourceTsconfigPath: string | undefined;
 
-  public constructor(name: string, folder: string) {
+  public constructor(name: string, folder: string, sourceTsconfigPath?: string) {
     this.name = name;
     this.projectName = `${name}${TestProject.PROJECT_SUFFIX}`;
     this.tsconfigPath = `${folder}/${TestProject.TSCONFIG_PATH}`;
     this.buildDirectory = `${Config.BUILD_FOLDER}/${this.projectName}`;
+    this.sourceTsconfigPath = sourceTsconfigPath;
   }
 }

@@ -11,12 +11,13 @@ import SuiteScript from "../../suite-script.ts";
 
 export default class SuiteScriptProbe extends SuiteScript {
   private static readonly NO_URL: string = "none";
+  private static readonly SOURCE_SEPARATOR: string = ":";
   private url: string = SuiteScriptProbe.NO_URL;
 
   public override async runAsync(): Promise<void> {
     const projects = await this.listTestProjectsAsync();
     await this.runSuiteAsync(projects, {});
-    console.log([...projects.map(t => t.name), this.url].join(" "));
+    console.log([...projects.map(t => t.sourceTsconfigPath === undefined ? t.name : `${t.name}${SuiteScriptProbe.SOURCE_SEPARATOR}${t.sourceTsconfigPath}`), this.url].join(" "));
   }
 
   protected override async executeProcessAsync(_command: string, _arguments: readonly string[], _workingDirectory: string, _silent?: boolean, environment?: Record<string, string>): Promise<void> {

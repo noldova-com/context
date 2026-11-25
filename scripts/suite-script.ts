@@ -21,7 +21,7 @@ export default abstract class SuiteScript extends Script {
   private static readonly POSTGRESQL_STARTED: string = "Started a PostgreSQL server for the data tests.";
   private static readonly SOURCE_MAPS_OPTION: string = "--enable-source-maps";
   private static readonly TEST_ENTRY_PATH: string = "node_modules/@noldova/context.testing/services/execution/test-run-entry-point.js";
-  private static readonly SCRIPTS_TEST_PROJECT: TestProject = new TestProject("scripts", "scripts");
+  private static readonly SCRIPTS_TEST_PROJECT: TestProject = new TestProject("scripts", "scripts", "scripts/tsconfig.json");
   private static readonly STARTS_POSTGRESQL: boolean = "START_POSTGRESQL" in Config && Config.START_POSTGRESQL === true;
   private static readonly TESTS_SCRIPTS: boolean = "TEST_SCRIPTS" in Config && Config.TEST_SCRIPTS === true;
 

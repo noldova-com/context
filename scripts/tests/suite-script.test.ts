@@ -34,7 +34,7 @@ export class SuiteScriptTests {
 
   @TestMethod
   public async startsPostgreSQLAndAddsTheScriptsProjectWhenConfigTurnsThemOnAsync(): Promise<void> {
-    Assert.areEqual("scripts started", await SuiteScriptTests.runAsync(["START_POSTGRESQL = true", "TEST_SCRIPTS = true"]));
+    Assert.areEqual("scripts:scripts/tsconfig.json started", await SuiteScriptTests.runAsync(["START_POSTGRESQL = true", "TEST_SCRIPTS = true"]));
   }
 
   @TestMethod
@@ -50,7 +50,7 @@ export class SuiteScriptTests {
   @TestMethod
   public async takesEachSettingOnItsOwnAsync(): Promise<void> {
     Assert.areEqual("started", await SuiteScriptTests.runAsync(["START_POSTGRESQL = true"]));
-    Assert.areEqual("scripts none", await SuiteScriptTests.runAsync(["TEST_SCRIPTS = true"]));
+    Assert.areEqual("scripts:scripts/tsconfig.json none", await SuiteScriptTests.runAsync(["TEST_SCRIPTS = true"]));
   }
 
   private static async runAsync(settings: readonly string[]): Promise<string> {
