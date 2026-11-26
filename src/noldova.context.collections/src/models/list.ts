@@ -41,6 +41,24 @@ export class List<T extends {} | null> extends Enumerable<T> implements IReadOnl
     return Object.isUndefined(predicate) ? this.items.length : super.count(predicate);
   }
 
+  public override last(predicate?: (item: T) => boolean): T {
+    const count = this.count();
+
+    return Object.isUndefined(predicate) && count > 0 ? this.get(count - 1) : super.last(predicate);
+  }
+
+  public override lastOrDefault(predicate?: (item: T) => boolean): T | undefined {
+    return Object.isUndefined(predicate) ? this.tryGet(this.count() - 1) : super.lastOrDefault(predicate);
+  }
+
+  public override elementAt(index: number): T {
+    return Number.isInteger(index) && index >= 0 ? this.get(index) : super.elementAt(index);
+  }
+
+  public override elementAtOrDefault(index: number): T | undefined {
+    return this.tryGet(index);
+  }
+
   public get(index: number): T {
     const item = this.items[index];
     if (Object.isUndefined(item))

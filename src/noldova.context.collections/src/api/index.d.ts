@@ -714,7 +714,8 @@ export declare class Enumerable<T> implements Iterable<T> {
   public firstOrDefault(predicate?: (item: T) => boolean): T | undefined;
 
   /**
-   * The last element, or the last that matches.
+   * The last element, or the last that matches. Without a predicate,
+   * `List`, `ReadOnlyList` and `ChunkedList` read it by its index, without walking the list.
    *
    * @throws {InvalidOperationException} When there is none.
    */
@@ -722,6 +723,8 @@ export declare class Enumerable<T> implements Iterable<T> {
 
   /**
    * The last element, or the last that matches; `undefined` when there is none.
+   * Without a predicate, `List`, `ReadOnlyList` and `ChunkedList` read it by its
+   * index, without walking the list.
    */
   public lastOrDefault(predicate?: (item: T) => boolean): T | undefined;
 
@@ -740,7 +743,8 @@ export declare class Enumerable<T> implements Iterable<T> {
   public singleOrDefault(predicate?: (item: T) => boolean): T | undefined;
 
   /**
-   * The element at a zero-based position.
+   * The element at a zero-based position. `List`, `ReadOnlyList` and
+   * `ChunkedList` read it by its index, without walking the list.
    *
    * @throws {ArgumentOutOfRangeException} When there is no element there; a
    * negative or fractional position throws before the sequence is read.
@@ -750,6 +754,7 @@ export declare class Enumerable<T> implements Iterable<T> {
   /**
    * The element at a zero-based position; `undefined` when there is none, and at
    * once, without reading the sequence, for a negative or fractional position.
+   * `List`, `ReadOnlyList` and `ChunkedList` read it by its index, without walking the list.
    */
   public elementAtOrDefault(index: number): T | undefined;
 
