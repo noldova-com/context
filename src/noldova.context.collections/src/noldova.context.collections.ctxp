@@ -2,6 +2,9 @@
   "name": "noldova.context.collections",
   "version": "0.0.1",
   "kind": "library",
+  "internalsVisibleTo": [
+    "noldova.context.collections.tests"
+  ],
   "frameworks": [],
   "dependencies": {
     "projects": [],
