@@ -98,6 +98,7 @@ export class TestRunWorker implements ITestProgressListener {
       return;
     }
 
+    await Promise.all([TestRunWorker.flushAsync(process.stdout), TestRunWorker.flushAsync(process.stderr)]);
     for (const classResult of classResults) {
       const heading = this.reportWriter.formatClassHeading(classResult);
       const openResources = this.findOpenResources();
@@ -131,6 +132,12 @@ export class TestRunWorker implements ITestProgressListener {
 
   private static countMethods(testClasses: readonly DiscoveredTestClass[]): number {
     return testClasses.reduce((count, testClass) => count + testClass.methods.length, 0);
+  }
+
+  private static async flushAsync(stream: NodeJS.WritableStream): Promise<void> {
+    await new Promise<void>(resolve => {
+      stream.write(String.empty, () => resolve());
+    });
   }
 
   private findOpenResources(): string[] {
