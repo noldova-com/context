@@ -10,6 +10,8 @@ import { Enumerable, List, ReadOnlyList } from "@noldova/context.collections";
 import { ArgumentOutOfRangeException, InvalidOperationException } from "@noldova/context.exceptions";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
+import { WalkedList } from "../fixtures/walked-list.fixture.js";
+
 @TestClass
 export class ReadOnlyListTests {
   @TestMethod
@@ -72,5 +74,34 @@ export class ReadOnlyListTests {
     Assert.isFalse(view instanceof List);
     Assert.isFalse("add" in view);
     Assert.isInstanceOf(view, Enumerable);
+  }
+
+  @TestMethod
+  public readsTheLastAndAnyPositionWithoutWalking(): void {
+    const walked = new WalkedList([1, 2, 3]);
+    const list = walked.asReadOnly();
+
+    Assert.areEqual(3, list.last());
+    Assert.areEqual(3, list.lastOrDefault());
+    Assert.areEqual(2, list.elementAt(1));
+    Assert.areEqual(2, list.elementAtOrDefault(1));
+    Assert.areEqual(0, walked.walks);
+  }
+
+  @TestMethod
+  public keepsTheLastAndThePositionResultsAtTheEdges(): void {
+    const empty = new List<number>().asReadOnly();
+    const list = new List([1, 2, 3]).asReadOnly();
+
+    Assert.throws(() => empty.last(), InvalidOperationException);
+    Assert.isUndefined(empty.lastOrDefault());
+    Assert.areEqual(2, list.last(t => t < 3));
+    Assert.areEqual(2, list.lastOrDefault(t => t < 3));
+    Assert.throws(() => list.elementAt(3), ArgumentOutOfRangeException);
+    Assert.throws(() => list.elementAt(-1), ArgumentOutOfRangeException);
+    Assert.throws(() => list.elementAt(1.5), ArgumentOutOfRangeException);
+    Assert.isUndefined(list.elementAtOrDefault(3));
+    Assert.isUndefined(list.elementAtOrDefault(-1));
+    Assert.isUndefined(list.elementAtOrDefault(1.5));
   }
 }

@@ -26,6 +26,22 @@ export class ReadOnlyList<T extends {} | null> extends Enumerable<T> implements 
     return this.list.count(predicate);
   }
 
+  public override last(predicate?: (item: T) => boolean): T {
+    return this.list.last(predicate);
+  }
+
+  public override lastOrDefault(predicate?: (item: T) => boolean): T | undefined {
+    return this.list.lastOrDefault(predicate);
+  }
+
+  public override elementAt(index: number): T {
+    return this.list.elementAt(index);
+  }
+
+  public override elementAtOrDefault(index: number): T | undefined {
+    return this.list.elementAtOrDefault(index);
+  }
+
   public get(index: number): T {
     return this.list.get(index);
   }
