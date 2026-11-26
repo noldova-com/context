@@ -42,6 +42,7 @@ Each name opens the package's folder and its own README; each badge opens it on 
 | [`context.exceptions`](src/noldova.context.exceptions) | [![npm](https://badgen.net/npm/v/@noldova/context.exceptions)](https://www.npmjs.com/package/@noldova/context.exceptions) | An `Exception` base and argument guards that check a value and narrow its type in one call |
 | [`context.collections`](src/noldova.context.collections) | [![npm](https://badgen.net/npm/v/@noldova/context.collections)](https://www.npmjs.com/package/@noldova/context.collections) | Collections and their queries: `List`, `Dictionary`, `HashSet`, `Queue`, `Stack` and `Enumerable`'s query operators |
 | [`context.text`](src/noldova.context.text) | [![npm](https://badgen.net/npm/v/@noldova/context.text)](https://www.npmjs.com/package/@noldova/context.text) | A string builder, read-only views of part of a string, line endings, and Unicode identifier rules |
+| [`context.threading`](src/noldova.context.threading) | [![npm](https://badgen.net/npm/v/@noldova/context.threading)](https://www.npmjs.com/package/@noldova/context.threading) | Cancellation: `CancellationTokenSource`, `CancellationToken` and `OperationCanceledException` |
 | [`context.processes`](src/noldova.context.processes) | [![npm](https://badgen.net/npm/v/@noldova/context.processes)](https://www.npmjs.com/package/@noldova/context.processes) | Ends a process and every process it started, told apart from later processes by start time, and returns once they are gone, on Linux, macOS and Windows |
 
 ### Queries

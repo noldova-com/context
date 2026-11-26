@@ -46,6 +46,7 @@ Package size never justifies moving an unrelated responsibility into Core.
 | `noldova.context.text` | Additional text abstractions and accepted String augmentations; planned: ECMAScript URI encoding functions |
 | `noldova.context.json` | JSON reading; planned: serialization |
 | `noldova.context.processes` | Process identities, listing the machine's processes and ending a process tree (section 8) |
+| `noldova.context.threading` | Cancellation: `CancellationTokenSource`, `CancellationToken`, their registrations and `OperationCanceledException` |
 | `noldova.context` | The `ctx` command host: project-file reading and the command providers it runs (section 9) |
 | `noldova.context.query.expressions` | Expression trees: the immutable expression classes, their factories and operators, their source text and expression replacement; no evaluation or translation |
 | `noldova.context.query` | Queries built as expression trees, the query provider contract, and the in-memory provider that runs the trees on `Enumerable`; their results are asynchronous |
@@ -62,6 +63,10 @@ Package size never justifies moving an unrelated responsibility into Core.
 Experimental resource-management and Temporal surfaces extend these owners or belong to separately accepted packages.
 ECMAScript years and TypeScript `lib.*.d.ts` filenames never become package identities.
 
+A package joins CONTEXT only with what survives its move onto its own compiler and Runtime: its public API names the language's own built-ins, such as `Promise`, iterators and typed arrays, and CONTEXT's types, never a host's, such as `AbortSignal`, `Worker`, `MessagePort` or a `node:` module's.
+Behind that API, a package may use host modules during the bootstrap, as sections 7 to 9 describe.
+Work that exists only because of a host, such as slicing work for a single-threaded event loop or a message protocol for workers, stays with the application that needs it, since the Runtime replaces it.
+
 ## 4. Dependency direction
 
 The accepted direct library dependencies are:
@@ -74,6 +79,7 @@ The accepted direct library dependencies are:
 | Text | Core, Exceptions, Collections |
 | JSON | Core, Exceptions |
 | Processes | Core, Exceptions, Collections |
+| Threading | Core, Exceptions |
 | Context (the host) | Core, Exceptions, JSON |
 | Query.Expressions | Core, Exceptions |
 | Query | Core, Exceptions, Collections, Query.Expressions |

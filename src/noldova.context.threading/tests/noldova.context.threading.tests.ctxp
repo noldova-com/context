@@ -1,0 +1,16 @@
+{
+  "name": "noldova.context.threading.tests",
+  "version": "0.0.1",
+  "kind": "library",
+  "frameworks": [],
+  "dependencies": {
+    "projects": [
+      "../src/noldova.context.threading.ctxp"
+    ],
+    "packages": [
+      "noldova.context.core",
+      "noldova.context.exceptions",
+      "noldova.context.testing"
+    ]
+  }
+}
