@@ -7,6 +7,7 @@
  */
 
 export class Resources {
+  public static readonly chunkSizeParameterName: string = "chunkSize";
   public static readonly collectionEmpty: string = "The collection is empty.";
   public static readonly collectionModified: string = "The collection was changed while it was being enumerated.";
   public static readonly countParameterName: string = "count";
@@ -14,6 +15,7 @@ export class Resources {
   public static readonly keyExists: string = "An entry with the same key already exists.";
   public static readonly keyParameterName: string = "key";
   public static readonly leftParameterName: string = "left";
+  public static readonly lengthParameterName: string = "length";
   public static readonly moreThanOneElement: string = "The sequence contains more than one element.";
   public static readonly moreThanOneMatch: string = "The sequence contains more than one matching element.";
   public static readonly noMatch: string = "The sequence contains no matching element.";

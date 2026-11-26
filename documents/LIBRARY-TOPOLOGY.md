@@ -42,7 +42,7 @@ Package size never justifies moving an unrelated responsibility into Core.
 |---|---|
 | `noldova.context.core` | Foundational global identities with their complete standard behavior, utility types, and base Errors |
 | `noldova.context.exceptions` | Additional CONTEXT exceptions (`EXCEPTIONS-CONTRACT.md`) |
-| `noldova.context.collections` | Collections and their queries: `Enumerable` with the query operators, `List`, `Dictionary`, `HashSet`, `Queue`, `Stack`, their read-only views, comparers, and collection algorithms; planned: weak collections |
+| `noldova.context.collections` | Collections and their queries: `Enumerable` with the query operators, `List`, `Dictionary`, `HashSet`, `Queue`, `Stack`, `ChunkedList`, their read-only views, comparers, and collection algorithms; planned: weak collections |
 | `noldova.context.text` | Additional text abstractions and accepted String augmentations; planned: ECMAScript URI encoding functions |
 | `noldova.context.json` | JSON reading; planned: serialization |
 | `noldova.context.processes` | Process identities and ending a process tree (section 8) |

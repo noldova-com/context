@@ -12,6 +12,7 @@ export type { IEqualityComparer } from "../interfaces/i-equality-comparer.js";
 export type { IReadOnlyDictionary } from "../interfaces/i-read-only-dictionary.js";
 export type { IReadOnlyList } from "../interfaces/i-read-only-list.js";
 export type { IReadOnlySet } from "../interfaces/i-read-only-set.js";
+export { ChunkedList } from "../models/chunked-list.js";
 export { DefaultEqualityComparer } from "../models/default-equality-comparer.js";
 export { Dictionary } from "../models/dictionary.js";
 export { Enumerable } from "../models/enumerable.js";

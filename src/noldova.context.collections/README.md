@@ -2,7 +2,8 @@
 
 Collections for CONTEXT libraries and apps, with queries over them:
 `List`, `Dictionary`, `HashSet`, `Queue` and `Stack`, each an `Enumerable` with
-the query operators; read-only views; equality and ordering comparers; and
+the query operators; `ChunkedList`, a list held in chunks that sums its
+elements' weights; read-only views; equality and ordering comparers; and
 `BinarySearchService`, which finds positions in ascending numeric arrays.
 
 ## Install
@@ -45,6 +46,22 @@ byId.get(2).name; // "Leo"
 byId.tryGet(9); // undefined
 
 Enumerable.from([3, 1, 2]).orderByDescending(t => t).take(2).toArray(); // [3, 2]
+```
+
+A `ChunkedList` suits a long list that is mostly one value, such as a count
+of matches for each line of a large text. A chunk that holds only that value
+takes no storage until an element in it is set, and each chunk keeps the sum
+of its elements' weights:
+
+```ts
+import { ChunkedList } from "@noldova/context.collections";
+
+const matches = new ChunkedList<number>(1024, 0, 100_000, t => t);
+matches.set(10, 2);
+matches.set(500, 3);
+matches.totalWeight; // 5
+matches.weightBefore(500); // 2
+matches.nextWeightedIndex(11); // 500
 ```
 
 Arrays stay native: `Enumerable.from` gives any iterable the operators, and

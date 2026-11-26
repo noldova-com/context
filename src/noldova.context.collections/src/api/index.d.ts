@@ -1182,6 +1182,195 @@ export declare class List<T extends {} | null> extends Enumerable<T> implements 
 }
 
 /**
+ * A list held in chunks, for long lists that are mostly one value and for
+ * sums of the elements' weights over a range.
+ *
+ * @template T The type of the elements; not `undefined`, which means no element.
+ *
+ * @remarks
+ * The elements are kept in chunks of at most `chunkSize`. A chunk that holds
+ * only the fill value it was created with takes no storage until an element
+ * in it is set, so a list of a million fill values holds only its chunks'
+ * lengths. Each chunk keeps the sum of its elements' weights, so the total
+ * weight is O(1), and the weight before a position and the next or previous
+ * weighted element take O(chunks) plus O(chunkSize), skipping chunks whose
+ * weight is 0. Reading or setting a position is O(log chunks), plus
+ * O(chunkSize) the first time a fill chunk is set; inserting or removing
+ * rebuilds only the chunks it touches, plus O(chunks) to renumber them.
+ * Changing the list while it is
+ * being enumerated makes the enumeration throw `InvalidOperationException` at
+ * its next step.
+ *
+ * @example
+ * ```ts
+ * import { ChunkedList } from "@noldova/context.collections";
+ *
+ * const matches = new ChunkedList<number>(1024, 0, 100_000, t => t);
+ * matches.set(10, 2);
+ * matches.set(500, 3);
+ * matches.totalWeight; // 5
+ * matches.weightBefore(500); // 2
+ * matches.nextWeightedIndex(11); // 500
+ * matches.previousWeightedIndex(500); // 10
+ * matches.insertRange(0, [0, 0]);
+ * matches.nextWeightedIndex(0); // 12
+ * ```
+ */
+export declare class ChunkedList<T extends {} | null> extends Enumerable<T> implements IReadOnlyList<T> {
+  /**
+   * Creates a list of `length` fill values.
+   *
+   * @param chunkSize The most elements a chunk holds.
+   * @param fill The value of every element at the start; chunks that hold
+   * only it take no storage.
+   * @param length How many elements the list starts with. Omitted, it is 0.
+   * @param weigh An element's weight, a finite number that isn't negative.
+   * Omitted, every element weighs 0.
+   * @throws {ArgumentOutOfRangeException} When `chunkSize` isn't a positive
+   * integer, or `length` isn't a non-negative integer.
+   */
+  public constructor(chunkSize: number, fill: T, length?: number, weigh?: (item: T) => number);
+
+  /**
+   * The sum of every element's weight.
+   */
+  public get totalWeight(): number;
+
+  /**
+   * Starts an enumeration of the elements in order.
+   */
+  public [Symbol.iterator](): Iterator<T>;
+
+  /**
+   * The element at a zero-based position.
+   *
+   * @throws {ArgumentOutOfRangeException} When there is no element there,
+   * including a negative or fractional position.
+   */
+  public get(index: number): T;
+
+  /**
+   * The element at a zero-based position; `undefined` when there is none.
+   */
+  public tryGet(index: number): T | undefined;
+
+  /**
+   * Replaces the element at a zero-based position, and its weight in the sums.
+   *
+   * @throws {ArgumentOutOfRangeException} When there is no element there.
+   */
+  public set(index: number, item: T): void;
+
+  /**
+   * Adds an element at the end.
+   */
+  public add(item: T): void;
+
+  /**
+   * Adds elements at the end, in order.
+   */
+  public addRange(items: Iterable<T>): void;
+
+  /**
+   * Inserts an element before a zero-based position; the list's length puts it at the end.
+   *
+   * @throws {ArgumentOutOfRangeException} When the position isn't an integer from
+   * zero to the list's length.
+   */
+  public insert(index: number, item: T): void;
+
+  /**
+   * Inserts elements, in order, before a zero-based position.
+   *
+   * @throws {ArgumentOutOfRangeException} When the position isn't an integer from
+   * zero to the list's length.
+   */
+  public insertRange(index: number, items: Iterable<T>): void;
+
+  /**
+   * Removes the first element equal to `item` by SameValueZero.
+   *
+   * @returns Whether an element was removed.
+   */
+  public remove(item: T): boolean;
+
+  /**
+   * Removes the element at a zero-based position.
+   *
+   * @throws {ArgumentOutOfRangeException} When there is no element there.
+   */
+  public removeAt(index: number): void;
+
+  /**
+   * Removes `count` elements from a zero-based position.
+   *
+   * @throws {ArgumentOutOfRangeException} When the position isn't an integer from
+   * zero to the list's length, `count` isn't a non-negative integer, or the
+   * range runs past the end.
+   */
+  public removeRange(index: number, count: number): void;
+
+  /**
+   * Removes every element that matches. The elements left all hold storage.
+   *
+   * @returns How many were removed.
+   */
+  public removeAll(predicate: (item: T) => boolean): number;
+
+  /**
+   * Removes every element.
+   */
+  public clear(): void;
+
+  /**
+   * The position of the first element equal to `item` by SameValueZero, or `-1`.
+   */
+  public indexOf(item: T): number;
+
+  /**
+   * The position of the last element equal to `item` by SameValueZero, or `-1`.
+   */
+  public lastIndexOf(item: T): number;
+
+  /**
+   * Sorts the list in place, keeping the order of equal elements. The
+   * elements then all hold storage.
+   *
+   * @param comparison The order. Omitted, it is {@link Comparer.compare}.
+   */
+  public sort(comparison?: Comparison<T>): void;
+
+  /**
+   * Returns a view that reads this list, follows its changes and can't change it.
+   */
+  public asReadOnly(): ReadOnlyList<T>;
+
+  /**
+   * The sum of the weights of the elements before a zero-based position.
+   *
+   * @throws {ArgumentOutOfRangeException} When the position isn't an integer from
+   * zero to the list's length.
+   */
+  public weightBefore(index: number): number;
+
+  /**
+   * The first position from `index` on whose element weighs more than 0, or `-1`.
+   *
+   * @throws {ArgumentOutOfRangeException} When the position isn't an integer from
+   * zero to the list's length.
+   */
+  public nextWeightedIndex(index: number): number;
+
+  /**
+   * The last position before `index` whose element weighs more than 0, or `-1`.
+   *
+   * @throws {ArgumentOutOfRangeException} When the position isn't an integer from
+   * zero to the list's length.
+   */
+  public previousWeightedIndex(index: number): number;
+}
+
+/**
  * Values stored by key.
  *
  * @template TKey The type of the keys.
