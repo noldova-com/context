@@ -301,6 +301,23 @@ export class ListTests {
   }
 
   @TestMethod
+  public binarySearchFindsTheItemOrTheComplementOfItsInsertionPoint(): void {
+    const list = new List([1, 3, 5, 7]);
+
+    Assert.areEqual(2, list.binarySearch(5));
+    Assert.areEqual(2, ~list.binarySearch(4));
+    Assert.areEqual(4, ~list.binarySearch(8));
+  }
+
+  @TestMethod
+  public binarySearchUsesTheComparison(): void {
+    const list = new List(["ccc", "bb", "a"]);
+
+    Assert.areEqual(1, list.binarySearch("xx", (left, right) => right.length - left.length));
+    Assert.areEqual(0, ~list.binarySearch("xxxx", (left, right) => right.length - left.length));
+  }
+
+  @TestMethod
   public enumeratesTheItemsInOrder(): void {
     const items: number[] = [];
 

@@ -315,6 +315,23 @@ export class ChunkedListTests {
   }
 
   @TestMethod
+  public binarySearchFindsTheItemOrTheComplementOfItsInsertionPointAcrossChunks(): void {
+    const list = ChunkedListTests.numbered(7, 2);
+
+    Assert.areEqual("0,3,6", [0, 3, 6].map(t => list.binarySearch(t)).join(","));
+    Assert.areEqual(7, ~list.binarySearch(9));
+  }
+
+  @TestMethod
+  public binarySearchUsesTheComparison(): void {
+    const list = new ChunkedList<string>(2, "");
+    list.addRange(["ccc", "bb", "a"]);
+
+    Assert.areEqual(1, list.binarySearch("xx", (left, right) => right.length - left.length));
+    Assert.areEqual(3, ~list.binarySearch("", (left, right) => right.length - left.length));
+  }
+
+  @TestMethod
   public asReadOnlyFollowsTheListsChanges(): void {
     const list = ChunkedListTests.numbered(3, 2);
     const view = list.asReadOnly();

@@ -8,7 +8,7 @@
 
 import type { IEqualityComparer } from "../interfaces/i-equality-comparer.js";
 import { Dictionary } from "../models/dictionary.js";
-import { Enumerable, QueryEnumerable } from "../models/enumerable.js";
+import { Enumerable } from "../models/enumerable.js";
 import { Grouping } from "../models/grouping.js";
 import { HashSet } from "../models/hash-set.js";
 import { HashTable } from "../models/hash-table.js";
@@ -38,8 +38,10 @@ Enumerable.prototype.orderByDescending = function <T, TKey>(this: Enumerable<T>,
 };
 
 Enumerable.prototype.groupBy = function <T, TKey>(this: Enumerable<T>, key: (item: T) => TKey, comparer?: IEqualityComparer<TKey>): Enumerable<Grouping<TKey, T>> {
-  return new QueryEnumerable<Grouping<TKey, T>>(() => Iterator.from(HashTable.groupOf(this, key, comparer))
-    .map((group: KeyValuePair<TKey, T[]>): Grouping<TKey, T> => new Grouping<TKey, T>(group.key, group.value)));
+  return Enumerable.from<Grouping<TKey, T>>({
+    [Symbol.iterator]: () => Iterator.from(HashTable.groupOf(this, key, comparer))
+      .map((group: KeyValuePair<TKey, T[]>): Grouping<TKey, T> => new Grouping<TKey, T>(group.key, group.value))
+  });
 };
 
 Enumerable.prototype.toList = function <TItem extends {} | null>(this: Enumerable<TItem>): List<TItem> {

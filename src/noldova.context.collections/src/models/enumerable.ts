@@ -16,11 +16,16 @@ import { EqualityComparers } from "../services/equality-comparers.js";
 import type { Comparison } from "../types/comparison.js";
 import { HashTable } from "./hash-table.js";
 
-export abstract class Enumerable<T> implements Iterable<T> {
+export class Enumerable<T> implements Iterable<T> {
   private static readonly MISSING: unique symbol = Symbol("missing");
+  private readonly factory: () => Iterator<T>;
+
+  protected constructor(factory: () => Iterator<T> = () => Iterator.from<T>([])) {
+    this.factory = factory;
+  }
 
   public static from<T>(source: Iterable<T>): Enumerable<T> {
-    return new QueryEnumerable<T>(() => source[Symbol.iterator]());
+    return new Enumerable<T>(() => source[Symbol.iterator]());
   }
 
   public static empty<T>(): Enumerable<T> {
@@ -35,29 +40,31 @@ export abstract class Enumerable<T> implements Iterable<T> {
     if (count > 0 && start > Number.MAX_SAFE_INTEGER - (count - 1))
       throw new ArgumentOutOfRangeException(Resources.countParameterName, count, Resources.rangeNotSafe);
 
-    return new QueryEnumerable<number>(() => Enumerable.rangeItems(start, count));
+    return new Enumerable<number>(() => Enumerable.rangeItems(start, count));
   }
 
   public static repeat<T>(value: T, count: number): Enumerable<T> {
     Enumerable.throwIfNotCount(count);
 
-    return new QueryEnumerable<T>(() => Enumerable.repeatItems(value, count));
+    return new Enumerable<T>(() => Enumerable.repeatItems(value, count));
   }
 
-  public abstract [Symbol.iterator](): Iterator<T>;
+  public [Symbol.iterator](): Iterator<T> {
+    return this.factory();
+  }
 
   public where<TResult extends T>(predicate: (item: T, index: number) => item is TResult): Enumerable<TResult>;
   public where(predicate: (item: T, index: number) => boolean): Enumerable<T>;
   public where(predicate: (item: T, index: number) => boolean): Enumerable<T> {
-    return new QueryEnumerable<T>(() => Iterator.from(this).filter(predicate));
+    return new Enumerable<T>(() => Iterator.from(this).filter(predicate));
   }
 
   public select<TResult>(selector: (item: T, index: number) => TResult): Enumerable<TResult> {
-    return new QueryEnumerable<TResult>(() => Iterator.from(this).map(selector));
+    return new Enumerable<TResult>(() => Iterator.from(this).map(selector));
   }
 
   public selectMany<TResult>(selector: (item: T, index: number) => Iterable<TResult>): Enumerable<TResult> {
-    return new QueryEnumerable<TResult>(() => Enumerable.selectManyItems(this, selector));
+    return new Enumerable<TResult>(() => Enumerable.selectManyItems(this, selector));
   }
 
   public join<TInner, TKey, TResult>(
@@ -66,7 +73,7 @@ export abstract class Enumerable<T> implements Iterable<T> {
     innerKey: (item: TInner) => TKey,
     result: (outer: T, inner: TInner) => TResult,
     comparer?: IEqualityComparer<TKey>): Enumerable<TResult> {
-    return new QueryEnumerable<TResult>(() => Enumerable.joinItems(this, inner, outerKey, innerKey, result, comparer));
+    return new Enumerable<TResult>(() => Enumerable.joinItems(this, inner, outerKey, innerKey, result, comparer));
   }
 
   public groupJoin<TInner, TKey, TResult>(
@@ -75,7 +82,7 @@ export abstract class Enumerable<T> implements Iterable<T> {
     innerKey: (item: TInner) => TKey,
     result: (outer: T, inner: Enumerable<TInner>) => TResult,
     comparer?: IEqualityComparer<TKey>): Enumerable<TResult> {
-    return new QueryEnumerable<TResult>(() => Enumerable.groupJoinItems(this, inner, outerKey, innerKey, result, comparer));
+    return new Enumerable<TResult>(() => Enumerable.groupJoinItems(this, inner, outerKey, innerKey, result, comparer));
   }
 
   public distinct(comparer?: IEqualityComparer<T>): Enumerable<T> {
@@ -83,23 +90,23 @@ export abstract class Enumerable<T> implements Iterable<T> {
   }
 
   public distinctBy<TKey>(key: (item: T) => TKey, comparer?: IEqualityComparer<TKey>): Enumerable<T> {
-    return new QueryEnumerable<T>(() => Enumerable.distinctItems([this], key, comparer));
+    return new Enumerable<T>(() => Enumerable.distinctItems([this], key, comparer));
   }
 
   public union(other: Iterable<T>, comparer?: IEqualityComparer<T>): Enumerable<T> {
-    return new QueryEnumerable<T>(() => Enumerable.distinctItems([this, other], (item: T): T => item, comparer));
+    return new Enumerable<T>(() => Enumerable.distinctItems([this, other], (item: T): T => item, comparer));
   }
 
   public intersect(other: Iterable<T>, comparer?: IEqualityComparer<T>): Enumerable<T> {
-    return new QueryEnumerable<T>(() => Enumerable.intersectItems(this, other, comparer));
+    return new Enumerable<T>(() => Enumerable.intersectItems(this, other, comparer));
   }
 
   public except(other: Iterable<T>, comparer?: IEqualityComparer<T>): Enumerable<T> {
-    return new QueryEnumerable<T>(() => Enumerable.exceptItems(this, other, comparer));
+    return new Enumerable<T>(() => Enumerable.exceptItems(this, other, comparer));
   }
 
   public concat(other: Iterable<T>): Enumerable<T> {
-    return new QueryEnumerable<T>(() => Enumerable.concatItems(this, other));
+    return new Enumerable<T>(() => Enumerable.concatItems(this, other));
   }
 
   public append(item: T): Enumerable<T> {
@@ -107,53 +114,53 @@ export abstract class Enumerable<T> implements Iterable<T> {
   }
 
   public prepend(item: T): Enumerable<T> {
-    return new QueryEnumerable<T>(() => Enumerable.concatItems([item], this));
+    return new Enumerable<T>(() => Enumerable.concatItems([item], this));
   }
 
   public skip(count: number): Enumerable<T> {
     ArgumentOutOfRangeException.throwIfNotInteger(count, Resources.countParameterName);
 
-    return new QueryEnumerable<T>(() => Iterator.from(this).drop(Math.max(count, 0)));
+    return new Enumerable<T>(() => Iterator.from(this).drop(Math.max(count, 0)));
   }
 
   public take(count: number): Enumerable<T> {
     ArgumentOutOfRangeException.throwIfNotInteger(count, Resources.countParameterName);
 
-    return new QueryEnumerable<T>(() => Iterator.from(this).take(Math.max(count, 0)));
+    return new Enumerable<T>(() => Iterator.from(this).take(Math.max(count, 0)));
   }
 
   public skipWhile(predicate: (item: T, index: number) => boolean): Enumerable<T> {
-    return new QueryEnumerable<T>(() => Enumerable.skipWhileItems(this, predicate));
+    return new Enumerable<T>(() => Enumerable.skipWhileItems(this, predicate));
   }
 
   public takeWhile(predicate: (item: T, index: number) => boolean): Enumerable<T> {
-    return new QueryEnumerable<T>(() => Enumerable.takeWhileItems(this, predicate));
+    return new Enumerable<T>(() => Enumerable.takeWhileItems(this, predicate));
   }
 
   public skipLast(count: number): Enumerable<T> {
     ArgumentOutOfRangeException.throwIfNotInteger(count, Resources.countParameterName);
 
-    return new QueryEnumerable<T>(() => Enumerable.skipLastItems(this, Math.max(count, 0)));
+    return new Enumerable<T>(() => Enumerable.skipLastItems(this, Math.max(count, 0)));
   }
 
   public takeLast(count: number): Enumerable<T> {
     ArgumentOutOfRangeException.throwIfNotInteger(count, Resources.countParameterName);
 
-    return new QueryEnumerable<T>(() => Enumerable.takeLastItems(this, Math.max(count, 0)));
+    return new Enumerable<T>(() => Enumerable.takeLastItems(this, Math.max(count, 0)));
   }
 
   public reverse(): Enumerable<T> {
-    return new QueryEnumerable<T>(() => Iterator.from(Array.from(this).reverse()));
+    return new Enumerable<T>(() => Iterator.from(Array.from(this).reverse()));
   }
 
   public chunk(size: number): Enumerable<readonly T[]> {
     ArgumentOutOfRangeException.throwIfNotPositiveInteger(size, Resources.sizeParameterName);
 
-    return new QueryEnumerable<readonly T[]>(() => Enumerable.chunkItems(this, size));
+    return new Enumerable<readonly T[]>(() => Enumerable.chunkItems(this, size));
   }
 
   public zip<TOther, TResult>(other: Iterable<TOther>, result: (first: T, second: TOther) => TResult): Enumerable<TResult> {
-    return new QueryEnumerable<TResult>(() => Enumerable.zipItems(this, other, result));
+    return new Enumerable<TResult>(() => Enumerable.zipItems(this, other, result));
   }
 
   public first(predicate?: (item: T) => boolean): T {
@@ -520,19 +527,5 @@ export abstract class Enumerable<T> implements Iterable<T> {
     finally {
       Enumerable.close(right);
     }
-  }
-}
-
-export class QueryEnumerable<T> extends Enumerable<T> {
-  private readonly factory: () => Iterator<T>;
-
-  public constructor(factory: () => Iterator<T>) {
-    super();
-
-    this.factory = factory;
-  }
-
-  public override [Symbol.iterator](): Iterator<T> {
-    return this.factory();
   }
 }

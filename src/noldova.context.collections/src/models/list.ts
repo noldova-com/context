@@ -11,6 +11,7 @@ import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
 
 import type { IReadOnlyList } from "../interfaces/i-read-only-list.js";
 import { Resources } from "../resources.js";
+import { BinarySearchService } from "../services/binary-search.service.js";
 import { Comparer } from "../services/comparer.js";
 import { EqualityComparers } from "../services/equality-comparers.js";
 import type { Comparison } from "../types/comparison.js";
@@ -137,6 +138,10 @@ export class List<T extends {} | null> extends Enumerable<T> implements IReadOnl
   public sort(comparison: Comparison<T> = Comparer.compare): void {
     this.items.sort(comparison);
     this.changes.increment();
+  }
+
+  public binarySearch(item: T, comparison: Comparison<T> = Comparer.compare): number {
+    return BinarySearchService.search(this.items, item, comparison);
   }
 
   public asReadOnly(): ReadOnlyList<T> {

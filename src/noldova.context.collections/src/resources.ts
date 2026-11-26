@@ -12,6 +12,8 @@ export class Resources {
   public static readonly collectionModified: string = "The collection was changed while it was being enumerated.";
   public static readonly countParameterName: string = "count";
   public static readonly indexParameterName: string = "index";
+  public static readonly itemMissing: string = "The sorted items have no element at a position the search reads.";
+  public static readonly itemsParameterName: string = "items";
   public static readonly keyExists: string = "An entry with the same key already exists.";
   public static readonly keyParameterName: string = "key";
   public static readonly leftParameterName: string = "left";

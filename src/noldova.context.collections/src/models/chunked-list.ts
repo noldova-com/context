@@ -11,6 +11,7 @@ import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
 
 import type { IReadOnlyList } from "../interfaces/i-read-only-list.js";
 import { Resources } from "../resources.js";
+import { BinarySearchService } from "../services/binary-search.service.js";
 import { Comparer } from "../services/comparer.js";
 import { EqualityComparers } from "../services/equality-comparers.js";
 import type { Comparison } from "../types/comparison.js";
@@ -146,6 +147,10 @@ export class ChunkedList<T extends {} | null> extends Enumerable<T> implements I
 
   public sort(comparison: Comparison<T> = Comparer.compare): void {
     this.replace(0, this.chunks.length, this.toArray().sort(comparison));
+  }
+
+  public binarySearch(item: T, comparison: Comparison<T> = Comparer.compare): number {
+    return BinarySearchService.search(this, item, comparison);
   }
 
   public asReadOnly(): ReadOnlyList<T> {

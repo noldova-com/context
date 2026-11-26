@@ -7,7 +7,12 @@
  */
 
 /**
- * Provides binary-search operations for ascending numeric arrays.
+ * Binary searches over sorted items: arrays or read-only lists.
+ *
+ * @remarks
+ * The items must be sorted by the comparison the search uses; the order isn't checked. Each
+ * search reads O(log n) items, where n is the number of items searched, and doesn't copy or keep
+ * them. `index` and `count` search part of the items; omitted, the search covers them all.
  */
 export declare class BinarySearchService {
   /**
@@ -39,6 +44,126 @@ export declare class BinarySearchService {
    * ```
    */
   public static floorIndex(values: readonly number[], target: number): number;
+
+  /**
+   * Finds an item's position in sorted items.
+   *
+   * @param items The items, sorted by `comparison`.
+   * @param item The item to find.
+   * @param comparison The order. Omitted, it is {@link Comparer.compare}.
+   * @param index The first position searched; 0 when omitted.
+   * @param count How many items are searched; the rest from `index` when omitted.
+   * @returns The position of an item the comparison finds equal, any one of them when there are
+   * several, or the bitwise complement (`~`) of the position where the item would be inserted to
+   * keep the order, which is negative.
+   * @throws ArgumentOutOfRangeException When `index` or `count` isn't an integer from 0, or they
+   * reach past the items.
+   * @throws ArgumentException When an array has a hole at a position the search reads.
+   * @example
+   * ```ts
+   * import { BinarySearchService } from "@noldova/context.collections";
+   *
+   * BinarySearchService.search([1, 3, 5], 3); // 1
+   * ~BinarySearchService.search([1, 3, 5], 4); // 2: insert 4 at position 2.
+   * ```
+   */
+  public static search<T extends {} | null>(items: readonly T[] | IReadOnlyList<T>, item: T, comparison?: Comparison<T>, index?: number, count?: number): number;
+
+  /**
+   * Finds the first position whose item isn't before the key.
+   *
+   * @param items The items, sorted by `comparison`.
+   * @param key The key, compared with each item.
+   * @param comparison The order. Omitted, it is {@link Comparer.compare}.
+   * @param index The first position searched; 0 when omitted.
+   * @param count How many items are searched; the rest from `index` when omitted.
+   * @returns The position, from `index` to `index + count`; `index + count` when every item is
+   * before the key.
+   * @throws ArgumentOutOfRangeException When `index` or `count` isn't an integer from 0, or they
+   * reach past the items.
+   * @throws ArgumentException When an array has a hole at a position the search reads.
+   * @example
+   * ```ts
+   * import { BinarySearchService } from "@noldova/context.collections";
+   *
+   * BinarySearchService.lowerBound([1, 3, 3, 5], 3); // 1
+   * BinarySearchService.lowerBound([1, 3, 3, 5], 4); // 3
+   * ```
+   */
+  public static lowerBound<T extends {} | null>(items: readonly T[] | IReadOnlyList<T>, key: T, comparison?: Comparison<T>, index?: number, count?: number): number;
+
+  /**
+   * Finds the first position whose item is after the key.
+   *
+   * @param items The items, sorted by `comparison`.
+   * @param key The key, compared with each item.
+   * @param comparison The order. Omitted, it is {@link Comparer.compare}.
+   * @param index The first position searched; 0 when omitted.
+   * @param count How many items are searched; the rest from `index` when omitted.
+   * @returns The position, from `index` to `index + count`; `index + count` when no item is
+   * after the key.
+   * @throws ArgumentOutOfRangeException When `index` or `count` isn't an integer from 0, or they
+   * reach past the items.
+   * @throws ArgumentException When an array has a hole at a position the search reads.
+   * @example
+   * ```ts
+   * import { BinarySearchService } from "@noldova/context.collections";
+   *
+   * BinarySearchService.upperBound([1, 3, 3, 5], 3); // 3
+   * BinarySearchService.upperBound([1, 3, 3, 5], 0); // 0
+   * ```
+   */
+  public static upperBound<T extends {} | null>(items: readonly T[] | IReadOnlyList<T>, key: T, comparison?: Comparison<T>, index?: number, count?: number): number;
+
+  /**
+   * Finds the first position whose item's key isn't before the key.
+   *
+   * @param items The items, sorted by `select`'s key and `comparison`.
+   * @param key The key, compared with each item's.
+   * @param select Gives an item's key.
+   * @param comparison The order of keys. Omitted, it is {@link Comparer.compare}.
+   * @param index The first position searched; 0 when omitted.
+   * @param count How many items are searched; the rest from `index` when omitted.
+   * @returns The position, from `index` to `index + count`; `index + count` when every item's
+   * key is before the key.
+   * @throws ArgumentOutOfRangeException When `index` or `count` isn't an integer from 0, or they
+   * reach past the items.
+   * @throws ArgumentException When an array has a hole at a position the search reads.
+   * @example
+   * ```ts
+   * import { BinarySearchService } from "@noldova/context.collections";
+   *
+   * const words = ["a", "bb", "ccc", "dddd"];
+   * BinarySearchService.lowerBoundBy(words, 3, t => t.length); // 2: the first word of 3 letters or more.
+   * ```
+   */
+  public static lowerBoundBy<T extends {} | null, TKey>(items: readonly T[] | IReadOnlyList<T>, key: TKey, select: (item: T) => TKey, comparison?: Comparison<TKey>,
+    index?: number, count?: number): number;
+
+  /**
+   * Finds the first position whose item's key is after the key.
+   *
+   * @param items The items, sorted by `select`'s key and `comparison`.
+   * @param key The key, compared with each item's.
+   * @param select Gives an item's key.
+   * @param comparison The order of keys. Omitted, it is {@link Comparer.compare}.
+   * @param index The first position searched; 0 when omitted.
+   * @param count How many items are searched; the rest from `index` when omitted.
+   * @returns The position, from `index` to `index + count`; `index + count` when no item's key
+   * is after the key.
+   * @throws ArgumentOutOfRangeException When `index` or `count` isn't an integer from 0, or they
+   * reach past the items.
+   * @throws ArgumentException When an array has a hole at a position the search reads.
+   * @example
+   * ```ts
+   * import { BinarySearchService } from "@noldova/context.collections";
+   *
+   * const words = ["a", "bb", "ccc", "dddd"];
+   * BinarySearchService.upperBoundBy(words, 2, t => t.length); // 2: the first word longer than 2 letters.
+   * ```
+   */
+  public static upperBoundBy<T extends {} | null, TKey>(items: readonly T[] | IReadOnlyList<T>, key: TKey, select: (item: T) => TKey, comparison?: Comparison<TKey>,
+    index?: number, count?: number): number;
 }
 
 /**
@@ -294,7 +419,28 @@ export declare class EqualityComparers {
  * ages.firstOrDefault(t => t > 50); // undefined
  * ```
  */
-export declare abstract class Enumerable<T> implements Iterable<T> {
+export declare class Enumerable<T> implements Iterable<T> {
+  /**
+   * Makes a sequence for a subclass. A subclass either passes the factory or
+   * overrides `[Symbol.iterator]`; outside a subclass, `Enumerable.from` makes one.
+   *
+   * @param factory Starts each enumeration of the elements. Without it, the
+   * sequence has no elements.
+   * @example
+   * ```ts
+   * import { Enumerable } from "@noldova/context.collections";
+   *
+   * class Countdown extends Enumerable<number> {
+   *   public constructor(start: number) {
+   *     super(() => Iterator.from([start, start - 1, start - 2]));
+   *   }
+   * }
+   *
+   * new Countdown(3).toArray(); // [3, 2, 1]
+   * ```
+   */
+  protected constructor(factory?: () => Iterator<T>);
+
   /**
    * Wraps any iterable, such as an array, a `Map` or a generator, in the query operators.
    *
@@ -342,7 +488,7 @@ export declare abstract class Enumerable<T> implements Iterable<T> {
   /**
    * Starts an enumeration of the elements.
    */
-  public abstract [Symbol.iterator](): Iterator<T>;
+  public [Symbol.iterator](): Iterator<T>;
 
   /**
    * Keeps the elements that match. A type guard narrows the result's element type.
@@ -1176,6 +1322,17 @@ export declare class List<T extends {} | null> extends Enumerable<T> implements 
   public sort(comparison?: Comparison<T>): void;
 
   /**
+   * Finds an item's position in the list, which must be sorted by `comparison`, as
+   * {@link BinarySearchService.search} does.
+   *
+   * @param item The item to find.
+   * @param comparison The order. Omitted, it is {@link Comparer.compare}.
+   * @returns The position of an item the comparison finds equal, or the bitwise complement (`~`)
+   * of the position where the item would be inserted to keep the order.
+   */
+  public binarySearch(item: T, comparison?: Comparison<T>): number;
+
+  /**
    * Returns a view that reads this list, follows its changes and can't change it.
    */
   public asReadOnly(): ReadOnlyList<T>;
@@ -1347,6 +1504,17 @@ export declare class ChunkedList<T extends {} | null> extends Enumerable<T> impl
    * @param comparison The order. Omitted, it is {@link Comparer.compare}.
    */
   public sort(comparison?: Comparison<T>): void;
+
+  /**
+   * Finds an item's position in the list, which must be sorted by `comparison`, as
+   * {@link BinarySearchService.search} does.
+   *
+   * @param item The item to find.
+   * @param comparison The order. Omitted, it is {@link Comparer.compare}.
+   * @returns The position of an item the comparison finds equal, or the bitwise complement (`~`)
+   * of the position where the item would be inserted to keep the order.
+   */
+  public binarySearch(item: T, comparison?: Comparison<T>): number;
 
   /**
    * Returns a view that reads this list, follows its changes and can't change it.
