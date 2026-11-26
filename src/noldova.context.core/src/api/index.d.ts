@@ -397,6 +397,24 @@ declare global {
      * ```
      */
     isNullOrWhitespace(value: string | null | undefined): boolean;
+
+    /**
+     * Joins strings in order, with the separator between each two.
+     *
+     * @param separator The text placed between each two values; it may be empty.
+     * @param values Any iterable of strings, such as an array, a `Set` or a
+     * collection's sequence. It is read once.
+     * @returns The joined text, or the empty string when there are no values.
+     * @example
+     * ```ts
+     * import "@noldova/context.core";
+     *
+     * String.join(", ", ["a", "b", "c"]); // "a, b, c"
+     * String.join("-", new Set(["x"])); // "x"
+     * String.join(", ", []); // ""
+     * ```
+     */
+    join(separator: string, values: Iterable<string>): string;
   }
 }
 

@@ -1236,6 +1236,22 @@ export declare class List<T extends {} | null> extends Enumerable<T> implements 
   public tryGet(index: number): T | undefined;
 
   /**
+   * Runs an action on each element, in order.
+   *
+   * @example
+   * ```ts
+   * import { List } from "@noldova/context.collections";
+   *
+   * const names = new List(["a", "b"]);
+   * names.forEach(t => console.log(t)); // logs "a", then "b"
+   * ```
+   *
+   * @throws {InvalidOperationException} When the action changes the list; the
+   * changes it made before stay.
+   */
+  public forEach(action: (item: T) => void): void;
+
+  /**
    * Replaces the element at a zero-based position.
    *
    * @throws {ArgumentOutOfRangeException} When there is no element there.

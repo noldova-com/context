@@ -7,22 +7,27 @@
  */
 
 import "@noldova/context.core";
-import { InvalidOperationException } from "@noldova/context.exceptions";
+import { ArgumentOutOfRangeException, InvalidOperationException } from "@noldova/context.exceptions";
 
 import { CancellationCallbacksFailedException } from "../exceptions/cancellation-callbacks-failed.exception.js";
+import type { ITimer } from "../interfaces/i-timer.js";
 import { Resources } from "../resources.js";
 import { CancellationToken } from "./cancellation-token.js";
+import { SystemTimer } from "../services/system-timer.js";
 import { CancellationTokenRegistration } from "./cancellation-token-registration.js";
 
 export class CancellationTokenSource implements Disposable {
   public readonly token: CancellationToken;
   private readonly registrations: Map<CancellationTokenRegistration, () => void> = new Map<CancellationTokenRegistration, () => void>();
   private readonly links: CancellationTokenRegistration[] = [];
+  private readonly timer: ITimer;
+  private delayTimer: number | undefined = undefined;
   private isCanceled: boolean = false;
   private isDisposed: boolean = false;
 
-  public constructor() {
+  public constructor(timer: ITimer = new SystemTimer()) {
     this.token = new CancellationToken(this);
+    this.timer = timer;
   }
 
   public get isCancellationRequested(): boolean {
@@ -44,6 +49,7 @@ export class CancellationTokenSource implements Disposable {
       return;
 
     this.isCanceled = true;
+    this.timer.clearTimeout(this.delayTimer);
     const errors: unknown[] = [];
     for (const registration of [...this.registrations.keys()].reverse()) {
       const callback = this.registrations.get(registration);
@@ -63,6 +69,18 @@ export class CancellationTokenSource implements Disposable {
       throw new CancellationCallbacksFailedException(errors);
   }
 
+  public cancelAfter(milliseconds: number): void {
+    if (!Number.isInteger(milliseconds) || milliseconds < 0 || milliseconds > Resources.maximumDelayMilliseconds)
+      throw new ArgumentOutOfRangeException(Resources.millisecondsParameterName, milliseconds);
+    if (this.isDisposed)
+      throw new InvalidOperationException(Resources.sourceDisposed);
+    if (this.isCanceled)
+      return;
+
+    this.timer.clearTimeout(this.delayTimer);
+    this.delayTimer = this.timer.setTimeout(() => this.cancel(), milliseconds);
+  }
+
   public register(callback: () => void): CancellationTokenRegistration {
     if (this.isCanceled) {
       callback();
@@ -79,6 +97,7 @@ export class CancellationTokenSource implements Disposable {
 
   public [Symbol.dispose](): void {
     this.isDisposed = true;
+    this.timer.clearTimeout(this.delayTimer);
     for (const link of this.links)
       link.unregister();
     this.registrations.clear();

@@ -53,6 +53,11 @@ export class List<T extends {} | null> extends Enumerable<T> implements IReadOnl
     return this.items[index];
   }
 
+  public forEach(action: (item: T) => void): void {
+    for (const item of this)
+      action(item);
+  }
+
   public set(index: number, item: T): void {
     this.get(index);
     this.items[index] = item;

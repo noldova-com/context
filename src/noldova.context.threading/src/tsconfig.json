@@ -3,6 +3,12 @@
   "compilerOptions": {
     "rootDir": ".",
     "outDir": "../../../_build/node/noldova.context.threading",
+    "typeRoots": [
+      "../../../node_modules/@types"
+    ],
+    "types": [
+      "node"
+    ],
     "sourceMap": true
   }
 }

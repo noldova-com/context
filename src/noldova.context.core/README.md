@@ -27,6 +27,7 @@ Object.isNullOrUndefined(0); // false: zero is a value.
 Object.isString(""); // true
 String.format("Expected {0} of {1}", 3, 5); // "Expected 3 of 5"
 String.isNullOrWhitespace(" \t\r\n "); // true
+String.join(", ", ["a", "b", "c"]); // "a, b, c"
 ```
 
 The predicates classify primitives only: `Object.isString(new String(""))` is

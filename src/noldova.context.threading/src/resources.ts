@@ -9,5 +9,7 @@
 export class Resources {
   public static readonly operationCanceled: string = "The operation was canceled.";
   public static readonly sourceDisposed: string = "The cancellation token source was disposed, so it cancels no more.";
+  public static readonly millisecondsParameterName: string = "milliseconds";
+  public static readonly maximumDelayMilliseconds: number = 2_147_483_647;
   public static readonly callbacksFailed: string = "A callback registered for the cancellation threw; each error is in errors.";
 }

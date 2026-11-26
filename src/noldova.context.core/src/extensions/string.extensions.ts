@@ -18,6 +18,7 @@ declare global {
     isAsciiLetter(character: string): boolean;
     isNullOrEmpty(value: string | null | undefined): value is null | undefined | "";
     isNullOrWhitespace(value: string | null | undefined): boolean;
+    join(separator: string, values: Iterable<string>): string;
   }
 }
 
@@ -106,6 +107,10 @@ function isNullOrWhitespace(value: string | null | undefined): boolean {
   return String.isNullOrEmpty(value) || !Resources.nonWhitespacePattern.test(value);
 }
 
+function join(separator: string, values: Iterable<string>): string {
+  return Array.from(values).join(separator);
+}
+
 Object.defineProperty(String, nameof<StringConstructor>(t => t.empty), { value: "", writable: false, enumerable: false, configurable: false });
 Object.defineProperty(String, nameof<StringConstructor>(t => t.format), { value: format, writable: false, enumerable: false, configurable: false });
 Object.defineProperty(String, nameof<StringConstructor>(t => t.isAsciiDigit), { value: isAsciiDigit, writable: false, enumerable: false, configurable: false });
@@ -113,5 +118,6 @@ Object.defineProperty(String, nameof<StringConstructor>(t => t.isAsciiHexDigit),
 Object.defineProperty(String, nameof<StringConstructor>(t => t.isAsciiLetter), { value: isAsciiLetter, writable: false, enumerable: false, configurable: false });
 Object.defineProperty(String, nameof<StringConstructor>(t => t.isNullOrEmpty), { value: isNullOrEmpty, writable: false, enumerable: false, configurable: false });
 Object.defineProperty(String, nameof<StringConstructor>(t => t.isNullOrWhitespace), { value: isNullOrWhitespace, writable: false, enumerable: false, configurable: false });
+Object.defineProperty(String, nameof<StringConstructor>(t => t.join), { value: join, writable: false, enumerable: false, configurable: false });
 
 export { };

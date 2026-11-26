@@ -342,6 +342,46 @@ export class ListTests {
   }
 
   @TestMethod
+  public forEachRunsTheActionOnEachItemInOrder(): void {
+    const list = new List([3, 1, 2]);
+    const items: number[] = [];
+
+    list.forEach(t => items.push(t));
+
+    Assert.areEqual("[3,1,2]", JSON.stringify(items));
+  }
+
+  @TestMethod
+  public forEachRunsNothingOnAnEmptyList(): void {
+    let runs = 0;
+
+    new List<number>().forEach(() => runs++);
+
+    Assert.areEqual(0, runs);
+  }
+
+  @TestMethod
+  public forEachThrowsWhenTheActionChangesTheList(): void {
+    const list = new List([1, 2, 3]);
+
+    const exception = Assert.throws(() => list.forEach(t => list.add(t)), InvalidOperationException);
+
+    Assert.areEqual("The collection was changed while it was being enumerated.", exception.message);
+    Assert.areEqual("[1,2,3,1]", JSON.stringify(list.toArray()));
+  }
+
+  @TestMethod
+  public forEachThrowsWhenTheActionChangesTheListAtItsLastItem(): void {
+    const list = new List([1, 2]);
+
+    Assert.throws(() => list.forEach(t => {
+      if (t === 2)
+        list.removeAt(0);
+    }), InvalidOperationException);
+    Assert.areEqual("[2]", JSON.stringify(list.toArray()));
+  }
+
+  @TestMethod
   public everyChangeEndsAnEnumerationInProgress(): void {
     const changes: readonly ((list: List<number>) => void)[] = [
       t => t.set(0, 9),

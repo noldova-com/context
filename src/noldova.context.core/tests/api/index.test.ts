@@ -55,7 +55,8 @@ export class CoreApiTests {
       api.nameof<StringConstructor>(t => t.isAsciiHexDigit),
       api.nameof<StringConstructor>(t => t.isAsciiLetter),
       api.nameof<StringConstructor>(t => t.isNullOrEmpty),
-      api.nameof<StringConstructor>(t => t.isNullOrWhitespace)
+      api.nameof<StringConstructor>(t => t.isNullOrWhitespace),
+      api.nameof<StringConstructor>(t => t.join)
     ];
 
     for (const extensionName of extensionNames) {
