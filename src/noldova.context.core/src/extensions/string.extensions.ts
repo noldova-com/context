@@ -108,7 +108,7 @@ function isNullOrWhitespace(value: string | null | undefined): boolean {
 }
 
 function join(separator: string, values: Iterable<string>): string {
-  return Array.from(values).join(separator);
+  return (Array.isArray(values) ? values : Array.from(values)).join(separator);
 }
 
 Object.defineProperty(String, nameof<StringConstructor>(t => t.empty), { value: "", writable: false, enumerable: false, configurable: false });

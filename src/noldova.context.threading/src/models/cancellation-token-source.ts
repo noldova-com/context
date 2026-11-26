@@ -12,11 +12,12 @@ import { ArgumentOutOfRangeException, InvalidOperationException } from "@noldova
 import { CancellationCallbacksFailedException } from "../exceptions/cancellation-callbacks-failed.exception.js";
 import type { ITimer } from "../interfaces/i-timer.js";
 import { Resources } from "../resources.js";
-import { CancellationToken } from "./cancellation-token.js";
 import { SystemTimer } from "../services/system-timer.js";
+import { CancellationToken } from "./cancellation-token.js";
 import { CancellationTokenRegistration } from "./cancellation-token-registration.js";
 
 export class CancellationTokenSource implements Disposable {
+  private static readonly SYSTEM_TIMER: ITimer = new SystemTimer();
   public readonly token: CancellationToken;
   private readonly registrations: Map<CancellationTokenRegistration, () => void> = new Map<CancellationTokenRegistration, () => void>();
   private readonly links: CancellationTokenRegistration[] = [];
@@ -25,7 +26,7 @@ export class CancellationTokenSource implements Disposable {
   private isCanceled: boolean = false;
   private isDisposed: boolean = false;
 
-  public constructor(timer: ITimer = new SystemTimer()) {
+  public constructor(timer: ITimer = CancellationTokenSource.SYSTEM_TIMER) {
     this.token = new CancellationToken(this);
     this.timer = timer;
   }
@@ -70,8 +71,10 @@ export class CancellationTokenSource implements Disposable {
   }
 
   public cancelAfter(milliseconds: number): void {
-    if (!Number.isInteger(milliseconds) || milliseconds < 0 || milliseconds > Resources.maximumDelayMilliseconds)
-      throw new ArgumentOutOfRangeException(Resources.millisecondsParameterName, milliseconds);
+    ArgumentOutOfRangeException.throwIfNotInteger(milliseconds, Resources.millisecondsParameterName, Resources.delayOutOfRange);
+    ArgumentOutOfRangeException.throwIfNegative(milliseconds, Resources.millisecondsParameterName, Resources.delayOutOfRange);
+    if (milliseconds > Resources.maximumDelayMilliseconds)
+      throw new ArgumentOutOfRangeException(Resources.millisecondsParameterName, milliseconds, Resources.delayOutOfRange);
     if (this.isDisposed)
       throw new InvalidOperationException(Resources.sourceDisposed);
     if (this.isCanceled)

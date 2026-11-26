@@ -1251,6 +1251,7 @@ export declare class List<T extends {} | null> extends Enumerable<T> implements 
    * names.forEach(t => console.log(t)); // logs "a", then "b"
    * ```
    *
+   * @param action The function run on each element, in order; it must not change the list.
    * @throws {InvalidOperationException} When the action changes the list; the
    * changes it made before stay.
    */

@@ -166,19 +166,6 @@ export declare class CancellationToken {
 }
 
 /**
- * Cancels the operations that take its token.
- *
- * @example
- * ```ts
- * import { CancellationTokenSource } from "@noldova/context.threading";
- *
- * using source = new CancellationTokenSource();
- * source.token.register(() => console.log("canceled"));
- * source.cancel(); // logs "canceled"
- * source.token.isCancellationRequested; // true
- * ```
- */
-/**
  * The timer a `CancellationTokenSource` arms for `cancelAfter`. A source uses the host's timer
  * by default; a test may pass its own to move time without waiting.
  *
@@ -226,6 +213,19 @@ export declare interface ITimer {
   clearTimeout(timer: number | undefined): void;
 }
 
+/**
+ * Cancels the operations that take its token.
+ *
+ * @example
+ * ```ts
+ * import { CancellationTokenSource } from "@noldova/context.threading";
+ *
+ * using source = new CancellationTokenSource();
+ * source.token.register(() => console.log("canceled"));
+ * source.cancel(); // logs "canceled"
+ * source.token.isCancellationRequested; // true
+ * ```
+ */
 export declare class CancellationTokenSource implements Disposable {
   /**
    * The token the source cancels.

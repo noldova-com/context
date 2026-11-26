@@ -72,8 +72,11 @@ export class List<T extends {} | null> extends Enumerable<T> implements IReadOnl
   }
 
   public forEach(action: (item: T) => void): void {
-    for (const item of this)
+    const version = this.changes.value;
+    for (const item of this.items) {
       action(item);
+      this.changes.throwIfChangedSince(version);
+    }
   }
 
   public set(index: number, item: T): void {

@@ -9,8 +9,10 @@
 import "@noldova/context.core";
 import type { ITimer } from "@noldova/context.threading";
 
+import { PendingTimer } from "./pending-timer.fixture.js";
+
 export class ManualTimer implements ITimer {
-  private readonly pending: Map<number, { callback: () => void; due: number }> = new Map<number, { callback: () => void; due: number }>();
+  private readonly pending: Map<number, PendingTimer> = new Map<number, PendingTimer>();
   private nextTimer: number = 1;
   private now: number = 0;
 
@@ -20,7 +22,7 @@ export class ManualTimer implements ITimer {
 
   public setTimeout(callback: () => void, delayMilliseconds: number): number {
     const timer = this.nextTimer++;
-    this.pending.set(timer, { callback, due: this.now + delayMilliseconds });
+    this.pending.set(timer, new PendingTimer(callback, this.now + delayMilliseconds));
 
     return timer;
   }

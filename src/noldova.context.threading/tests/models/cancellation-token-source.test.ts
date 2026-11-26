@@ -278,6 +278,8 @@ export class CancellationTokenSourceTests {
     const exception = Assert.throws(() => source.cancelAfter(milliseconds), ArgumentOutOfRangeException);
 
     Assert.areEqual("milliseconds", exception.parameterName);
+    Assert.areEqual<unknown>(milliseconds, exception.actualValue);
+    Assert.areEqual("The delay must be an integer of milliseconds from 0 to 2147483647. (Parameter 'milliseconds')", exception.message);
     Assert.areEqual(0, timer.pendingCount);
   }
 
