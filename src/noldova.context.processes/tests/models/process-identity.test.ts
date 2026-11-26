@@ -10,13 +10,19 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 
 import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
-import { ProcessIdentity } from "@noldova/context.processes";
+import { Processes, ProcessIdentity } from "@noldova/context.processes";
 import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
 @TestClass
 export class ProcessIdentityTests {
   private static readonly COVERAGE_VARIABLE: string = "NODE_V8_COVERAGE";
   private static readonly EXIT_EVENT: string = "exit";
+  private static readonly SPAWN_EVENT: string = "spawn";
+  private static readonly DATA_EVENT: string = "data";
+  private static readonly WINDOWS_PLATFORM: string = "win32";
+  private static readonly SHELL: string = "/bin/sh";
+  private static readonly UNREAPED_CHILD_SCRIPT: string = "sleep 0 & echo $!; exec sleep 60";
+  private static readonly ZOMBIE_LIMIT_MILLISECONDS: number = 30_000;
 
   @TestMethod
   public keepsTheIdAndTheStartTime(): void {
@@ -50,13 +56,42 @@ export class ProcessIdentityTests {
   }
 
   @TestMethod
-  public async readsNothingForAProcessThatEndedAsync(): Promise<void> {
+  public async readsNothingOfAProcessThatEndedAsync(): Promise<void> {
     const environment = { ...process.env };
     delete environment[ProcessIdentityTests.COVERAGE_VARIABLE];
-    const child = spawn(process.execPath, ["--eval", ""], { env: environment, stdio: "ignore", windowsHide: true });
+    const child = spawn(process.execPath, ["--eval", "process.stdin.resume()"],
+      { env: environment, stdio: ["pipe", "ignore", "ignore"], windowsHide: true });
+    await once(child, ProcessIdentityTests.SPAWN_EVENT);
+    const running = await ProcessIdentity.readAsync(child.pid ?? 0);
+    Assert.isDefined(running);
+    child.stdin.end();
     await once(child, ProcessIdentityTests.EXIT_EVENT);
 
-    Assert.isUndefined(await ProcessIdentity.readAsync(child.pid ?? 0));
+    const ended = await ProcessIdentity.readAsync(running.processId);
+
+    Assert.isTrue(Object.isUndefined(ended) || ended.startTime !== running.startTime);
+  }
+
+  @TestMethod
+  public async readsNothingOfAnEndedProcessItsParentHasNotReapedAsync(): Promise<void> {
+    if (process.platform === ProcessIdentityTests.WINDOWS_PLATFORM)
+      return;
+
+    const parent = spawn(ProcessIdentityTests.SHELL, ["-c", ProcessIdentityTests.UNREAPED_CHILD_SCRIPT],
+      { stdio: ["ignore", "pipe", "ignore"] });
+    try {
+      const [output] = await once(parent.stdout, ProcessIdentityTests.DATA_EVENT);
+      const processId = Number(String(output).trim());
+      const deadline = performance.now() + ProcessIdentityTests.ZOMBIE_LIMIT_MILLISECONDS;
+      while (!(await Processes.listAsync()).any(t => t.processId === processId && t.isZombie))
+        Assert.isTrue(performance.now() < deadline, String(processId));
+
+      Assert.isUndefined(await ProcessIdentity.readAsync(processId));
+    }
+    finally {
+      parent.kill();
+      await once(parent, ProcessIdentityTests.EXIT_EVENT);
+    }
   }
 
   @TestMethod
