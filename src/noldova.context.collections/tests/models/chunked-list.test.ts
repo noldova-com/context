@@ -455,22 +455,6 @@ export class ChunkedListTests {
     }
   }
 
-  private static numbered(length: number, chunkSize: number, weighted: boolean = true): ChunkedList<number> {
-    const list = weighted ? new ChunkedList<number>(chunkSize, 0, 0, t => t) : new ChunkedList<number>(chunkSize, 0);
-    list.addRange(Array.from({ length }, (_, t) => t));
-
-    return list;
-  }
-
-  private static weighted(): ChunkedList<number> {
-    const list = new ChunkedList<number>(3, 0, 10, t => t);
-    list.set(1, 2);
-    list.set(6, 5);
-    list.set(9, 1);
-
-    return list;
-  }
-
   @TestMethod
   public readsTheLastAndAnyPositionWithoutWalking(): void {
     const list = ChunkedListTests.walkedListOf([1, 2, 3]);
@@ -497,6 +481,22 @@ export class ChunkedListTests {
     Assert.isUndefined(list.elementAtOrDefault(3));
     Assert.isUndefined(list.elementAtOrDefault(-1));
     Assert.isUndefined(list.elementAtOrDefault(1.5));
+  }
+
+  private static numbered(length: number, chunkSize: number, weighted: boolean = true): ChunkedList<number> {
+    const list = weighted ? new ChunkedList<number>(chunkSize, 0, 0, t => t) : new ChunkedList<number>(chunkSize, 0);
+    list.addRange(Array.from({ length }, (_, t) => t));
+
+    return list;
+  }
+
+  private static weighted(): ChunkedList<number> {
+    const list = new ChunkedList<number>(3, 0, 10, t => t);
+    list.set(1, 2);
+    list.set(6, 5);
+    list.set(9, 1);
+
+    return list;
   }
 
   private static walkedListOf(items: readonly number[]): WalkedChunkedList<number> {
