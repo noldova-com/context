@@ -241,4 +241,25 @@ export class StringExtensionsTests {
   public isNullOrWhitespaceReturnsFalseForPaddedText(): void {
     Assert.isFalse(String.isNullOrWhitespace(" value "));
   }
+
+  @TestMethod
+  public joinPutsTheSeparatorBetweenEachTwoValues(): void {
+    Assert.areEqual("a, b, c", String.join(", ", ["a", "b", "c"]));
+  }
+
+  @TestMethod
+  public joinReadsAnyIterable(): void {
+    Assert.areEqual("x-y", String.join("-", new Set(["x", "y"])));
+    Assert.areEqual("ab", String.join(String.empty, ["a", "b"].values()));
+  }
+
+  @TestMethod
+  public joinReturnsTheEmptyStringForNoValues(): void {
+    Assert.areEqual(String.empty, String.join(", ", []));
+  }
+
+  @TestMethod
+  public joinReturnsASingleValueWithoutTheSeparator(): void {
+    Assert.areEqual("only", String.join(", ", ["only"]));
+  }
 }

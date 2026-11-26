@@ -166,6 +166,54 @@ export declare class CancellationToken {
 }
 
 /**
+ * The timer a `CancellationTokenSource` arms for `cancelAfter`. A source uses the host's timer
+ * by default; a test may pass its own to move time without waiting.
+ *
+ * @example
+ * ```ts
+ * import { CancellationTokenSource, type ITimer } from "@noldova/context.threading";
+ *
+ * class ManualTimer implements ITimer {
+ *   public callback: (() => void) | undefined = undefined;
+ *
+ *   public setTimeout(callback: () => void): number {
+ *     this.callback = callback;
+ *
+ *     return 1;
+ *   }
+ *
+ *   public clearTimeout(): void {
+ *     this.callback = undefined;
+ *   }
+ * }
+ *
+ * const timer = new ManualTimer();
+ * const source = new CancellationTokenSource(timer);
+ * source.cancelAfter(1000);
+ * timer.callback?.();
+ * source.isCancellationRequested; // true
+ * ```
+ */
+export declare interface ITimer {
+  /**
+   * Arms a timer that calls the callback once, after the delay.
+   *
+   * @param callback The function to call when the timer fires.
+   * @param delayMilliseconds The delay in milliseconds before the callback runs.
+   * @returns The timer's id, which `clearTimeout` takes.
+   */
+  setTimeout(callback: () => void, delayMilliseconds: number): number;
+
+  /**
+   * Disarms a timer so its callback never runs; an id that is `undefined`, already fired or
+   * already cleared is ignored.
+   *
+   * @param timer The id `setTimeout` returned, or `undefined`.
+   */
+  clearTimeout(timer: number | undefined): void;
+}
+
+/**
  * Cancels the operations that take its token.
  *
  * @example
@@ -186,8 +234,10 @@ export declare class CancellationTokenSource implements Disposable {
 
   /**
    * Initializes a source that is not canceled.
+   *
+   * @param timer The timer `cancelAfter` arms; the host's timer when omitted.
    */
-  public constructor();
+  public constructor(timer?: ITimer);
 
   /**
    * Whether the source was canceled.
@@ -228,8 +278,33 @@ export declare class CancellationTokenSource implements Disposable {
   public cancel(): void;
 
   /**
-   * Disposes the source: a linked source stops watching its tokens, registered callbacks are
-   * dropped without running, and `cancel` throws from then on. A canceled source stays canceled,
+   * Cancels the source once the delay passes. A later call replaces the pending delay, `cancel`
+   * and disposing the source clear it, and a canceled source ignores the call.
+   *
+   * @remarks
+   * The cancellation runs from the timer, so a callback that throws there reaches the host as
+   * an uncaught `CancellationCallbacksFailedException`. A pending delay keeps the process
+   * running until it fires or is cleared.
+   *
+   * @param milliseconds The delay, an integer from 0 to 2147483647.
+   * @throws ArgumentOutOfRangeException When the delay is negative, not an integer or above
+   * 2147483647.
+   * @throws InvalidOperationException When the source was disposed.
+   * @example
+   * ```ts
+   * import { CancellationTokenSource } from "@noldova/context.threading";
+   *
+   * using source = new CancellationTokenSource();
+   * source.cancelAfter(5000);
+   * await fetchReportAsync(source.token); // stops once five seconds pass
+   * ```
+   */
+  public cancelAfter(milliseconds: number): void;
+
+  /**
+   * Disposes the source: a linked source stops watching its tokens, a pending `cancelAfter` delay
+   * is cleared, registered callbacks are dropped without running, and `cancel` and `cancelAfter`
+   * throw from then on. A canceled source stays canceled,
    * so a callback registered later still runs at once.
    */
   public [Symbol.dispose](): void;

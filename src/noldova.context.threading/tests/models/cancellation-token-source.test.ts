@@ -6,9 +6,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { InvalidOperationException } from "@noldova/context.exceptions";
-import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
+import { ArgumentOutOfRangeException, InvalidOperationException } from "@noldova/context.exceptions";
+import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 import { CancellationCallbacksFailedException, CancellationTokenSource } from "@noldova/context.threading";
+
+import { ManualTimer } from "../fixtures/manual-timer.fixture.js";
 
 @TestClass
 export class CancellationTokenSourceTests {
@@ -186,5 +188,129 @@ export class CancellationTokenSourceTests {
     source.cancel();
 
     Assert.isFalse(linked.isCancellationRequested);
+  }
+
+  @TestMethod
+  public cancelAfterCancelsOnceTheDelayPasses(): void {
+    const timer = new ManualTimer();
+    const source = new CancellationTokenSource(timer);
+    source.cancelAfter(1000);
+
+    timer.advance(999);
+    Assert.isFalse(source.isCancellationRequested);
+    timer.advance(1);
+
+    Assert.isTrue(source.isCancellationRequested);
+    Assert.areEqual(0, timer.pendingCount);
+  }
+
+  @TestMethod
+  public aLaterCancelAfterReplacesTheEarlierDelay(): void {
+    const timer = new ManualTimer();
+    const source = new CancellationTokenSource(timer);
+    source.cancelAfter(1000);
+    timer.advance(500);
+
+    source.cancelAfter(1000);
+    timer.advance(999);
+    Assert.isFalse(source.isCancellationRequested);
+    Assert.areEqual(1, timer.pendingCount);
+    timer.advance(1);
+
+    Assert.isTrue(source.isCancellationRequested);
+  }
+
+  @TestMethod
+  public cancelingTheSourceClearsItsDelay(): void {
+    const timer = new ManualTimer();
+    const source = new CancellationTokenSource(timer);
+    source.cancelAfter(1000);
+
+    source.cancel();
+
+    Assert.areEqual(0, timer.pendingCount);
+  }
+
+  @TestMethod
+  public disposingTheSourceClearsItsDelay(): void {
+    const timer = new ManualTimer();
+    const source = new CancellationTokenSource(timer);
+    source.cancelAfter(1000);
+
+    source[Symbol.dispose]();
+
+    Assert.areEqual(0, timer.pendingCount);
+    Assert.isFalse(source.isCancellationRequested);
+  }
+
+  @TestMethod
+  public aCanceledSourceIgnoresCancelAfter(): void {
+    const timer = new ManualTimer();
+    const source = new CancellationTokenSource(timer);
+    source.cancel();
+
+    source.cancelAfter(1000);
+
+    Assert.areEqual(0, timer.pendingCount);
+  }
+
+  @TestMethod
+  public cancelAfterThrowsOnADisposedSource(): void {
+    const timer = new ManualTimer();
+    const source = new CancellationTokenSource(timer);
+    source[Symbol.dispose]();
+
+    const exception = Assert.throws(() => source.cancelAfter(1000), InvalidOperationException);
+
+    Assert.areEqual("The cancellation token source was disposed, so it cancels no more.", exception.message);
+    Assert.areEqual(0, timer.pendingCount);
+  }
+
+  @TestData(-1)
+  @TestData(1.5)
+  @TestData(Number.NaN)
+  @TestData(2_147_483_648)
+  @TestMethod
+  public cancelAfterRefusesADelayOutOfRange(milliseconds: number): void {
+    const timer = new ManualTimer();
+    const source = new CancellationTokenSource(timer);
+
+    const exception = Assert.throws(() => source.cancelAfter(milliseconds), ArgumentOutOfRangeException);
+
+    Assert.areEqual("milliseconds", exception.parameterName);
+    Assert.areEqual<unknown>(milliseconds, exception.actualValue);
+    Assert.areEqual("The delay must be an integer of milliseconds from 0 to 2147483647. (Parameter 'milliseconds')", exception.message);
+    Assert.areEqual(0, timer.pendingCount);
+  }
+
+  @TestMethod
+  public cancelAfterTakesTheLargestDelay(): void {
+    const timer = new ManualTimer();
+    const source = new CancellationTokenSource(timer);
+
+    source.cancelAfter(2_147_483_647);
+
+    Assert.areEqual(1, timer.pendingCount);
+  }
+
+  @TestMethod
+  public async cancelAfterCancelsWithTheHostTimerAsync(): Promise<void> {
+    using source = new CancellationTokenSource();
+    const canceled = new Promise<void>(resolve => source.token.register(() => resolve()));
+
+    source.cancelAfter(0);
+    await canceled;
+
+    Assert.isTrue(source.isCancellationRequested);
+  }
+
+  @TestMethod
+  public disposingTheSourceClearsTheHostTimer(): void {
+    const source = new CancellationTokenSource();
+    source.cancelAfter(60_000);
+
+    source[Symbol.dispose]();
+
+    Assert.isFalse(source.isCancellationRequested);
   }
 }
