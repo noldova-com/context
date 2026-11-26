@@ -25,4 +25,6 @@ export class Resources {
   public static readonly sequenceEmpty: string = "The sequence contains no elements.";
   public static readonly sizeParameterName: string = "size";
   public static readonly startParameterName: string = "start";
+  public static readonly weighParameterName: string = "weigh";
+  public static readonly weightInvalid: string = "An element's weight must be a finite number that isn't negative.";
 }

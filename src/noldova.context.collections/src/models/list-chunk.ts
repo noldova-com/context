@@ -7,7 +7,9 @@
  */
 
 import "@noldova/context.core";
+import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
 
+import { Resources } from "../resources.js";
 import { EqualityComparers } from "../services/equality-comparers.js";
 
 export class ListChunk<T extends {} | null> {
@@ -25,7 +27,7 @@ export class ListChunk<T extends {} | null> {
   }
 
   public static ofFill<T extends {} | null>(fill: T, length: number, weigh: (item: T) => number): ListChunk<T> {
-    return new ListChunk(fill, null, length, length * weigh(fill));
+    return new ListChunk(fill, null, length, length * ListChunk.weighOne(fill, weigh));
   }
 
   public static of<T extends {} | null>(fill: T, items: T[], weigh: (item: T) => number): ListChunk<T> {
@@ -46,11 +48,16 @@ export class ListChunk<T extends {} | null> {
   }
 
   public set(local: number, item: T, weigh: (item: T) => number): number {
+    const weight = ListChunk.weighOne(item, weigh);
     this.items ??= new Array<T>(this.length).fill(this.fill);
-    const change = weigh(item) - ListChunk.weighAll(this.items.splice(local, 1, item), weigh);
+    const change = weight - ListChunk.weighAll(this.items.splice(local, 1, item), weigh);
     this.sum += change;
 
     return change;
+  }
+
+  public slice(start: number, end: number = this.length): T[] {
+    return Object.isNull(this.items) ? new Array<T>(end - start).fill(this.fill) : this.items.slice(start, end);
   }
 
   public indexOf(item: T): number {
@@ -91,10 +98,18 @@ export class ListChunk<T extends {} | null> {
     return found;
   }
 
+  private static weighOne<T>(item: T, weigh: (item: T) => number): number {
+    const weight = weigh(item);
+    if (!Number.isFinite(weight) || weight < 0)
+      throw new ArgumentOutOfRangeException(Resources.weighParameterName, weight, Resources.weightInvalid);
+
+    return weight;
+  }
+
   private static weighAll<T>(items: readonly T[], weigh: (item: T) => number): number {
     let sum = 0;
     for (const item of items)
-      sum += weigh(item);
+      sum += ListChunk.weighOne(item, weigh);
 
     return sum;
   }

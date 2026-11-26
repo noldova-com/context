@@ -1195,8 +1195,14 @@ export declare class List<T extends {} | null> extends Enumerable<T> implements 
  * weight is O(1), and the weight before a position and the next or previous
  * weighted element take O(chunks) plus O(chunkSize), skipping chunks whose
  * weight is 0. Reading or setting a position is O(log chunks), plus
- * O(chunkSize) the first time a fill chunk is set; inserting or removing
- * rebuilds only the chunks it touches, plus O(chunks) to renumber them.
+ * O(chunkSize) the first time a fill chunk is set. Inserting or removing
+ * copies only the kept ends of the first and last chunks it touches, drops
+ * the chunks it removes whole without reading them, and renumbers the chunks
+ * in O(chunks). The rebuilt elements split into chunks of nearly equal size,
+ * and a chunk left with fewer than half of `chunkSize` joins a neighbour, so
+ * the chunk count stays near the length over `chunkSize`. A change that
+ * weighs an element whose weight isn't a finite number that isn't negative
+ * throws `ArgumentOutOfRangeException` and leaves the list as it was.
  * Changing the list while it is
  * being enumerated makes the enumeration throw `InvalidOperationException` at
  * its next step.
@@ -1227,7 +1233,8 @@ export declare class ChunkedList<T extends {} | null> extends Enumerable<T> impl
    * @param weigh An element's weight, a finite number that isn't negative.
    * Omitted, every element weighs 0.
    * @throws {ArgumentOutOfRangeException} When `chunkSize` isn't a positive
-   * integer, or `length` isn't a non-negative integer.
+   * integer, `length` isn't a non-negative integer, or `length` is positive
+   * and the fill value's weight isn't a finite number that isn't negative.
    */
   public constructor(chunkSize: number, fill: T, length?: number, weigh?: (item: T) => number);
 
@@ -1257,7 +1264,8 @@ export declare class ChunkedList<T extends {} | null> extends Enumerable<T> impl
   /**
    * Replaces the element at a zero-based position, and its weight in the sums.
    *
-   * @throws {ArgumentOutOfRangeException} When there is no element there.
+   * @throws {ArgumentOutOfRangeException} When there is no element there, or
+   * the element's weight isn't a finite number that isn't negative.
    */
   public set(index: number, item: T): void;
 

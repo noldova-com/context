@@ -43,6 +43,21 @@ export class ChunkedListTests {
   }
 
   @TestMethod
+  public removesMostOfAFillListOfABillionWithoutReadingTheRemovedChunks(): void {
+    const list = new ChunkedList<number>(1_000_000, 1, 1_000_000_000, t => t);
+    list.set(0, 2);
+    list.set(999_999_999, 3);
+
+    list.removeRange(10, 999_999_980);
+
+    Assert.areEqual(20, list.count());
+    Assert.areEqual(23, list.totalWeight);
+    Assert.areEqual(2, list.get(0));
+    Assert.areEqual(1, list.get(10));
+    Assert.areEqual(3, list.get(19));
+  }
+
+  @TestMethod
   @TestData(0)
   @TestData(-1)
   @TestData(1.5)
@@ -62,6 +77,31 @@ export class ChunkedListTests {
 
     Assert.areEqual("length", exception.parameterName);
     Assert.areEqual<unknown>(length, exception.actualValue);
+  }
+
+  @TestMethod
+  @TestData(-1)
+  @TestData(Number.NaN)
+  @TestData(Number.POSITIVE_INFINITY)
+  public refusesAWeightThatIsNotAFiniteNumberThatIsNotNegative(weight: number): void {
+    const weigh = (item: number): number => item === 1 ? weight : 0;
+    const list = new ChunkedList<number>(2, 0, 3, weigh);
+    const changes: readonly (() => void)[] = [
+      () => new ChunkedList<number>(2, 1, 3, weigh),
+      () => list.set(1, 1),
+      () => list.insert(1, 1),
+      () => list.addRange([0, 1])
+    ];
+
+    for (const change of changes) {
+      const exception = Assert.throws(change, ArgumentOutOfRangeException);
+
+      Assert.areEqual("weigh", exception.parameterName);
+      Assert.areEqual<unknown>(weight, exception.actualValue);
+      Assert.areEqual("An element's weight must be a finite number that isn't negative. (Parameter 'weigh')", exception.message);
+    }
+    Assert.areEqual("0,0,0", list.toArray().join(","));
+    Assert.areEqual(0, list.totalWeight);
   }
 
   @TestMethod
