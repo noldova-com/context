@@ -2,7 +2,8 @@
 
 Ends a process and every process it started, and returns only once they are
 gone. A process is named by its id and its start time, so an id the system has
-since given to another process is never ended.
+since given to another process is never ended. It also lists the machine's
+processes, for ending processes you didn't start.
 
 ## Install
 
@@ -49,6 +50,22 @@ const own = await ProcessIdentity.readAsync(process.pid);
 if (!Object.isUndefined(own))
   await ProcessTree.endDescendantsAsync(own);
 ```
+
+`Processes.listAsync` lists every process on the machine, each with its id,
+parent's id, group's id (`null` on Windows), whether it waits for its parent to
+collect it, and its start time, so you can pick processes you never owned and
+end each through its identity:
+
+```ts
+const processes = await Processes.listAsync();
+const leftovers = processes.where(t => t.groupId === group && !t.isZombie);
+
+for (const leftover of leftovers)
+  await ProcessTree.endAsync(leftover.identity);
+```
+
+A `ProcessEntry` can be constructed, so code that takes its listing through a
+type of its own can be tested with entries instead of real processes.
 
 The processes are listed through one lister process, started on the first call
 and kept for the rest of the process's life. The limit starts once it is ready,

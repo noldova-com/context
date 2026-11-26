@@ -8,6 +8,8 @@
 
 export { ProcessTreeEndException } from "../exceptions/process-tree-end.exception.js";
 export { ProcessesException } from "../exceptions/processes.exception.js";
+export { ProcessEntry } from "../models/process-entry.js";
 export { ProcessIdentity } from "../models/process-identity.js";
 export { ProcessTreeEndOptions } from "../models/process-tree-end-options.js";
 export { ProcessTree } from "../services/process-tree.js";
+export { Processes } from "../services/processes.js";

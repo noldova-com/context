@@ -45,7 +45,7 @@ Package size never justifies moving an unrelated responsibility into Core.
 | `noldova.context.collections` | Collections and their queries: `Enumerable` with the query operators, `List`, `Dictionary`, `HashSet`, `Queue`, `Stack`, `ChunkedList`, their read-only views, comparers, and collection algorithms; planned: weak collections |
 | `noldova.context.text` | Additional text abstractions and accepted String augmentations; planned: ECMAScript URI encoding functions |
 | `noldova.context.json` | JSON reading; planned: serialization |
-| `noldova.context.processes` | Process identities and ending a process tree (section 8) |
+| `noldova.context.processes` | Process identities, listing the machine's processes and ending a process tree (section 8) |
 | `noldova.context` | The `ctx` command host: project-file reading and the command providers it runs (section 9) |
 | `noldova.context.query.expressions` | Expression trees: the immutable expression classes, their factories and operators, their source text and expression replacement; no evaluation or translation |
 | `noldova.context.query` | Queries built as expression trees, the query provider contract, and the in-memory provider that runs the trees on `Enumerable`; their results are asynchronous |
@@ -221,7 +221,7 @@ The client is internal to the package: the provider's connection is its only use
 ## 8. Processes and its host boundary
 
 `noldova.context.processes` ends a process and every process it started, for any package or application that starts processes, so none of them needs a test package or a way of its own.
-It depends on Core, Exceptions and Collections only, and its public API is `ProcessIdentity`, `ProcessTree`, `ProcessTreeEndOptions` and its exceptions; the identities it returns are an `IReadOnlyList`.
+It depends on Core, Exceptions and Collections only, and its public API is `ProcessIdentity`, `ProcessEntry`, `Processes`, `ProcessTree`, `ProcessTreeEndOptions` and its exceptions; the identities and entries it returns are an `IReadOnlyList`.
 `noldova.context.testing` uses it to end the processes a stopped test left, with `ProcessTree.endDescendantsAsync` from the run's own identity, so the run itself is never signalled.
 
 During the Node bootstrap it reaches the operating system through `node:child_process`, `node:events`, `node:fs/promises`, `node:net`, `node:os`, `node:path`, `node:readline` and `node:timers/promises`, and each file that imports one of them carries the Node note in `TESTING-CONTRACT.md` section 1.
