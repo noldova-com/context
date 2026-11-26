@@ -78,3 +78,9 @@ declare module "@noldova/context.processes/services/process-lister.js" {
     public listAsync(): Promise<IReadOnlyList<ProcessEntry>>;
   }
 }
+
+declare module "@noldova/context.processes/resources.js" {
+  export class Resources {
+    public static readonly windowsListingScript: string;
+  }
+}
