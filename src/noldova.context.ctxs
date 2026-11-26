@@ -32,6 +32,8 @@
     "noldova.context.testing/tests/noldova.context.testing.tests.ctxp",
     "noldova.context.text/src/noldova.context.text.ctxp",
     "noldova.context.text/tests/noldova.context.text.tests.ctxp",
+    "noldova.context.threading/src/noldova.context.threading.ctxp",
+    "noldova.context.threading/tests/noldova.context.threading.tests.ctxp",
     "parsers/noldova.context.parsers.typescript/src/noldova.context.parsers.typescript.ctxp",
     "parsers/noldova.context.parsers.typescript/tests/noldova.context.parsers.typescript.tests.ctxp"
   ]

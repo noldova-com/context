@@ -1,0 +1,25 @@
+{
+  "name": "@noldova/context.threading",
+  "version": "__VERSION__",
+  "type": "module",
+  "main": "api/index.js",
+  "types": "api/index.d.ts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/noldova-com/context.git",
+    "directory": "src/noldova.context.threading"
+  },
+  "homepage": "https://github.com/noldova-com/context#readme",
+  "bugs": {
+    "url": "https://github.com/noldova-com/context/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "peerDependencies": {
+    "@noldova/context.core": ">=__VERSION__ <__UPPER_BOUND__",
+    "@noldova/context.exceptions": ">=__VERSION__ <__UPPER_BOUND__"
+  }
+}
