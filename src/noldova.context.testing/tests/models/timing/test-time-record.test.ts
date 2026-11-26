@@ -97,6 +97,16 @@ export class TestTimeRecordTests {
   }
 
   @TestMethod
+  public keepsItsOwnCopyOfTheAttachments(): void {
+    const attachments = new Dictionary([new KeyValuePair("ratio", "1.234")]);
+    const record = new TestTimeRecord("Sample", "a.test.js", "ATests", "measures", undefined, TestOutcome.Passed, 2, attachments);
+    attachments.set("ratio", "2");
+    attachments.add("count", "3");
+
+    Assert.areEqual("ratio=1.234", [...record.attachments].map(t => `${t.key}=${t.value}`).join());
+  }
+
+  @TestMethod
   public listsTheAttachmentsOfEachTestOfARun(): void {
     const measured = new TestMethodResult("Sample", "ATests", "measures", undefined, [], TestOutcome.Passed, 2, undefined, undefined,
       new Dictionary([new KeyValuePair("ratio", "1.234")]));

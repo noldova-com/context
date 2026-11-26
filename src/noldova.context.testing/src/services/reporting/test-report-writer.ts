@@ -19,6 +19,7 @@ import { Resources } from "../../resources.js";
 
 export class TestReportWriter {
   private static readonly LABEL_WIDTH: number = 12;
+  private static readonly CONTROL_CHARACTERS: RegExp = /[\u0000-\u001f]/gu;
 
   public formatLines(result: TestRunResult, skipPassingDetails: boolean): string[] {
     const lines: string[] = [];
@@ -47,15 +48,20 @@ export class TestReportWriter {
     const duration = `${Math.round(methodResult.durationMilliseconds)} ${Resources.millisecondUnit}`;
     const methodName = this.formatMethodName(methodResult);
 
-    const attachmentLines = [...methodResult.attachments].map(t => `${Resources.reportIndent.repeat(2)}${t.key}: ${t.value}`);
-    if (methodResult.outcome === TestOutcome.Passed)
-      return [`  ${Resources.terminalGreen}${Resources.passedMark}${Resources.terminalReset} ${methodName} (${duration})`, ...attachmentLines];
-
     if (methodResult.outcome === TestOutcome.Skipped)
       return [`  ${Resources.terminalYellow}${Resources.skippedMark}${Resources.terminalReset} ${Resources.skippedTest(methodName, methodResult.skipReason)}`];
 
-    const lines = [`  ${Resources.terminalRed}${Resources.failedMark}${Resources.terminalReset} ${methodName} (${duration})`, ...attachmentLines];
-    lines.push(...this.formatFailureLines(methodResult.failure));
+    const lines = methodResult.outcome === TestOutcome.Passed
+      ? [`  ${Resources.terminalGreen}${Resources.passedMark}${Resources.terminalReset} ${methodName} (${duration})`]
+      : [`  ${Resources.terminalRed}${Resources.failedMark}${Resources.terminalReset} ${methodName} (${duration})`];
+    if (methodResult.attachments.count() > 0)
+      for (const attachment of methodResult.attachments)
+        lines.push(`${Resources.reportIndent.repeat(2)}${TestReportWriter.escapeControlCharacters(attachment.key)}: `
+          + TestReportWriter.escapeControlCharacters(attachment.value));
+
+    if (methodResult.outcome === TestOutcome.Failed)
+      lines.push(...this.formatFailureLines(methodResult.failure));
+
     return lines;
   }
 
@@ -116,6 +122,10 @@ export class TestReportWriter {
       return methodResult.methodName;
 
     return `${methodResult.methodName}[${methodResult.testDataIndex}](${methodResult.testData.map(t => this.formatValue(t)).join(Resources.valueSeparator)})`;
+  }
+
+  private static escapeControlCharacters(text: string): string {
+    return text.replace(TestReportWriter.CONTROL_CHARACTERS, t => JSON.stringify(t).slice(1, -1));
   }
 
   private formatFailureLines(failure: unknown): string[] {

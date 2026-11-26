@@ -39,6 +39,8 @@ export class TestContext {
 
   public addAttachment(name: string, value: string): void {
     ArgumentException.throwIfNullOrWhitespace(name, Resources.attachmentNameParameter);
+    if (!Object.isString(value))
+      throw new ArgumentException(Resources.attachmentValueInvalid, Resources.attachmentValueParameter);
     if (this.isEnded)
       throw new InvalidOperationException(Resources.testEnded);
     if (!this.attachmentsByName.tryAdd(name, value))

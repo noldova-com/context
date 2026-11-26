@@ -37,6 +37,10 @@ export class AttachingFixture {
     TestContext.current.addAttachment("ratio", "2");
   }
 
+  public attachesANumber(): void {
+    Reflect.apply(TestContext.current.addAttachment, TestContext.current, ["ratio", 1.234]);
+  }
+
   public attachesABlankName(): void {
     TestContext.current.addAttachment(" ", "1");
   }

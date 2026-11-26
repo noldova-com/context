@@ -50,6 +50,8 @@ export class Resources {
   public static readonly noTestRunning: string = "No test is running here, so there is no test context.";
   public static readonly testEnded: string = "The test already ended, so it takes no more attachments.";
   public static readonly attachmentNameParameter: string = "name";
+  public static readonly attachmentValueParameter: string = "value";
+  public static readonly attachmentValueInvalid: string = "An attachment's value must be text.";
   public static readonly coverageOffsetBeforeFirstLine: string = "A coverage offset lies before the generated file's first line.";
   public static readonly testWorkerParentPortMissing: string = "The test worker runs only in a worker thread, which has a parent port.";
   public static readonly secondUnit: string = "s";

@@ -78,6 +78,15 @@ export class TestContextTests {
   }
 
   @TestMethod
+  public async rejectsAValueThatIsNotTextAsync(): Promise<void> {
+    const result = await TestContextTests.executeAsync("attachesANumber");
+
+    Assert.isInstanceOf(result.failure, ArgumentException);
+    Assert.areEqual("An attachment's value must be text. (Parameter 'value')", result.failure.message);
+    Assert.areEqual(0, result.attachments.count());
+  }
+
+  @TestMethod
   public async rejectsReadingTheContextOutsideATestAsync(): Promise<void> {
     const result = await TestContextTests.executeAsync("readsTheContextOutsideTestExecution");
 
@@ -103,6 +112,7 @@ export class TestContextTests {
       [new DiscoveredTestMethod(methodName, testData.length > 0 ? 0 : undefined, testData, undefined)]);
     const result = (await new TestExecutor(5000).executeAsync([testClass]))[0]?.methodResults[0];
     Assert.isDefined(result);
+
     return result;
   }
 }

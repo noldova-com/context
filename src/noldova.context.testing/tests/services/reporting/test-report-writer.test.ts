@@ -301,6 +301,17 @@ export class TestReportWriterTests {
   }
 
   @TestMethod
+  public escapesTheLineBreaksAndControlCharactersOfAnAttachment(): void {
+    const result = new TestMethodResult("TestPackage", "SampleTests", "compares", undefined, [], TestOutcome.Passed, 1, undefined, undefined,
+      new Dictionary([new KeyValuePair("diff\tlines", "a\nb\u001b[31m \"c\"")]));
+
+    const lines = new TestReportWriter().formatMethodLines(result, false);
+
+    Assert.areEqual(2, lines.length);
+    Assert.areEqual("    diff\\tlines: a\\nb\\u001b[31m \"c\"", lines[1]);
+  }
+
+  @TestMethod
   public formatsTheTotalsAfterTheSeparator(): void {
     const result = new TestRunResult([new TestClassResult("TestPackage", "SampleTests", "sample.test.js", [
       new TestMethodResult("TestPackage", "SampleTests", "passes", undefined, [], TestOutcome.Passed, 4, undefined, undefined),

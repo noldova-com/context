@@ -516,7 +516,7 @@ export declare class TestContext {
    *
    * @param name The non-whitespace name, unique within the test.
    * @param value The value, as text.
-   * @throws ArgumentException if the name is blank or the test already has an attachment by that name.
+   * @throws ArgumentException if the name is blank, the value is not text, or the test already has an attachment by that name.
    * @throws InvalidOperationException if the test already ended, such as work it left running after a timeout.
    *
    * See {@link TestContext} for usage examples.
