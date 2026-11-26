@@ -127,6 +127,27 @@ export class ParallelTestRunnerTests {
   }
 
   @TestMethod
+  public async failsTheRunWhenAClassWhoseModuleWritesLeavesAPortOpenAsync(): Promise<void> {
+    const error = await ParallelTestRunnerTests.failAsync(["leaking-port-fixture"], () => undefined);
+
+    Assert.isTrue(error.message.includes("LeakingPortFixtureTests left MessagePort open after its tests finished"), error.message);
+  }
+
+  @TestMethod
+  public async passesAClassThatWritesToItsOutputAsync(): Promise<void> {
+    const project = await FixtureTestProject.createAsync(["writing-fixture"]);
+    try {
+      const result = await WithoutCoverage.runAsync(() => new ParallelTestRunner(ParallelTestRunnerTests.TIMEOUT_MILLISECONDS, 1, new FakeClock())
+        .runAsync([project.testProject]));
+
+      Assert.areEqual("WritingFixtureTests.writesToItsOutput Passed", ParallelTestRunnerTests.outcomes(result));
+    }
+    finally {
+      await project.removeAsync();
+    }
+  }
+
+  @TestMethod
   public async returnsAnEmptyResultWhenItsFiltersSelectNoTestAsync(): Promise<void> {
     const resourceCount = process.getActiveResourcesInfo().length;
     const project = await FixtureTestProject.createAsync(["passing-fixture"]);

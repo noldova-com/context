@@ -71,6 +71,7 @@ export class TestRunWorker implements ITestProgressListener {
     const discovery = new TestDiscovery();
     const discovered = await discovery.discoverAsync(this.start.testProjects, filePath => this.post(TestWorkerMessage.imported(filePath)));
     this.selected = new TestRunner(discovery, this.executor).select(discovered, this.start.filters);
+    await TestRunWorker.flushOutputAsync();
     this.port.on(Resources.messageEvent, (value: unknown) => {
       if (Object.isUndefined(value))
         this.port.close();
@@ -98,6 +99,7 @@ export class TestRunWorker implements ITestProgressListener {
       return;
     }
 
+    await TestRunWorker.flushOutputAsync();
     for (const classResult of classResults) {
       const heading = this.reportWriter.formatClassHeading(classResult);
       const openResources = this.findOpenResources();
@@ -131,6 +133,16 @@ export class TestRunWorker implements ITestProgressListener {
 
   private static countMethods(testClasses: readonly DiscoveredTestClass[]): number {
     return testClasses.reduce((count, testClass) => count + testClass.methods.length, 0);
+  }
+
+  private static async flushOutputAsync(): Promise<void> {
+    await Promise.all([TestRunWorker.flushAsync(process.stdout), TestRunWorker.flushAsync(process.stderr)]);
+  }
+
+  private static async flushAsync(stream: NodeJS.WritableStream): Promise<void> {
+    await new Promise<void>(resolve => {
+      stream.write(String.empty, () => resolve());
+    });
   }
 
   private findOpenResources(): string[] {
