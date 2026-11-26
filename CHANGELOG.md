@@ -6,6 +6,14 @@ Each version's section is written by the pull request that changes the version, 
 Every package moves to each version together, as [VERSIONING-AND-COMPATIBILITY.md](documents/VERSIONING-AND-COMPATIBILITY.md) says.
 Versions before 0.0.6 are described in their version pull requests.
 
+## 0.0.14
+
+CONTEXT's collections get a list held in chunks that sums its elements' weights.
+
+- `@noldova/context.collections`: `ChunkedList<T>` is a list like `List`, kept in chunks of the size its constructor takes, `new ChunkedList(chunkSize, fill, length?, weigh?)`; a chunk that holds only the fill value takes no storage until an element in it is set, and each chunk keeps its elements' weight sum, so `totalWeight`, `weightBefore(index)`, `nextWeightedIndex(index)` and `previousWeightedIndex(index)` skip chunks that weigh nothing (#66).
+- No other package's source changes.
+- Moving from 0.0.13: nothing in a caller's code changes.
+
 ## 0.0.13
 
 CONTEXT gets a package that ends a process tree and the `ctx` command host, and its test runner, PostgreSQL provider, JSON, Text and SQLite packages get fixes.
