@@ -6,6 +6,17 @@ Each version's section is written by the pull request that changes the version, 
 Every package moves to each version together, as [VERSIONING-AND-COMPATIBILITY.md](documents/VERSIONING-AND-COMPATIBILITY.md) says.
 Versions before 0.0.6 are described in their version pull requests.
 
+## 0.0.17
+
+A test can attach measured values to its result, and writing to the console no longer fails a test run's leak check.
+
+- `@noldova/context.testing` (#82):
+  - `TestContext.current.addAttachment(name, value)` attaches a named text value to the running test's result; `TestContext.current` follows the test across its awaits and throws `TestingException` outside a test, and `addAttachment` throws `ArgumentException` for a blank or repeated name or a value that isn't text, and `InvalidOperationException` once the test ended (#88);
+  - `TestMethodResult` and `TestTimeRecord` carry the test's `attachments`, and take them as an optional last constructor argument; the console shows each as `name: value` under the test's line, with control characters escaped, and the results file `CONTEXT_TEST_RESULTS_FILE` names writes them as the test's `attachments` object, left out when there are none (#88);
+  - a test that writes to standard output or standard error no longer fails its class with "left MessagePort open", and a test module's writes while it loads no longer hide a port its tests leave open: the worker waits for the writes to reach the main thread before it takes its baseline and before each check (#85).
+- No other package's source changes.
+- Moving from 0.0.16: nothing in a caller's code changes. A script that reads the results file can read the new optional `attachments`.
+
 ## 0.0.16
 
 CONTEXT gets a threading package with cancellation.
