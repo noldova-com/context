@@ -19,6 +19,7 @@ import type { IClock } from "../../interfaces/i-clock.js";
 import type { ITestProgressListener } from "../../interfaces/i-test-progress-listener.js";
 import type { DiscoveredTestClass } from "../../models/discovery/discovered-test-class.js";
 import type { DiscoveredTestMethod } from "../../models/discovery/discovered-test-method.js";
+import { TestContext } from "../../models/execution/test-context.js";
 import { TestClassResult } from "../../models/results/test-class-result.js";
 import { TestMethodResult } from "../../models/results/test-method-result.js";
 import { Resources } from "../../resources.js";
@@ -145,18 +146,21 @@ export class TestExecutor {
       else
         this.lateFailure ??= new TestingException(formatLate(endedAs), new ExceptionOptions(failure));
     };
+    const context = new TestContext();
     const start = this.clock.now();
     let didFail = false;
     let failure: unknown;
 
     try {
-      await TestExecutor.FAILURE_STORAGE.run(record, async () => {
-        try {
-          await this.invokeWithTimeoutAsync(testClass, method);
-        }
-        finally {
-          await this.drainPendingRejectionsAsync();
-        }
+      await TestContext.runAsync(context, async () => {
+        await TestExecutor.FAILURE_STORAGE.run(record, async () => {
+          try {
+            await this.invokeWithTimeoutAsync(testClass, method);
+          }
+          finally {
+            await this.drainPendingRejectionsAsync();
+          }
+        });
       });
 
       if (strayFailures.length > 0) {
@@ -169,6 +173,7 @@ export class TestExecutor {
       failure = exception;
     }
 
+    context.end();
     const methodResult = new TestMethodResult(
       testClass.packageName,
       testClass.className,
@@ -178,7 +183,8 @@ export class TestExecutor {
       didFail ? TestOutcome.Failed : TestOutcome.Passed,
       this.clock.now() - start,
       failure,
-      undefined);
+      undefined,
+      context.attachments);
     endedAs = methodResult.displayName;
     return methodResult;
   }

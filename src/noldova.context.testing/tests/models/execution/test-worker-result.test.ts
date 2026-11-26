@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { Dictionary, KeyValuePair } from "@noldova/context.collections";
 import { Assert, AssertFailedException, TestClass, TestingException, TestMethod, TestMethodResult, TestOutcome } from "@noldova/context.testing";
 import { TestWorkerResult } from "@noldova/context.testing/models/execution/test-worker-result.js";
 
@@ -46,6 +47,31 @@ export class TestWorkerResultTests {
 
     Assert.areEqual(TestOutcome.Skipped, crossed.outcome);
     Assert.areEqual("Not yet.", crossed.skipReason);
+  }
+
+  @TestMethod
+  public crossesTheAttachmentsInTheirOrder(): void {
+    const crossed = TestWorkerResultTests.cross(new TestMethodResult("Sample", "SampleTests", "measures", undefined, [], TestOutcome.Passed, 1, undefined,
+      undefined, new Dictionary([new KeyValuePair("ratio", "1.234"), new KeyValuePair("count", "3")])));
+
+    Assert.areEqual("ratio=1.234,count=3", [...crossed.attachments].map(t => `${t.key}=${t.value}`).join());
+  }
+
+  @TestMethod
+  public rejectsAnAttachmentNamedTwice(): void {
+    const data = new TestWorkerResult(new TestMethodResult("Sample", "SampleTests", "passes", undefined, [], TestOutcome.Passed, 0, undefined,
+      undefined)).toData();
+    const attachments = [{ key: "ratio", value: "1" }, { key: "ratio", value: "2" }];
+
+    Assert.throws(() => TestWorkerResult.from({ ...data, attachments }), TestingException);
+  }
+
+  @TestMethod
+  public rejectsAnAttachmentThatIsNotText(): void {
+    const data = new TestWorkerResult(new TestMethodResult("Sample", "SampleTests", "passes", undefined, [], TestOutcome.Passed, 0, undefined,
+      undefined)).toData();
+
+    Assert.throws(() => TestWorkerResult.from({ ...data, attachments: [{ key: "ratio", value: 1 }] }), TestingException);
   }
 
   @TestMethod

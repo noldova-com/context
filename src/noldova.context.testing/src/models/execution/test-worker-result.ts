@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { Dictionary, KeyValuePair } from "@noldova/context.collections";
 import { nameof } from "@noldova/context.core";
 
 import { TestOutcome } from "../../enums/test-outcome.js";
@@ -39,7 +40,8 @@ export class TestWorkerResult {
       outcome,
       record.duration(nameof<TestMethodResult>(t => t.durationMilliseconds)),
       TestWorkerValue.from(record.value(nameof<TestMethodResult>(t => t.failure))).toValue(),
-      record.optionalString(nameof<TestMethodResult>(t => t.skipReason))));
+      record.optionalString(nameof<TestMethodResult>(t => t.skipReason)),
+      TestWorkerResult.toAttachments(record.records(nameof<TestMethodResult>(t => t.attachments)))));
   }
 
   public toData(): object {
@@ -53,7 +55,17 @@ export class TestWorkerResult {
       durationMilliseconds: this.methodResult.durationMilliseconds,
       failure: TestWorkerValue.of(this.methodResult.failure).toData(),
       skipReason: this.methodResult.skipReason,
+      attachments: [...this.methodResult.attachments].map(t => ({ key: t.key, value: t.value })),
     };
+  }
+
+  private static toAttachments(records: readonly TestWorkerRecord[]): Dictionary<string, string> {
+    const attachments = new Dictionary<string, string>();
+    for (const record of records)
+      if (!attachments.tryAdd(record.string(nameof<KeyValuePair<string, string>>(t => t.key)), record.string(nameof<KeyValuePair<string, string>>(t => t.value))))
+        throw new TestingException(Resources.testWorkerDataInvalid);
+
+    return attachments;
   }
 
   private static isOutcome(value: string): value is TestOutcome {

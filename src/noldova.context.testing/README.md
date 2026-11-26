@@ -46,6 +46,15 @@ needs a time limit of its own, longer or shorter than the run's, carries
 `@Timeout(milliseconds)` beside `@TestMethod`; every other test keeps the run's
 limit.
 
+A test can attach a measured value to its result, as text:
+
+```ts
+TestContext.current.addAttachment("ratio", ratio.toFixed(3));
+```
+
+The console shows it as `ratio: 1.234` under the test's line, and the results
+file `CONTEXT_TEST_RESULTS_FILE` names carries it in the test's `attachments`.
+
 ### Run tests
 
 Compile the tests, then run their compiled folder:
