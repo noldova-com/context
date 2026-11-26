@@ -6,6 +6,19 @@ Each version's section is written by the pull request that changes the version, 
 Every package moves to each version together, as [VERSIONING-AND-COMPATIBILITY.md](documents/VERSIONING-AND-COMPATIBILITY.md) says.
 Versions before 0.0.6 are described in their version pull requests.
 
+## 0.0.18
+
+The Windows process lister starts without loading a PowerShell module, strings join, lists run an action on each item and read their last element by index, and a cancellation can come after a delay.
+
+- `@noldova/context.processes`: the Windows process lister no longer loads a PowerShell module when it starts, which took about 22 s on Windows arm64; it now works the same with module loading turned off, and still reports the machine's refusal in constrained language (#100, for #99).
+- `@noldova/context.core`: `String.join(separator, values)` puts the separator between the values of any iterable (#98, for #94).
+- `@noldova/context.collections`:
+  - `List.forEach(action)` runs the action on each item in order, and throws `InvalidOperationException` when the action changes the list (#98, for #96);
+  - `List`, `ChunkedList` and `ReadOnlyList` answer `last`, `lastOrDefault`, `elementAt` and `elementAtOrDefault` by index, without walking the list; with a predicate, on an empty list or for an invalid position they behave as before (#97, for #93).
+- `@noldova/context.threading`: `CancellationTokenSource.cancelAfter(milliseconds)` cancels the source once the delay passes; a later call replaces the pending delay, `cancel` and disposing the source clear it, a canceled source ignores the call, and a disposed one throws `InvalidOperationException`; a delay that isn't an integer from 0 to 2147483647 throws `ArgumentOutOfRangeException`. The source takes an optional `ITimer` in its constructor, the host's timer by default, so the package now uses the host's timer for `cancelAfter`, and a pending delay keeps the process running until it fires or is cleared (#98, for #95).
+- No other package's source changes.
+- Moving from 0.0.17: nothing in a caller's code changes.
+
 ## 0.0.17
 
 A test can attach measured values to its result, and writing to the console no longer fails a test run's leak check.
