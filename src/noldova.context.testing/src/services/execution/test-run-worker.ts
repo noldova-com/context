@@ -71,13 +71,13 @@ export class TestRunWorker implements ITestProgressListener {
     const discovery = new TestDiscovery();
     const discovered = await discovery.discoverAsync(this.start.testProjects, filePath => this.post(TestWorkerMessage.imported(filePath)));
     this.selected = new TestRunner(discovery, this.executor).select(discovered, this.start.filters);
+    await TestRunWorker.flushOutputAsync();
     this.port.on(Resources.messageEvent, (value: unknown) => {
       if (Object.isUndefined(value))
         this.port.close();
       else
         void this.runAsync(TestWorkerRun.from(value));
     });
-    await TestRunWorker.flushOutputAsync();
     this.baseline = process.getActiveResourcesInfo();
     this.post(TestWorkerMessage.ready(this.selected.length, TestRunWorker.countMethods(this.selected), TestRunWorker.countMethods(discovered)));
   }
