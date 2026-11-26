@@ -95,7 +95,8 @@ export class ProcessListerTests {
 
     const error = await Assert.throwsAsync(() => ProcessLister.useAsync(10_000, t => t.listAsync(), listings), ProcessesException);
 
-    Assert.areEqual(`The process lister "${process.execPath}" was not ready within 100 ms.`, error.message);
+    Assert.isTrue(error.message.startsWith(`The process lister "${process.execPath}" was not ready within its 100 ms limit; it was waited for `), error.message);
+    Assert.isTrue(/waited for \d+ ms\.$/u.test(error.message), error.message);
     Assert.areEqual(handlesBefore, ProcessListerTests.countHandles(ProcessListerTests.PROCESS_HANDLE));
   }
 
