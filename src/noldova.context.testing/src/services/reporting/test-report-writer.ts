@@ -130,6 +130,7 @@ export class TestReportWriter {
 
   private static escapeControlCharacter(character: string): string {
     const escaped = JSON.stringify(character).slice(1, -1);
+
     return escaped === character ? `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}` : escaped;
   }
 
