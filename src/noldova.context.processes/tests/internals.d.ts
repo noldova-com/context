@@ -34,6 +34,15 @@ declare module "@noldova/context.processes/models/process-listing.js" {
   }
 }
 
+declare module "@noldova/context.processes/resources.js" {
+  import type { IReadOnlyDictionary } from "@noldova/context.collections";
+  import type { ProcessListing } from "@noldova/context.processes/models/process-listing.js";
+
+  export class Resources {
+    public static readonly listings: IReadOnlyDictionary<string, ProcessListing>;
+  }
+}
+
 declare module "@noldova/context.processes/models/process-entry.js" {
   import type { ProcessIdentity } from "@noldova/context.processes";
 

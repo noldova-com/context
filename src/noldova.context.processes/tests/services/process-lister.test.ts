@@ -15,6 +15,7 @@ import { Dictionary, type IReadOnlyDictionary, KeyValuePair } from "@noldova/con
 import { ProcessesException } from "@noldova/context.processes";
 import { ProcessListing } from "@noldova/context.processes/models/process-listing.js";
 import { ProcessSignals } from "@noldova/context.processes/models/process-signals.js";
+import { Resources } from "@noldova/context.processes/resources.js";
 import { ProcessLister } from "@noldova/context.processes/services/process-lister.js";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
@@ -28,6 +29,9 @@ export class ProcessListerTests {
   private static readonly ANSWERING_SCRIPT: string = "let answers = 0; console.log(\"end\"); require(\"node:readline\").createInterface({ input: process.stdin })" +
     ".on(\"line\", () => { answers++; console.log(process.ppid + \" 1 0 R \" + answers); console.log(\"end\"); });";
   private static readonly REFUSAL: string = "Cannot create type. Only core types are supported in this language mode.";
+  private static readonly WINDOWS_PLATFORM: string = "win32";
+  private static readonly NO_MODULE_LOADING: string = "$PSModuleAutoLoadingPreference = 'None'\n";
+  private static readonly CONSTRAINED_LANGUAGE: string = "$ExecutionContext.SessionState.LanguageMode = 'ConstrainedLanguage'\n";
 
   @TestMethod
   public async listsAgainWhenAListingLeavesOutItsCallerAsync(): Promise<void> {
@@ -151,6 +155,30 @@ export class ProcessListerTests {
     }
   }
 
+  @TestMethod
+  public async listsOnWindowsWithoutLoadingAModuleAsync(): Promise<void> {
+    if (process.platform !== ProcessListerTests.WINDOWS_PLATFORM)
+      return;
+
+    const listings = ProcessListerTests.windowsListings(ProcessListerTests.NO_MODULE_LOADING);
+
+    const entries = await ProcessLister.useAsync(10_000, t => t.listAsync(), listings);
+
+    Assert.isTrue(entries.any(t => t.processId === process.pid));
+  }
+
+  @TestMethod
+  public async refusesOnWindowsInConstrainedLanguageWithoutLoadingAModuleAsync(): Promise<void> {
+    if (process.platform !== ProcessListerTests.WINDOWS_PLATFORM)
+      return;
+
+    const listings = ProcessListerTests.windowsListings(ProcessListerTests.CONSTRAINED_LANGUAGE + ProcessListerTests.NO_MODULE_LOADING);
+
+    const error = await Assert.throwsAsync(() => ProcessLister.useAsync(10_000, t => t.listAsync(), listings), ProcessesException);
+
+    Assert.areEqual(`The process lister "powershell.exe" could not set up its listing, as the machine refused it: ${ProcessListerTests.REFUSAL}`, error.message);
+  }
+
   private static countHandles(type: string): number {
     return process.getActiveResourcesInfo().filter(t => t === type).length;
   }
@@ -158,6 +186,13 @@ export class ProcessListerTests {
   private static answering(completeFrom: number): IReadOnlyDictionary<string, ProcessListing> {
     return ProcessListerTests.fakeListings("let answers = 0; console.log(\"end\"); require(\"node:readline\").createInterface({ input: process.stdin }).on(\"line\", () => { answers++; " +
       `if (answers >= ${completeFrom}) console.log(process.ppid + " 1 0 R " + answers); console.log("end"); });`, ProcessListerTests.READY_MILLISECONDS);
+  }
+
+  private static windowsListings(prefix: string): IReadOnlyDictionary<string, ProcessListing> {
+    const listing = Resources.listings.get(ProcessListerTests.WINDOWS_PLATFORM);
+
+    return new Dictionary([new KeyValuePair(ProcessListerTests.WINDOWS_PLATFORM, new ProcessListing(listing.file, listing.arguments, listing.scriptFileName,
+      prefix + listing.script, listing.signals, listing.freezeRounds, listing.readyMilliseconds))]);
   }
 
   private static fakeListings(script: string, readyMilliseconds: number): IReadOnlyDictionary<string, ProcessListing> {
