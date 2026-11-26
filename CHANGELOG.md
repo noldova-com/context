@@ -11,9 +11,9 @@ Versions before 0.0.6 are described in their version pull requests.
 CONTEXT gets a package that ends a process tree and the `ctx` command host, and its test runner, PostgreSQL provider, JSON, Text and SQLite packages get fixes.
 
 - `@noldova/context.processes` (new):
-  - `ProcessTree.endAsync(root, options?)` ends a process and every process it started, and `ProcessTree.endDescendantsAsync(root, options?)` ends every process a root started but leaves the root running, on Linux, macOS and Windows (#240, #12);
-  - each returns the identities it ended as an `IReadOnlyList<ProcessIdentity>` once none of them runs, or throws `ProcessTreeEndException`, whose `survivors` lists those still running, when its limit passes (#240, #51);
-  - `ProcessIdentity` is a process id with its start time, and `ProcessIdentity.readAsync(processId)` reads a running process's (#240);
+  - `ProcessTree.endAsync(root, options?)` ends a process and every process it started, and `ProcessTree.endDescendantsAsync(root, options?)` ends every process a root started but leaves the root running, on Linux, macOS and Windows (#12);
+  - each returns the identities it ended as an `IReadOnlyList<ProcessIdentity>` once none of them runs, or throws `ProcessTreeEndException`, whose `survivors` lists those still running, when its limit passes (#51);
+  - `ProcessIdentity` is a process id with its start time, and `ProcessIdentity.readAsync(processId)` reads a running process's;
   - a process listing line it can't read fails with `ProcessesException` naming the line (#51);
   - it takes `@noldova/context.collections` as a peer (#51).
 - `@noldova/context` (new): the `ctx` command host (#40, #53).
@@ -25,21 +25,21 @@ CONTEXT gets a package that ends a process tree and the `ctx` command host, and 
 - `@noldova/context.testing`:
   - the run ends the processes a stopped test left through `@noldova/context.processes`, which it takes as a peer, and writes how many it ended with each one's id, as `Processes the run ended that were still running under it: 1, process 4242.`; when it can't list or end them, it writes `The run could not end the processes still running under it.` with the cause and ends its own process, as before (#12);
   - on Windows the run lists processes through `powershell.exe`, so it no longer needs Windows Script Host (#12);
-  - a failed test whose error isn't an `AssertFailedException` shows the error's stack frames and each `cause` in turn with its own frames (#238);
-  - discovery fails on a base class's marked members, which never ran, and on a data-less test method with default or rest parameters, and a throw from work a test left fails the run naming the test (#225);
-  - a test's promise that rejects unhandled after the test ended fails the command-line run at the end of whichever class is running, a later class included (#211);
+  - a failed test whose error isn't an `AssertFailedException` shows the error's stack frames and each `cause` in turn with its own frames;
+  - discovery fails on a base class's marked members, which never ran, and on a data-less test method with default or rest parameters, and a throw from work a test left fails the run naming the test;
+  - a test's promise that rejects unhandled after the test ended fails the command-line run at the end of whichever class is running, a later class included;
   - when the run's listing of the processes a stopped test left leaves out the run's own process, the run fails with a `TestingException` naming its process id (#12).
 - `@noldova/context.data.sql.postgresql`:
-  - the default `sslmode` is `prefer` in place of `disable` (#214);
-  - bytes after the startup's last message reach the session; an array deeper than 6 dimensions fails, read with `MalformedMessageException` and sent with `DataException`, so a cyclic array parameter no longer recurses forever; and an answer to the SSL request other than exactly `S` or `N` fails with `MalformedMessageException` (#214);
-  - a callback that throws fails the operation it belongs to, and a date or time that isn't ISO fails with a `DataException` in place of being read by `new Date(text)` (#220);
-  - a lease's `closed` resolves once its released connection is back, in place of staying pending (#224);
-  - `PostgreSQLClientException`, extending `DataException`, is the base of the package's own exceptions; `PostgreSQLException` stays the server's error (#228);
-  - `Backend.readRowDescription` and `Backend.readDataRow`, which nothing called, are removed (#214), and per-row work is faster with the same behavior (#217).
-- `@noldova/context.json`: a number too large to be finite and an integer outside the safe range fail with their own messages, and a path key that isn't a plain name is quoted, as `$["a.b"]` (#221).
-- `@noldova/context.text`: a second loaded copy fails with an `Error` saying two copies are loaded (#221).
-- `@noldova/context.data.sql.sqlite`: `prepare` refuses text holding more than one statement, which `node:sqlite` would run only the first of (#221).
-- No other package's behavior changes; `@noldova/context.collections`, `diagnostics` and `exceptions` get import lines in their declaration examples (#221), and a caught failure is named `exception` throughout the source and the declaration examples (#39).
+  - the default `sslmode` is `prefer` in place of `disable`;
+  - bytes after the startup's last message reach the session; an array deeper than 6 dimensions fails, read with `MalformedMessageException` and sent with `DataException`, so a cyclic array parameter no longer recurses forever; and an answer to the SSL request other than exactly `S` or `N` fails with `MalformedMessageException`;
+  - a callback that throws fails the operation it belongs to, and a date or time that isn't ISO fails with a `DataException` in place of being read by `new Date(text)`;
+  - a lease's `closed` resolves once its released connection is back, in place of staying pending;
+  - `PostgreSQLClientException`, extending `DataException`, is the base of the package's own exceptions; `PostgreSQLException` stays the server's error;
+  - `Backend.readRowDescription` and `Backend.readDataRow`, which nothing called, are removed, and per-row work is faster with the same behavior.
+- `@noldova/context.json`: a number too large to be finite and an integer outside the safe range fail with their own messages, and a path key that isn't a plain name is quoted, as `$["a.b"]`.
+- `@noldova/context.text`: a second loaded copy fails with an `Error` saying two copies are loaded.
+- `@noldova/context.data.sql.sqlite`: `prepare` refuses text holding more than one statement, which `node:sqlite` would run only the first of.
+- No other package's behavior changes; `@noldova/context.collections`, `diagnostics` and `exceptions` get import lines in their declaration examples, and a caught failure is named `exception` throughout the source and the declaration examples (#39).
 - The repository's scripts, which other repositories copy: `scripts/suite-script.ts` starts PostgreSQL for the tests and adds the `scripts` test project only when `scripts/config.ts` sets `START_POSTGRESQL` and `TEST_SCRIPTS` to true, and a `config.ts` that leaves one out turns it off (#49).
 - Moving from 0.0.12:
   - install `@noldova/context.processes` beside `@noldova/context.testing`, since testing now takes it as a peer, and `@noldova/context.collections` beside processes; npm 7 and later installs both by itself;
