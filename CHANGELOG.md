@@ -8,14 +8,27 @@ Versions before 0.0.6 are described in their version pull requests.
 
 ## 0.0.13
 
-CONTEXT gets a package that ends a process tree, and its test runner, PostgreSQL provider, JSON, Text and SQLite packages get fixes.
+CONTEXT gets a package that ends a process tree and the `ctx` command host, and its test runner, PostgreSQL provider, JSON, Text and SQLite packages get fixes.
 
-- `@noldova/context.processes` (new): `ProcessTree.endAsync(root, options?)` ends a process and every process it started, on Linux, macOS and Windows, and returns the identities it ended once none of them runs, or throws `ProcessTreeEndException` naming the survivors when its limit passes; `ProcessIdentity` is a process id with its start time, and `ProcessIdentity.readAsync(processId)` reads a running process's (#240).
+- `@noldova/context.processes` (new):
+  - `ProcessTree.endAsync(root, options?)` ends a process and every process it started, and `ProcessTree.endDescendantsAsync(root, options?)` ends every process a root started but leaves the root running, on Linux, macOS and Windows (#240, #12);
+  - each returns the identities it ended as an `IReadOnlyList<ProcessIdentity>` once none of them runs, or throws `ProcessTreeEndException`, whose `survivors` lists those still running, when its limit passes (#240, #51);
+  - `ProcessIdentity` is a process id with its start time, and `ProcessIdentity.readAsync(processId)` reads a running process's (#240);
+  - a process listing line it can't read fails with `ProcessesException` naming the line (#51);
+  - it takes `@noldova/context.collections` as a peer (#51).
+- `@noldova/context` (new): the `ctx` command host (#40, #53).
+  - `ctx <command> [arguments]` reads the folder's one `.ctxp`, loads the project's `sdk`, `noldova.context.sdk` when left out, and its `tools`, and runs the provider's command of that name with the project file's path and the arguments after the name, unchanged; a provider's command is an exported class that extends `Command`.
+  - `ctx`, `-h` or `--help` lists the project's commands, and `-v` or `--version` prints `Context <version>`.
+  - A missing or failing provider, two providers with the same command, an unknown command and an invalid project file each fail with their own message and exit code 1.
+  - Installed globally, `ctx` hands the command to the copy installed for the folder's project, when there is one.
+  - It has no command of its own: `build`, `run`, `serve` and `watch` will come from the SDK.
 - `@noldova/context.testing`:
+  - the run ends the processes a stopped test left through `@noldova/context.processes`, which it takes as a peer, and writes how many it ended with each one's id, as `Processes the run ended that were still running under it: 1, process 4242.`; when it can't list or end them, it writes `The run could not end the processes still running under it.` with the cause and ends its own process, as before (#12);
+  - on Windows the run lists processes through `powershell.exe`, so it no longer needs Windows Script Host (#12);
   - a failed test whose error isn't an `AssertFailedException` shows the error's stack frames and each `cause` in turn with its own frames (#238);
   - discovery fails on a base class's marked members, which never ran, and on a data-less test method with default or rest parameters, and a throw from work a test left fails the run naming the test (#225);
   - a test's promise that rejects unhandled after the test ended fails the command-line run at the end of whichever class is running, a later class included (#211);
-  - when the run's listing of the processes a stopped test left leaves out the run's own process, the run lists again, three times at most within 65 s, then fails naming each listing; the line it writes says how it listed (#241, #239).
+  - when the run's listing of the processes a stopped test left leaves out the run's own process, the run fails with a `TestingException` naming its process id (#12).
 - `@noldova/context.data.sql.postgresql`:
   - the default `sslmode` is `prefer` in place of `disable` (#214);
   - bytes after the startup's last message reach the session; an array deeper than 6 dimensions fails, read with `MalformedMessageException` and sent with `DataException`, so a cyclic array parameter no longer recurses forever; and an answer to the SSL request other than exactly `S` or `N` fails with `MalformedMessageException` (#214);
@@ -26,7 +39,13 @@ CONTEXT gets a package that ends a process tree, and its test runner, PostgreSQL
 - `@noldova/context.json`: a number too large to be finite and an integer outside the safe range fail with their own messages, and a path key that isn't a plain name is quoted, as `$["a.b"]` (#221).
 - `@noldova/context.text`: a second loaded copy fails with an `Error` saying two copies are loaded (#221).
 - `@noldova/context.data.sql.sqlite`: `prepare` refuses text holding more than one statement, which `node:sqlite` would run only the first of (#221).
-- No other package's behavior changes; `@noldova/context.collections`, `diagnostics` and `exceptions` get import lines in their declaration examples (#221).
+- No other package's behavior changes; `@noldova/context.collections`, `diagnostics` and `exceptions` get import lines in their declaration examples (#221), and a caught failure is named `exception` throughout the source and the declaration examples (#39).
+- The repository's scripts, which other repositories copy: `scripts/suite-script.ts` starts PostgreSQL for the tests and adds the `scripts` test project only when `scripts/config.ts` sets `START_POSTGRESQL` and `TEST_SCRIPTS` to true, and a `config.ts` that leaves one out turns it off (#49).
+- Moving from 0.0.12:
+  - install `@noldova/context.processes` beside `@noldova/context.testing`, since testing now takes it as a peer, and `@noldova/context.collections` beside processes; npm 7 and later installs both by itself;
+  - a PostgreSQL connection that relied on the `disable` default now asks for SSL first and falls back without it; set `sslmode=disable` to keep it unencrypted;
+  - a repository that copies the scripts sets `START_POSTGRESQL` and `TEST_SCRIPTS` in its `scripts/config.ts` to keep starting PostgreSQL and testing its scripts;
+  - nothing else changes in a caller's code.
 
 ## 0.0.12
 
