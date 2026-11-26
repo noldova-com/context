@@ -6,6 +6,21 @@ Each version's section is written by the pull request that changes the version, 
 Every package moves to each version together, as [VERSIONING-AND-COMPATIBILITY.md](documents/VERSIONING-AND-COMPATIBILITY.md) says.
 Versions before 0.0.6 are described in their version pull requests.
 
+## 0.0.15
+
+CONTEXT's processes package lists the machine's processes, and its collections get binary searches.
+
+- `@noldova/context.processes`:
+  - `Processes.listAsync()` lists the running processes as an `IReadOnlyList<ProcessEntry>`, through the process lister the package keeps, on Linux, macOS and Windows (#71);
+  - `ProcessEntry` is public: a process's `processId`, `parentId`, `groupId` (`null` on Windows, which has no groups), `isZombie` and `startTime`, with its `identity` for `ProcessTree.endAsync`; its constructor takes each field, so a test can stand an entry in for a listed process, and throws `ArgumentOutOfRangeException` for an id or a start time that isn't an integer from 0 (#71);
+  - the process lister's start limit is 45 seconds, down from 60, and a lister that isn't ready in time fails with a message giving the limit and how long it was waited for (#69).
+- `@noldova/context.collections`:
+  - `BinarySearchService.search(items, item, comparison?, index?, count?)` searches a sorted array or `IReadOnlyList` and returns the item's index, or on a miss the complement of the index where it would be inserted; `lowerBound`, `upperBound`, `lowerBoundBy` and `upperBoundBy` return the first position not before, or after, a key, the `By` forms comparing a key selected from each item; a range outside the items throws `ArgumentOutOfRangeException`, and a hole in an array `ArgumentException` (#73);
+  - `List.binarySearch(item, comparison?)` and `ChunkedList.binarySearch(item, comparison?)` search the list (#73);
+  - `Enumerable` is no longer abstract: a subclass may pass its protected constructor a factory that starts each enumeration, rather than override `[Symbol.iterator]` (#73).
+- No other package's source changes.
+- Moving from 0.0.14: nothing in a caller's code changes; a subclass of `Enumerable` that overrides `[Symbol.iterator]` works as before.
+
 ## 0.0.14
 
 CONTEXT's collections get a list held in chunks that sums its elements' weights.
