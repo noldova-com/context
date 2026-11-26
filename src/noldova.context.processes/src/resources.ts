@@ -15,10 +15,11 @@ export class Resources {
   public static readonly endLine: string = "end";
   public static readonly refusedPrefix: string = "refused ";
   public static readonly lineSeparator: string = "\n";
-  public static readonly entryPattern: RegExp = /^(?<processId>\d+)\s+(?<parentId>\d+)\s+(?<groupId>\d+)\s+(?<state>\S+)\s+(?<startTime>\d+)$/u;
+  public static readonly entryPattern: RegExp = /^(?<processId>\d+)\s+(?<parentId>\d+)\s+(?<groupId>\d+|-)\s+(?<state>\S+)\s+(?<startTime>\d+)$/u;
   public static readonly processIdGroup: string = "processId";
   public static readonly parentIdGroup: string = "parentId";
   public static readonly groupIdGroup: string = "groupId";
+  public static readonly noGroup: string = "-";
   public static readonly stateGroup: string = "state";
   public static readonly startTimeGroup: string = "startTime";
   public static readonly zombieState: string = "Z";
@@ -38,6 +39,8 @@ export class Resources {
   public static readonly listingTries: number = 3;
   public static readonly processIdParameterName: string = "processId";
   public static readonly startTimeParameterName: string = "startTime";
+  public static readonly parentIdParameterName: string = "parentId";
+  public static readonly groupIdParameterName: string = "groupId";
   public static readonly graceMillisecondsParameterName: string = "graceMilliseconds";
   public static readonly limitMillisecondsParameterName: string = "limitMilliseconds";
   public static readonly listingEnvironment: Readonly<Record<string, string>> = { LC_ALL: "C", TZ: "UTC0" };
@@ -83,7 +86,7 @@ export class Resources {
     "      if ([IntPtr]::Size -eq 8) { $id = [BitConverter]::ToInt64($bytes, $offset + 80); $parent = [BitConverter]::ToInt64($bytes, $offset + 88) }",
     "      else { $id = [BitConverter]::ToInt32($bytes, $offset + 68); $parent = [BitConverter]::ToInt32($bytes, $offset + 72) }",
     "      $start = if ($created -eq 0) { 0 } else { [Math]::DivRem($created - 116444736000000000, [long] 10000, [ref] $remainder) }",
-    "      $null = $lines.Append($id).Append(' ').Append($parent).Append(' 0 R ').Append($start).Append(\"`n\")",
+    "      $null = $lines.Append($id).Append(' ').Append($parent).Append(' - R ').Append($start).Append(\"`n\")",
     "      $next = [BitConverter]::ToInt32($bytes, $offset)",
     "      if ($next -eq 0) { return $lines.ToString() }",
     "    }",

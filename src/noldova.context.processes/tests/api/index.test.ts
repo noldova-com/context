@@ -13,6 +13,6 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 export class ProcessesApiTests {
   @TestMethod
   public exportsTheCompleteCatalog(): void {
-    Assert.areEqual("ProcessIdentity,ProcessTree,ProcessTreeEndException,ProcessTreeEndOptions,ProcessesException", Object.keys(api).sort().join(","));
+    Assert.areEqual("ProcessEntry,ProcessIdentity,ProcessTree,ProcessTreeEndException,ProcessTreeEndOptions,Processes,ProcessesException", Object.keys(api).sort().join(","));
   }
 }

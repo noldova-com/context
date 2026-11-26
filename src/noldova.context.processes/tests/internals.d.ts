@@ -40,10 +40,12 @@ declare module "@noldova/context.processes/models/process-entry.js" {
   export class ProcessEntry {
     public readonly processId: number;
     public readonly parentId: number;
-    public readonly groupId: number;
+    public readonly groupId: number | null;
     public readonly isZombie: boolean;
     public readonly startTime: number;
     public readonly identity: ProcessIdentity;
+
+    public constructor(processId: number, parentId: number, groupId: number | null, isZombie: boolean, startTime: number);
 
     public static parse(line: string): ProcessEntry;
   }

@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { ArgumentOutOfRangeException } from "@noldova/context.exceptions";
 import { ProcessesException } from "@noldova/context.processes";
 import { ProcessEntry } from "@noldova/context.processes/models/process-entry.js";
 import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
@@ -28,6 +29,37 @@ export class ProcessEntryTests {
   @TestMethod
   public readsAZombieByItsState(): void {
     Assert.isTrue(ProcessEntry.parse("200 100 50 Z+ 10").isZombie);
+  }
+
+  @TestMethod
+  public readsNoGroupFromADash(): void {
+    Assert.isNull(ProcessEntry.parse("200 100 - R 10").groupId);
+  }
+
+  @TestMethod
+  public keepsEachFieldItIsGiven(): void {
+    const entry = new ProcessEntry(200, 100, null, true, 10);
+
+    Assert.areEqual(200, entry.processId);
+    Assert.areEqual(100, entry.parentId);
+    Assert.isNull(entry.groupId);
+    Assert.isTrue(entry.isZombie);
+    Assert.areEqual(10, entry.startTime);
+  }
+
+  @TestData(-1, 0, 0, 0, "processId")
+  @TestData(1.5, 0, 0, 0, "processId")
+  @TestData(0, -1, 0, 0, "parentId")
+  @TestData(0, 0.5, 0, 0, "parentId")
+  @TestData(0, 0, -1, 0, "groupId")
+  @TestData(0, 0, 0.5, 0, "groupId")
+  @TestData(0, 0, 0, -1, "startTime")
+  @TestData(0, 0, 0, 0.5, "startTime")
+  @TestMethod
+  public refusesAnIdOrAStartTimeOutOfRange(processId: number, parentId: number, groupId: number, startTime: number, parameterName: string): void {
+    const error = Assert.throws(() => new ProcessEntry(processId, parentId, groupId, false, startTime), ArgumentOutOfRangeException);
+
+    Assert.areEqual(parameterName, error.parameterName);
   }
 
   @TestData("")

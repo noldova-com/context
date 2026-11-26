@@ -98,6 +98,59 @@ export declare class ProcessIdentity {
 }
 
 /**
+ * A process as `Processes.listAsync` lists it.
+ *
+ * @remarks
+ * The start time is in the units of `ProcessIdentity.startTime`, so `identity` can be passed to
+ * `ProcessTree.endAsync`. Construct an entry to stand in for a listed process, such as in a test.
+ */
+export declare class ProcessEntry {
+  /**
+   * The process id.
+   */
+  public readonly processId: number;
+
+  /**
+   * The id of the process's parent, or 0 when it has none.
+   */
+  public readonly parentId: number;
+
+  /**
+   * The id of the process's group on Linux and macOS, or `null` on Windows, which has no groups.
+   */
+  public readonly groupId: number | null;
+
+  /**
+   * Whether the process has ended and waits for its parent to collect it.
+   */
+  public readonly isZombie: boolean;
+
+  /**
+   * When the process started, in milliseconds since the epoch.
+   */
+  public readonly startTime: number;
+
+  /**
+   * Initializes the entry.
+   *
+   * @param processId The process id, an integer from 0.
+   * @param parentId The parent's id, an integer from 0.
+   * @param groupId The group's id, an integer from 0, or `null` on Windows.
+   * @param isZombie Whether the process has ended and waits for its parent to collect it.
+   * @param startTime When the process started, in milliseconds since the epoch, an integer from 0.
+   * @throws ArgumentOutOfRangeException When an id or the start time is not an integer from 0.
+   */
+  public constructor(processId: number, parentId: number, groupId: number | null, isZombie: boolean, startTime: number);
+
+  /**
+   * The process's identity, for `ProcessTree.endAsync`.
+   *
+   * @throws ArgumentOutOfRangeException When the process id is 0, which no listed process has.
+   */
+  public get identity(): ProcessIdentity;
+}
+
+/**
  * How `ProcessTree.endAsync` and `ProcessTree.endDescendantsAsync` end a tree.
  */
 export declare class ProcessTreeEndOptions {
@@ -211,4 +264,33 @@ export declare class ProcessTree {
    * ```
    */
   public static endDescendantsAsync(root: ProcessIdentity, options?: ProcessTreeEndOptions): Promise<IReadOnlyList<ProcessIdentity>>;
+}
+
+/**
+ * Lists the machine's processes.
+ *
+ * @remarks
+ * The listing goes through the same kept lister process as `ProcessTree`, so a call after the
+ * first is cheap and can be repeated to poll. It is read within 10 seconds once the lister is
+ * ready. Id 0, which Windows and macOS give to the system's idle or kernel task, isn't listed.
+ */
+export declare class Processes {
+  /**
+   * Lists every process on the machine, other than the lister itself.
+   *
+   * @returns The processes, in the order the system reports them.
+   * @throws ProcessesException When processes can't be listed on this system, the process lister
+   * is not ready within its limit, ends before it answers, or answers a line that is not a
+   * process.
+   * @example
+   * ```ts
+   * import { Processes, ProcessTree } from "@noldova/context.processes";
+   *
+   * const processes = await Processes.listAsync();
+   * const children = processes.where(t => t.parentId === process.pid && !t.isZombie);
+   * for (const child of children)
+   *   await ProcessTree.endAsync(child.identity);
+   * ```
+   */
+  public static listAsync(): Promise<IReadOnlyList<ProcessEntry>>;
 }
