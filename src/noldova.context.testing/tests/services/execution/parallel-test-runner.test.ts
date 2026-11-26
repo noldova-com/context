@@ -127,6 +127,13 @@ export class ParallelTestRunnerTests {
   }
 
   @TestMethod
+  public async failsTheRunWhenAClassWhoseModuleWritesLeavesAPortOpenAsync(): Promise<void> {
+    const error = await ParallelTestRunnerTests.failAsync(["leaking-port-fixture"], () => undefined);
+
+    Assert.isTrue(error.message.includes("LeakingPortFixtureTests left MessagePort open after its tests finished"), error.message);
+  }
+
+  @TestMethod
   public async passesAClassThatWritesToItsOutputAsync(): Promise<void> {
     const project = await FixtureTestProject.createAsync(["writing-fixture"]);
     try {
