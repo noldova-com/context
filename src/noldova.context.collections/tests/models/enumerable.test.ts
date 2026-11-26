@@ -12,6 +12,8 @@ import { ArgumentOutOfRangeException, InvalidOperationException } from "@noldova
 import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
 import { CaseInsensitiveComparer } from "../fixtures/case-insensitive-comparer.fixture.js";
+import { Countdown } from "../fixtures/countdown.fixture.js";
+import { NoItems } from "../fixtures/no-items.fixture.js";
 import { TrackedSequence } from "../fixtures/tracked-sequence.fixture.js";
 
 @TestClass
@@ -27,6 +29,19 @@ export class EnumerableTests {
 
     Assert.areEqual("[1,2,3]", JSON.stringify(query.toArray()));
     Assert.areEqual("[1,2,3]", JSON.stringify(query.toArray()));
+  }
+
+  @TestMethod
+  public aSubclassEnumeratesItsFactoryEachTime(): void {
+    const countdown = new Countdown(3);
+
+    Assert.areEqual("[3,2,1]", JSON.stringify(countdown.toArray()));
+    Assert.areEqual("[2,1]", JSON.stringify(countdown.skip(1).toArray()));
+  }
+
+  @TestMethod
+  public aSubclassWithoutAFactoryHasNoItems(): void {
+    Assert.areEqual("[]", JSON.stringify(new NoItems().toArray()));
   }
 
   @TestMethod

@@ -4,7 +4,9 @@ Collections for CONTEXT libraries and apps, with queries over them:
 `List`, `Dictionary`, `HashSet`, `Queue` and `Stack`, each an `Enumerable` with
 the query operators; `ChunkedList`, a list held in chunks that sums its
 elements' weights; read-only views; equality and ordering comparers; and
-`BinarySearchService`, which finds positions in ascending numeric arrays.
+`BinarySearchService`, which finds an item's position and the lower and upper
+bounds of a key in sorted arrays and lists, as `List.binarySearch` and
+`ChunkedList.binarySearch` do for their own items.
 
 ## Install
 
