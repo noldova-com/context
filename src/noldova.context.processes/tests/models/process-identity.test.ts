@@ -21,7 +21,7 @@ export class ProcessIdentityTests {
   private static readonly DATA_EVENT: string = "data";
   private static readonly WINDOWS_PLATFORM: string = "win32";
   private static readonly SHELL: string = "/bin/sh";
-  private static readonly UNREAPED_CHILD_SCRIPT: string = "sleep 0 & echo $!; exec sleep 60";
+  private static readonly UNREAPED_CHILD_SCRIPT: string = "(until ps -o comm= -p $$ | grep -q sleep; do :; done) & echo $!; exec sleep 60";
   private static readonly ZOMBIE_LIMIT_MILLISECONDS: number = 30_000;
 
   @TestMethod
@@ -84,7 +84,7 @@ export class ProcessIdentityTests {
       const processId = Number(String(output).trim());
       const deadline = performance.now() + ProcessIdentityTests.ZOMBIE_LIMIT_MILLISECONDS;
       while (!(await Processes.listAsync()).any(t => t.processId === processId && t.isZombie))
-        Assert.isTrue(performance.now() < deadline, String(processId));
+        Assert.isTrue(performance.now() < deadline, `The unreaped child ${processId} wasn't listed as a zombie within 30 s.`);
 
       Assert.isUndefined(await ProcessIdentity.readAsync(processId));
     }
