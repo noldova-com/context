@@ -10,6 +10,8 @@ import { ChunkedList } from "@noldova/context.collections";
 import { ArgumentOutOfRangeException, InvalidOperationException } from "@noldova/context.exceptions";
 import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
+import { WalkedChunkedList } from "../fixtures/walked-chunked-list.fixture.js";
+
 @TestClass
 export class ChunkedListTests {
   @TestMethod
@@ -453,6 +455,34 @@ export class ChunkedListTests {
     }
   }
 
+  @TestMethod
+  public readsTheLastAndAnyPositionWithoutWalking(): void {
+    const list = ChunkedListTests.walkedListOf([1, 2, 3]);
+
+    Assert.areEqual(3, list.last());
+    Assert.areEqual(3, list.lastOrDefault());
+    Assert.areEqual(2, list.elementAt(1));
+    Assert.areEqual(2, list.elementAtOrDefault(1));
+    Assert.areEqual(0, list.walks);
+  }
+
+  @TestMethod
+  public keepsTheLastAndThePositionResultsAtTheEdges(): void {
+    const empty = new ChunkedList<number>(2, 0);
+    const list = ChunkedListTests.walkedListOf([1, 2, 3]);
+
+    Assert.throws(() => empty.last(), InvalidOperationException);
+    Assert.isUndefined(empty.lastOrDefault());
+    Assert.areEqual(2, list.last(t => t < 3));
+    Assert.areEqual(2, list.lastOrDefault(t => t < 3));
+    Assert.throws(() => list.elementAt(3), ArgumentOutOfRangeException);
+    Assert.throws(() => list.elementAt(-1), ArgumentOutOfRangeException);
+    Assert.throws(() => list.elementAt(1.5), ArgumentOutOfRangeException);
+    Assert.isUndefined(list.elementAtOrDefault(3));
+    Assert.isUndefined(list.elementAtOrDefault(-1));
+    Assert.isUndefined(list.elementAtOrDefault(1.5));
+  }
+
   private static numbered(length: number, chunkSize: number, weighted: boolean = true): ChunkedList<number> {
     const list = weighted ? new ChunkedList<number>(chunkSize, 0, 0, t => t) : new ChunkedList<number>(chunkSize, 0);
     list.addRange(Array.from({ length }, (_, t) => t));
@@ -465,6 +495,14 @@ export class ChunkedListTests {
     list.set(1, 2);
     list.set(6, 5);
     list.set(9, 1);
+
+    return list;
+  }
+
+  private static walkedListOf(items: readonly number[]): WalkedChunkedList<number> {
+    const list = new WalkedChunkedList<number>(2, 0);
+    for (const item of items)
+      list.add(item);
 
     return list;
   }
