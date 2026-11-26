@@ -6,6 +6,17 @@ Each version's section is written by the pull request that changes the version, 
 Every package moves to each version together, as [VERSIONING-AND-COMPATIBILITY.md](documents/VERSIONING-AND-COMPATIBILITY.md) says.
 Versions before 0.0.6 are described in their version pull requests.
 
+## 0.0.16
+
+CONTEXT gets a threading package with cancellation.
+
+- `@noldova/context.threading` (new), on the language's own built-ins only, so it runs on every host (#80):
+  - `CancellationTokenSource` cancels the `CancellationToken` it hands out; `cancel()` runs the token's callbacks, the last registered first, and when any throws, throws `CancellationCallbacksFailedException` with every error; `createLinkedTokenSource(...tokens)` makes a source that is canceled when any of the tokens is; once disposed, a source drops its callbacks, a linked one stops watching its tokens, and `cancel` throws `InvalidOperationException`;
+  - `CancellationToken` watches for the cancellation: `CancellationToken.none` is never canceled, `register(callback)` returns a `CancellationTokenRegistration` that takes the callback back, and `throwIfCancellationRequested()` throws `OperationCanceledException`, which carries the token;
+  - `ThreadingException` is the base of the package's exceptions.
+- No other package's source changes.
+- Moving from 0.0.15: nothing in a caller's code changes.
+
 ## 0.0.15
 
 CONTEXT's processes package lists the machine's processes, and its collections get binary searches.
