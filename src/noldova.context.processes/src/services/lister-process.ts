@@ -89,11 +89,12 @@ export class ListerProcess {
   }
 
   private async waitReadyAsync(): Promise<void> {
+    const started = performance.now();
     const late = Promise.withResolvers<boolean>();
     const timer = setTimeout(() => late.resolve(false), this.listing.readyMilliseconds);
     const isReady = await Promise.race([this.waitAsync().then(() => true), late.promise]).finally(() => clearTimeout(timer));
     if (!isReady)
-      throw new ProcessesException(Resources.formatListerNotReady(this.listing.file, this.listing.readyMilliseconds));
+      throw new ProcessesException(Resources.formatListerNotReady(this.listing.file, this.listing.readyMilliseconds, Math.round(performance.now() - started)));
   }
 
   private async listOnceAsync(): Promise<IReadOnlyList<ProcessEntry>> {

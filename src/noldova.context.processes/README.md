@@ -52,7 +52,7 @@ if (!Object.isUndefined(own))
 
 The processes are listed through one lister process, started on the first call
 and kept for the rest of the process's life. The limit starts once it is ready,
-so the first call in a process may first wait up to 60 seconds for it, which a
+so the first call in a process may first wait up to 45 seconds for it, which a
 fresh Windows machine can take; a lister not ready by then throws
 `ProcessesException`.
 

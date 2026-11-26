@@ -109,7 +109,7 @@ export declare class ProcessTreeEndOptions {
 
   /**
    * How long the end may take once the process lister is ready, in milliseconds; `10000` by
-   * default. The first end in a process first waits up to 60 seconds for its lister to start.
+   * default. The first end in a process first waits up to 45 seconds for its lister to start.
    */
   public readonly limitMilliseconds: number;
 
@@ -141,7 +141,7 @@ export declare class ProcessTreeEndOptions {
  * process's children.
  *
  * The processes are listed through one lister process, started on the first call and kept for
- * the rest of the process's life; it may take up to 60 seconds to start, and the call's limit
+ * the rest of the process's life; it may take up to 45 seconds to start, and the call's limit
  * starts once it is ready.
  *
  * On Linux and macOS each process is stopped with `SIGSTOP` before it is ended, and the tree is
@@ -170,7 +170,7 @@ export declare class ProcessTree {
    * @throws ProcessTreeEndException When processes of the tree are still listed when the limit
    * passes.
    * @throws ProcessesException When processes can't be listed on this system, the process lister
-   * is not ready within 60 seconds, ends before it answers, which it does when it takes 5 seconds
+   * is not ready within 45 seconds, ends before it answers, which it does when it takes 5 seconds
    * past the limit, or answers a line that is not a process.
    * @example
    * ```ts
@@ -198,7 +198,7 @@ export declare class ProcessTree {
    * @throws ProcessTreeEndException When descendants of the root are still listed when the limit
    * passes.
    * @throws ProcessesException When processes can't be listed on this system, the process lister
-   * is not ready within 60 seconds, ends before it answers, which it does when it takes 5 seconds
+   * is not ready within 45 seconds, ends before it answers, which it does when it takes 5 seconds
    * past the limit, or answers a line that is not a process.
    * @example
    * ```ts

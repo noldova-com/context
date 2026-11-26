@@ -34,7 +34,7 @@ export class Resources {
   public static readonly defaultLimitMilliseconds: number = 10_000;
   public static readonly readLimitMilliseconds: number = 10_000;
   public static readonly listerMarginMilliseconds: number = 5_000;
-  public static readonly listerReadyMilliseconds: number = 60_000;
+  public static readonly listerReadyMilliseconds: number = 45_000;
   public static readonly listingTries: number = 3;
   public static readonly processIdParameterName: string = "processId";
   public static readonly startTimeParameterName: string = "startTime";
@@ -107,8 +107,8 @@ export class Resources {
     return `The process lister "${file}" ended before it answered.`;
   }
 
-  public static formatListerNotReady(file: string, limitMilliseconds: number): string {
-    return `The process lister "${file}" was not ready within ${limitMilliseconds} ms.`;
+  public static formatListerNotReady(file: string, limitMilliseconds: number, waitedMilliseconds: number): string {
+    return `The process lister "${file}" was not ready within its ${limitMilliseconds} ms limit; it was waited for ${waitedMilliseconds} ms.`;
   }
 
   public static formatListerRefused(file: string, reason: string): string {
