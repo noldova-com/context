@@ -303,12 +303,12 @@ export class TestReportWriterTests {
   @TestMethod
   public escapesTheLineBreaksAndControlCharactersOfAnAttachment(): void {
     const result = new TestMethodResult("TestPackage", "SampleTests", "compares", undefined, [], TestOutcome.Passed, 1, undefined, undefined,
-      new Dictionary([new KeyValuePair("diff\tlines", "a\nb\u001b[31m \"c\"")]));
+      new Dictionary([new KeyValuePair("diff\tlines", "a\nb\u001b[31m \"c\" \u007f\u009b0m")]));
 
     const lines = new TestReportWriter().formatMethodLines(result, false);
 
     Assert.areEqual(2, lines.length);
-    Assert.areEqual("    diff\\tlines: a\\nb\\u001b[31m \"c\"", lines[1]);
+    Assert.areEqual("    diff\\tlines: a\\nb\\u001b[31m \"c\" \\u007f\\u009b0m", lines[1]);
   }
 
   @TestMethod

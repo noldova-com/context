@@ -79,7 +79,7 @@ export class TestContextTests {
 
   @TestMethod
   public async rejectsAValueThatIsNotTextAsync(): Promise<void> {
-    const result = await TestContextTests.executeAsync("attachesANumber");
+    const result = await TestContextTests.executeAsync("attachesItsValue", [1.234]);
 
     Assert.isInstanceOf(result.failure, ArgumentException);
     Assert.areEqual("An attachment's value must be text. (Parameter 'value')", result.failure.message);

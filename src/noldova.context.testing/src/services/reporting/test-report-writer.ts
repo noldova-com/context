@@ -19,7 +19,7 @@ import { Resources } from "../../resources.js";
 
 export class TestReportWriter {
   private static readonly LABEL_WIDTH: number = 12;
-  private static readonly CONTROL_CHARACTERS: RegExp = /[\u0000-\u001f]/gu;
+  private static readonly CONTROL_CHARACTERS: RegExp = /\p{Cc}/gu;
 
   public formatLines(result: TestRunResult, skipPassingDetails: boolean): string[] {
     const lines: string[] = [];
@@ -125,7 +125,12 @@ export class TestReportWriter {
   }
 
   private static escapeControlCharacters(text: string): string {
-    return text.replace(TestReportWriter.CONTROL_CHARACTERS, t => JSON.stringify(t).slice(1, -1));
+    return text.replace(TestReportWriter.CONTROL_CHARACTERS, t => TestReportWriter.escapeControlCharacter(t));
+  }
+
+  private static escapeControlCharacter(character: string): string {
+    const escaped = JSON.stringify(character).slice(1, -1);
+    return escaped === character ? `\\u${character.charCodeAt(0).toString(16).padStart(4, "0")}` : escaped;
   }
 
   private formatFailureLines(failure: unknown): string[] {
