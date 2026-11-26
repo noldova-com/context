@@ -13,7 +13,7 @@ import { CancellationCallbacksFailedException, CancellationTokenSource } from "@
 @TestClass
 export class CancellationTokenSourceTests {
   @TestMethod
-  public runsItsCallbacksInOrderOnce(): void {
+  public runsItsCallbacksLastRegisteredFirstOnce(): void {
     const source = new CancellationTokenSource();
     const ran: number[] = [];
     source.token.register(() => ran.push(1));
@@ -24,7 +24,7 @@ export class CancellationTokenSourceTests {
     source.cancel();
 
     Assert.isTrue(source.isCancellationRequested);
-    Assert.areEqual("1,2", ran.join(","));
+    Assert.areEqual("2,1", ran.join(","));
   }
 
   @TestMethod
@@ -56,25 +56,26 @@ export class CancellationTokenSourceTests {
   }
 
   @TestMethod
-  public throwsWhatItsOneFailingCallbackThrewAfterRunningTheRest(): void {
+  public wrapsWhatItsOneFailingCallbackThrewAfterRunningTheRest(): void {
     const source = new CancellationTokenSource();
     const failure = new RangeError("failed");
     let ran = false;
     source.token.register(() => {
-      throw failure;
-    });
-    source.token.register(() => {
       ran = true;
     });
+    source.token.register(() => {
+      throw failure;
+    });
 
-    const exception = Assert.throws(() => source.cancel(), RangeError);
+    const exception = Assert.throws(() => source.cancel(), CancellationCallbacksFailedException);
 
-    Assert.areEqual(failure, exception);
+    Assert.areEqual(1, exception.errors.length);
+    Assert.areEqual(failure, exception.errors[0]);
     Assert.isTrue(ran);
   }
 
   @TestMethod
-  public throwsEachErrorWhenSeveralCallbacksFail(): void {
+  public wrapsEachErrorInTheOrderTheCallbacksRan(): void {
     const source = new CancellationTokenSource();
     const failure = new RangeError("failed");
     source.token.register(() => {
@@ -87,8 +88,50 @@ export class CancellationTokenSourceTests {
     const exception = Assert.throws(() => source.cancel(), CancellationCallbacksFailedException);
 
     Assert.areEqual(2, exception.errors.length);
-    Assert.areEqual(failure, exception.errors[0]);
-    Assert.areEqual("text", exception.errors[1]);
+    Assert.areEqual("text", exception.errors[0]);
+    Assert.areEqual(failure, exception.errors[1]);
+  }
+
+  @TestMethod
+  public skipsACallbackThatAnEarlierOneTookBack(): void {
+    const source = new CancellationTokenSource();
+    let ran = false;
+    let tookBack = false;
+    const later = source.token.register(() => {
+      ran = true;
+    });
+    source.token.register(() => {
+      tookBack = later.unregister();
+    });
+
+    source.cancel();
+
+    Assert.isTrue(tookBack);
+    Assert.isFalse(ran);
+  }
+
+  @TestMethod
+  public skipsALinkedSourceThatAnEarlierCallbackDisposed(): void {
+    const source = new CancellationTokenSource();
+    const linked = CancellationTokenSource.createLinkedTokenSource(source.token);
+    source.token.register(() => linked[Symbol.dispose]());
+
+    Assert.doesNotThrow(() => source.cancel());
+    Assert.isFalse(linked.isCancellationRequested);
+  }
+
+  @TestMethod
+  public runsALateCallbackAtOnceWhenCanceledThenDisposed(): void {
+    const source = new CancellationTokenSource();
+    let ran = false;
+    source.cancel();
+    source[Symbol.dispose]();
+
+    source.token.register(() => {
+      ran = true;
+    });
+
+    Assert.isTrue(ran);
   }
 
   @TestMethod

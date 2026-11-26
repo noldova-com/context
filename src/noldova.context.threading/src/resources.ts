@@ -9,5 +9,5 @@
 export class Resources {
   public static readonly operationCanceled: string = "The operation was canceled.";
   public static readonly sourceDisposed: string = "The cancellation token source was disposed, so it cancels no more.";
-  public static readonly callbacksFailed: string = "More than one callback registered for the cancellation threw; their errors are in errors.";
+  public static readonly callbacksFailed: string = "A callback registered for the cancellation threw; each error is in errors.";
 }

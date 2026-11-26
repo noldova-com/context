@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "@noldova/context.core";
 import { InvalidOperationException } from "@noldova/context.exceptions";
 
 import { CancellationCallbacksFailedException } from "../exceptions/cancellation-callbacks-failed.exception.js";
@@ -43,10 +44,13 @@ export class CancellationTokenSource implements Disposable {
       return;
 
     this.isCanceled = true;
-    const callbacks = [...this.registrations.values()];
-    this.registrations.clear();
     const errors: unknown[] = [];
-    for (const callback of callbacks) {
+    for (const registration of [...this.registrations.keys()].reverse()) {
+      const callback = this.registrations.get(registration);
+      if (Object.isUndefined(callback))
+        continue;
+
+      this.registrations.delete(registration);
       try {
         callback();
       }
@@ -55,19 +59,17 @@ export class CancellationTokenSource implements Disposable {
       }
     }
 
-    if (errors.length > 1)
+    if (errors.length > 0)
       throw new CancellationCallbacksFailedException(errors);
-    if (errors.length === 1)
-      throw errors[0];
   }
 
   public register(callback: () => void): CancellationTokenRegistration {
-    if (this.isDisposed)
-      return new CancellationTokenRegistration(null);
     if (this.isCanceled) {
       callback();
       return new CancellationTokenRegistration(null);
     }
+    if (this.isDisposed)
+      return new CancellationTokenRegistration(null);
 
     const registration = new CancellationTokenRegistration(this.registrations);
     this.registrations.set(registration, callback);

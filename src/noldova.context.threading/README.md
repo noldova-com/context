@@ -42,10 +42,11 @@ catch (exception) {
 `CancellationTokenSource.createLinkedTokenSource(...tokens)` is canceled when any
 of its tokens is; dispose it to stop watching them.
 
-Callbacks run in the order they were registered. `cancel` runs every one; when
-one throws, it then throws what that one threw, and when several do,
-`CancellationCallbacksFailedException` with each error. A callback registered
-after the cancellation runs at once.
+Callbacks run the last registered first, so cleanup unwinds in reverse. `cancel`
+runs every one, and when any throws, it then throws
+`CancellationCallbacksFailedException` with every error. A callback taken back
+by one that ran before it doesn't run. A callback registered after the
+cancellation runs at once.
 
 A host API that takes an `AbortSignal` gets one from a token in one line:
 
@@ -62,7 +63,7 @@ source.token.register(() => controller.abort());
 | `CancellationToken` | Watches for cancellation; `none`, `isCancellationRequested`, `canBeCanceled`, `register`, `throwIfCancellationRequested` |
 | `CancellationTokenRegistration` | A registered callback; `unregister`, `[Symbol.dispose]` |
 | `OperationCanceledException` | An operation stopped because its cancellation was requested; `cancellationToken` |
-| `CancellationCallbacksFailedException` | More than one cancellation callback threw; `errors` |
+| `CancellationCallbacksFailedException` | A cancellation callback threw; `errors` |
 | `ThreadingException` | The base of the package's exceptions |
 
 The package uses only the language's own built-ins, so it runs on every host,

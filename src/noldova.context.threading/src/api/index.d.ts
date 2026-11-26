@@ -55,10 +55,10 @@ export declare class OperationCanceledException extends ThreadingException {
 }
 
 /**
- * Raised by `CancellationTokenSource.cancel` when more than one registered callback throws.
+ * Raised by `CancellationTokenSource.cancel` when a registered callback throws.
  *
  * @remarks
- * Every callback still runs. When only one throws, `cancel` throws what it threw instead.
+ * Every callback still runs, and every error they threw is kept, even when only one failed.
  */
 export declare class CancellationCallbacksFailedException extends ThreadingException {
   /**
@@ -149,8 +149,8 @@ export declare class CancellationToken {
    * Registers a callback that runs when the token is canceled.
    *
    * @remarks
-   * Callbacks run in the order they were registered, during `cancel`. A callback registered
-   * after the cancellation runs at once, before `register` returns.
+   * Callbacks run during `cancel`, the last registered first. A callback registered after the
+   * cancellation runs at once, before `register` returns, even once the source is disposed.
    *
    * @param callback Runs once, when the token is canceled.
    * @returns The registration, which takes the callback back.
@@ -215,17 +215,22 @@ export declare class CancellationTokenSource implements Disposable {
   public static createLinkedTokenSource(...tokens: CancellationToken[]): CancellationTokenSource;
 
   /**
-   * Cancels the token and runs its callbacks; a second call does nothing.
+   * Cancels the token and runs its callbacks, the last registered first; a second call does
+   * nothing.
+   *
+   * @remarks
+   * A callback taken back by one that ran before it doesn't run.
    *
    * @throws InvalidOperationException When the source was disposed.
-   * @throws CancellationCallbacksFailedException When more than one callback throws; when only one
-   * does, what it threw. Every callback runs either way.
+   * @throws CancellationCallbacksFailedException When a callback throws, with every error; every
+   * callback runs either way.
    */
   public cancel(): void;
 
   /**
    * Disposes the source: a linked source stops watching its tokens, registered callbacks are
-   * dropped without running, and `cancel` throws from then on.
+   * dropped without running, and `cancel` throws from then on. A canceled source stays canceled,
+   * so a callback registered later still runs at once.
    */
   public [Symbol.dispose](): void;
 }

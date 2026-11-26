@@ -17,7 +17,7 @@ export class CancellationCallbacksFailedExceptionTests {
     const exception = new CancellationCallbacksFailedException(errors);
 
     Assert.isInstanceOf(exception, ThreadingException);
-    Assert.areEqual("More than one callback registered for the cancellation threw; their errors are in errors.", exception.message);
+    Assert.areEqual("A callback registered for the cancellation threw; each error is in errors.", exception.message);
     Assert.areEqual(errors, exception.errors);
   }
 }
