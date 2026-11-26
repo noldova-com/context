@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { Dictionary, KeyValuePair } from "@noldova/context.collections";
 import {
   Assert,
   AssertFailedException,
@@ -279,6 +280,24 @@ export class TestReportWriterTests {
     Assert.areEqual(1, writer.formatMethodLines(passed, false).length);
     Assert.areEqual(0, writer.formatClassBlock("heading", [], true).length);
     Assert.areEqual("heading,", writer.formatClassBlock("heading", [], false).join());
+  }
+
+  @TestMethod
+  public formatsEachAttachmentUnderItsTestsLine(): void {
+    const writer = new TestReportWriter();
+    const attachments = new Dictionary([new KeyValuePair("ratio", "1.234"), new KeyValuePair("count", "3")]);
+    const passed = new TestMethodResult("TestPackage", "SampleTests", "passes", undefined, [], TestOutcome.Passed, 1, undefined, undefined,
+      attachments);
+    const failed = new TestMethodResult("TestPackage", "SampleTests", "fails", undefined, [], TestOutcome.Failed, 1,
+      new AssertFailedException("Too high."), undefined, attachments);
+
+    const passedLines = writer.formatMethodLines(passed, false);
+    const failedLines = writer.formatMethodLines(failed, false);
+
+    Assert.areEqual("    ratio: 1.234,    count: 3", passedLines.slice(1).join());
+    Assert.areEqual("    ratio: 1.234,    count: 3", failedLines.slice(1, 3).join());
+    Assert.isTrue(failedLines[3]?.includes("Too high.") === true);
+    Assert.areEqual(0, writer.formatMethodLines(passed, true).length);
   }
 
   @TestMethod

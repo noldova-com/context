@@ -47,6 +47,9 @@ export class Resources {
   public static readonly endingOwnProcess: string = "The stopped tests' workers still have not ended, so the run ends its own process so it cannot hang.";
   public static readonly minimumWorkerCount: number = 2;
   public static readonly testWorkerDataInvalid: string = "The test worker exchanged data that is not a test worker message.";
+  public static readonly noTestRunning: string = "No test is running here, so there is no test context.";
+  public static readonly testEnded: string = "The test already ended, so it takes no more attachments.";
+  public static readonly attachmentNameParameter: string = "name";
   public static readonly coverageOffsetBeforeFirstLine: string = "A coverage offset lies before the generated file's first line.";
   public static readonly testWorkerParentPortMissing: string = "The test worker runs only in a worker thread, which has a parent port.";
   public static readonly secondUnit: string = "s";
@@ -81,8 +84,8 @@ export class Resources {
   public static readonly timeoutVariablePattern: RegExp = /^[1-9][0-9]*$/u;
   public static readonly emptyParameterListPattern: RegExp = /^(?:\s|\/\*[\s\S]*?\*\/|\/\/[^\n]*\n)*\)/u;
   public static readonly parameterListStart: string = "(";
-  public static readonly testTimeFields: readonly string[] = ["packageName", "filePath", "className", "methodName", "testDataIndex", "outcome", "durationMilliseconds"];
-  public static readonly testTimesInvalid: string = "The test times must be a JSON array of results, each with its package, file, class and method names, an optional non-negative integer data row, an outcome, and a non-negative duration.";
+  public static readonly testTimeFields: readonly string[] = ["packageName", "filePath", "className", "methodName", "testDataIndex", "outcome", "durationMilliseconds", "attachments"];
+  public static readonly testTimesInvalid: string = "The test times must be a JSON array of results, each with its package, file, class and method names, an optional non-negative integer data row, an outcome, a non-negative duration, and optional attachments of text.";
   public static readonly budgetMillisecondsParameter: string = "budgetMilliseconds";
   public static readonly budgetInvalid: string = "The time budget must be a positive finite number of milliseconds.";
   public static readonly marginParameter: string = "margin";
@@ -208,6 +211,10 @@ export class Resources {
 
   public static outcomeCannotCarryFailure(outcome: string): string {
     return `A ${outcome} result cannot carry a failure.`;
+  }
+
+  public static attachmentDuplicated(name: string): string {
+    return `The test already has an attachment named "${name}".`;
   }
 
   public static outcomeCannotCarrySkipReason(outcome: string): string {

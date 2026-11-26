@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { Dictionary, type IReadOnlyDictionary } from "@noldova/context.collections";
 import { nameof } from "@noldova/context.core";
 import { ArgumentException, ArgumentOutOfRangeException } from "@noldova/context.exceptions";
 
@@ -22,6 +23,7 @@ export class TestMethodResult {
   public readonly durationMilliseconds: number;
   public readonly failure: unknown;
   public readonly skipReason: string | undefined;
+  public readonly attachments: IReadOnlyDictionary<string, string>;
   public readonly displayName: string;
 
   public constructor(
@@ -33,7 +35,8 @@ export class TestMethodResult {
     outcome: TestOutcome,
     durationMilliseconds: number,
     failure: unknown,
-    skipReason: string | undefined) {
+    skipReason: string | undefined,
+    attachments: IReadOnlyDictionary<string, string> = new Dictionary<string, string>()) {
     ArgumentException.throwIfNullOrWhitespace(packageName, nameof<TestMethodResult>(t => t.packageName));
     ArgumentException.throwIfNullOrWhitespace(className, nameof<TestMethodResult>(t => t.className));
     ArgumentException.throwIfNullOrWhitespace(methodName, nameof<TestMethodResult>(t => t.methodName));
@@ -72,6 +75,7 @@ export class TestMethodResult {
     this.durationMilliseconds = durationMilliseconds;
     this.failure = failure;
     this.skipReason = skipReason;
+    this.attachments = new Dictionary<string, string>(attachments).asReadOnly();
     this.displayName = Object.isUndefined(this.testDataIndex)
       ? `${this.className}.${this.methodName}`
       : `${this.className}.${this.methodName}[${this.testDataIndex}]`;

@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { Dictionary, KeyValuePair } from "@noldova/context.collections";
 import { ArgumentException } from "@noldova/context.exceptions";
 import { Assert, TestClass, TestMethod, TestMethodResult, TestOutcome } from "@noldova/context.testing";
 
@@ -16,6 +17,19 @@ export class TestMethodResultTests {
     const result = new TestMethodResult("TestPackage", "SampleTests", "behaves", undefined, [], TestOutcome.Passed, 1, undefined, undefined);
 
     Assert.areEqual("SampleTests.behaves", result.displayName);
+  }
+
+  @TestMethod
+  public keepsItsOwnCopyOfTheAttachments(): void {
+    const attachments = new Dictionary([new KeyValuePair("ratio", "1.234")]);
+    const result = new TestMethodResult("TestPackage", "SampleTests", "behaves", undefined, [], TestOutcome.Passed, 1, undefined, undefined,
+      attachments);
+    attachments.set("ratio", "2");
+    attachments.add("count", "3");
+
+    Assert.areEqual("ratio=1.234", [...result.attachments].map(t => `${t.key}=${t.value}`).join());
+    Assert.areEqual(0, new TestMethodResult("TestPackage", "SampleTests", "behaves", undefined, [], TestOutcome.Passed, 1, undefined, undefined)
+      .attachments.count());
   }
 
   @TestMethod

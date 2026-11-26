@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type { IReadOnlyDictionary } from "@noldova/context.collections";
 import "@noldova/context.core";
 import type { Exception, ExceptionOptions } from "@noldova/context.exceptions";
 import "@noldova/context.text";
@@ -476,6 +477,54 @@ export declare enum TestOutcome {
 }
 
 /**
+ * The running test's context: a test attaches named values to its own result
+ * through {@link TestContext.current}, and the run writes them to the console
+ * under the test's line and to the file `CONTEXT_TEST_RESULTS_FILE` names.
+ *
+ * @example
+ * ```ts
+ * import { Assert, TestClass, TestContext, TestMethod } from "@noldova/context.testing";
+ *
+ * @TestClass
+ * export class RatioTests {
+ *   @TestMethod
+ *   public boundsTheRatio(): void {
+ *     const ratio = 1.234;
+ *     TestContext.current.addAttachment("ratio", ratio.toFixed(3));
+ *     Assert.isTrue(ratio < 2);
+ *   }
+ * }
+ * ```
+ */
+export declare class TestContext {
+  /**
+   * The context of the test running here, followed across its awaits.
+   *
+   * @throws TestingException when no test is running here.
+   */
+  public static get current(): TestContext;
+
+  /**
+   * The values attached so far, by name, in the order they were attached.
+   */
+  public get attachments(): IReadOnlyDictionary<string, string>;
+
+  private constructor();
+
+  /**
+   * Attaches a named value to the test's result.
+   *
+   * @param name The non-whitespace name, unique within the test.
+   * @param value The value, as text.
+   * @throws ArgumentException if the name is blank or the test already has an attachment by that name.
+   * @throws InvalidOperationException if the test already ended, such as work it left running after a timeout.
+   *
+   * See {@link TestContext} for usage examples.
+   */
+  public addAttachment(name: string, value: string): void;
+}
+
+/**
  * The result snapshot of one test-method invocation. The constructor rejects
  * contradictory outcome, failure, skip, and test-data states.
  *
@@ -542,6 +591,12 @@ export declare class TestMethodResult {
   public readonly skipReason: string | undefined;
 
   /**
+   * The values the test attached through {@link TestContext}, by name; empty
+   * when it attached none.
+   */
+  public readonly attachments: IReadOnlyDictionary<string, string>;
+
+  /**
    * The `ClassName.methodName` identity, followed by `[index]` for a
    * parameterized invocation.
    */
@@ -560,6 +615,7 @@ export declare class TestMethodResult {
    * @param durationMilliseconds The non-negative finite elapsed duration for this invocation, in milliseconds.
    * @param failure The original thrown or rejected value for a failed outcome, including undefined when that was thrown. Must be undefined otherwise.
    * @param skipReason A non-whitespace reason when skipped, or undefined otherwise.
+   * @param attachments The values the test attached, by name; none by default. The result keeps its own copy.
    * @throws ArgumentException if an identity or required skip reason is blank, data identity is inconsistent, or failure/skip state contradicts the outcome.
    * @throws ArgumentOutOfRangeException if the row index is negative or fractional, or duration is negative or non-finite.
    *
@@ -574,7 +630,8 @@ export declare class TestMethodResult {
     outcome: TestOutcome,
     durationMilliseconds: number,
     failure: unknown,
-    skipReason: string | undefined);
+    skipReason: string | undefined,
+    attachments?: IReadOnlyDictionary<string, string>);
 }
 
 /**
@@ -678,8 +735,9 @@ export declare class TestSelection {
 }
 
 /**
- * One test's identity, outcome and duration, as a run writes it to the file
- * `CONTEXT_TEST_RESULTS_FILE` names, so a suite's scripts can read its times.
+ * One test's identity, outcome, duration and attachments, as a run writes it to
+ * the file `CONTEXT_TEST_RESULTS_FILE` names, so a suite's scripts can read its
+ * times and measured values.
  *
  * @example
  * ```ts
@@ -727,6 +785,12 @@ export declare class TestTimeRecord {
   public readonly durationMilliseconds: number;
 
   /**
+   * The values the test attached, by name; the file writes them as an
+   * `attachments` object of strings, and leaves it out when there are none.
+   */
+  public readonly attachments: IReadOnlyDictionary<string, string>;
+
+  /**
    * The test's file with its package, as `package/file`.
    */
   public get file(): string;
@@ -746,11 +810,12 @@ export declare class TestTimeRecord {
    * @param testDataIndex The data row's index, or undefined.
    * @param outcome The test's outcome.
    * @param durationMilliseconds How long the test ran, in milliseconds.
+   * @param attachments The values the test attached, by name; none by default. The record keeps its own copy.
    *
    * See {@link TestTimeRecord} for usage examples.
    */
   public constructor(packageName: string, filePath: string, className: string, methodName: string, testDataIndex: number | undefined,
-    outcome: TestOutcome, durationMilliseconds: number);
+    outcome: TestOutcome, durationMilliseconds: number, attachments?: IReadOnlyDictionary<string, string>);
 
   /**
    * Lists one record per test of a run's result, in the result's order.
@@ -766,7 +831,7 @@ export declare class TestTimeRecord {
    * @param text The JSON array the run wrote.
    * @returns The records, in the file's order.
    * @throws TestingException if the text is not a JSON array of records, each with its names, an optional non-negative integer data row, a known
-   *   outcome, and a non-negative finite duration.
+   *   outcome, a non-negative finite duration, and an optional `attachments` object of strings.
    */
   public static parseAll(text: string): TestTimeRecord[];
 

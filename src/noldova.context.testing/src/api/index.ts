@@ -30,6 +30,7 @@ export { MappedSourceLine } from "../models/coverage/mapped-source-line.js";
 export { DiscoveredTestClass } from "../models/discovery/discovered-test-class.js";
 export { DiscoveredTestMethod } from "../models/discovery/discovered-test-method.js";
 export { TestProject } from "../models/discovery/test-project.js";
+export { TestContext } from "../models/execution/test-context.js";
 export { TestClassResult } from "../models/results/test-class-result.js";
 export { TestMethodResult } from "../models/results/test-method-result.js";
 export { TestRunResult } from "../models/results/test-run-result.js";

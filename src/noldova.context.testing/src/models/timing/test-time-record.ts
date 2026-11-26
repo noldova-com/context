@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { Dictionary, type IReadOnlyDictionary } from "@noldova/context.collections";
 import "@noldova/context.core";
 
 import { TestOutcome } from "../../enums/test-outcome.js";
@@ -21,9 +22,10 @@ export class TestTimeRecord {
   public readonly testDataIndex: number | undefined;
   public readonly outcome: TestOutcome;
   public readonly durationMilliseconds: number;
+  public readonly attachments: IReadOnlyDictionary<string, string>;
 
   public constructor(packageName: string, filePath: string, className: string, methodName: string, testDataIndex: number | undefined,
-    outcome: TestOutcome, durationMilliseconds: number) {
+    outcome: TestOutcome, durationMilliseconds: number, attachments: IReadOnlyDictionary<string, string> = new Dictionary<string, string>()) {
     this.packageName = packageName;
     this.filePath = filePath;
     this.className = className;
@@ -31,6 +33,7 @@ export class TestTimeRecord {
     this.testDataIndex = testDataIndex;
     this.outcome = outcome;
     this.durationMilliseconds = durationMilliseconds;
+    this.attachments = new Dictionary<string, string>(attachments).asReadOnly();
   }
 
   public get file(): string {
@@ -44,7 +47,7 @@ export class TestTimeRecord {
 
   public static fromResult(result: TestRunResult): TestTimeRecord[] {
     return result.classResults.flatMap(t => t.methodResults.map(u => new TestTimeRecord(
-      u.packageName, t.filePath, u.className, u.methodName, u.testDataIndex, u.outcome, u.durationMilliseconds)));
+      u.packageName, t.filePath, u.className, u.methodName, u.testDataIndex, u.outcome, u.durationMilliseconds, u.attachments)));
   }
 
   public static parseAll(text: string): TestTimeRecord[] {
@@ -79,13 +82,14 @@ export class TestTimeRecord {
       methodName: t.methodName,
       testDataIndex: t.testDataIndex,
       outcome: t.outcome,
-      durationMilliseconds: t.durationMilliseconds
+      durationMilliseconds: t.durationMilliseconds,
+      attachments: t.attachments.count() > 0 ? Object.fromEntries([...t.attachments].map(u => [u.key, u.value])) : undefined
     })));
   }
 
   private static parse(value: unknown): TestTimeRecord {
     const fields: unknown[] = Resources.testTimeFields.map(t => Object.isObject(value) ? Reflect.get(value, t) : undefined);
-    const [packageName, filePath, className, methodName, testDataIndex, outcomeName, durationMilliseconds] = fields;
+    const [packageName, filePath, className, methodName, testDataIndex, outcomeName, durationMilliseconds, attachments] = fields;
     const outcome = Object.values(TestOutcome).find(t => t === outcomeName);
     if (!Object.isString(packageName) || !Object.isString(filePath) || !Object.isString(className) || !Object.isString(methodName)
       || !(Object.isUndefined(testDataIndex) || Object.isNumber(testDataIndex) && Number.isInteger(testDataIndex) && testDataIndex >= 0)
@@ -93,6 +97,25 @@ export class TestTimeRecord {
       || !Object.isNumber(durationMilliseconds) || !Number.isFinite(durationMilliseconds) || durationMilliseconds < 0)
       throw new TestingException(Resources.testTimesInvalid);
 
-    return new TestTimeRecord(packageName, filePath, className, methodName, testDataIndex, outcome, durationMilliseconds);
+    return new TestTimeRecord(packageName, filePath, className, methodName, testDataIndex, outcome, durationMilliseconds,
+      TestTimeRecord.parseAttachments(attachments));
+  }
+
+  private static parseAttachments(value: unknown): Dictionary<string, string> {
+    const attachments = new Dictionary<string, string>();
+    if (Object.isUndefined(value))
+      return attachments;
+
+    if (!Object.isObject(value) || Array.isArray(value))
+      throw new TestingException(Resources.testTimesInvalid);
+
+    for (const [name, text] of Object.entries(value)) {
+      if (!Object.isString(text))
+        throw new TestingException(Resources.testTimesInvalid);
+
+      attachments.add(name, text);
+    }
+
+    return attachments;
   }
 }

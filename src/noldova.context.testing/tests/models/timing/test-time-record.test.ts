@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { Dictionary, KeyValuePair } from "@noldova/context.collections";
 import {
   Assert, TestClass, TestClassResult, TestData, TestingException, TestMethod, TestMethodResult, TestOutcome, TestRunResult, TestTimeRecord
 } from "@noldova/context.testing";
@@ -68,12 +69,41 @@ export class TestTimeRecordTests {
   @TestData("[{\"packageName\":\"Sample\",\"filePath\":\"a.test.js\",\"className\":\"ATests\",\"methodName\":\"adds\",\"testDataIndex\":1.5,\"outcome\":\"Passed\",\"durationMilliseconds\":1}]")
   @TestData("[{\"packageName\":\"Sample\",\"filePath\":\"a.test.js\",\"className\":\"ATests\",\"methodName\":\"adds\",\"testDataIndex\":\"1\",\"outcome\":\"Passed\",\"durationMilliseconds\":1}]")
   @TestData("[{\"packageName\":\"Sample\",\"filePath\":7,\"className\":\"ATests\",\"methodName\":\"adds\",\"outcome\":\"Passed\",\"durationMilliseconds\":1}]")
+  @TestData("[{\"packageName\":\"Sample\",\"filePath\":\"a.test.js\",\"className\":\"ATests\",\"methodName\":\"adds\",\"outcome\":\"Passed\",\"durationMilliseconds\":1,\"attachments\":[]}]")
+  @TestData("[{\"packageName\":\"Sample\",\"filePath\":\"a.test.js\",\"className\":\"ATests\",\"methodName\":\"adds\",\"outcome\":\"Passed\",\"durationMilliseconds\":1,\"attachments\":\"1.234\"}]")
+  @TestData("[{\"packageName\":\"Sample\",\"filePath\":\"a.test.js\",\"className\":\"ATests\",\"methodName\":\"adds\",\"outcome\":\"Passed\",\"durationMilliseconds\":1,\"attachments\":{\"ratio\":1.234}}]")
   @TestMethod
   public rejectsTextThatIsNotAnArrayOfRecords(text: string): void {
     const failure = Assert.throws(() => TestTimeRecord.parseAll(text), TestingException);
 
     Assert.areEqual("The test times must be a JSON array of results, each with its package, file, class and method names, an optional non-negative "
-      + "integer data row, an outcome, and a non-negative duration.", failure.message);
+      + "integer data row, an outcome, a non-negative duration, and optional attachments of text.", failure.message);
+  }
+
+  @TestMethod
+  public writesAndReadsBackTheAttachments(): void {
+    const measured = new TestTimeRecord("Sample", "a.test.js", "ATests", "measures", undefined, TestOutcome.Passed, 2,
+      new Dictionary([new KeyValuePair("ratio", "1.234"), new KeyValuePair("count", "3")]));
+    const plain = new TestTimeRecord("Sample", "a.test.js", "ATests", "adds", undefined, TestOutcome.Passed, 1);
+
+    const text = TestTimeRecord.formatAll([measured, plain]);
+    const [read, readPlain] = TestTimeRecord.parseAll(text);
+
+    Assert.areEqual("[{\"packageName\":\"Sample\",\"filePath\":\"a.test.js\",\"className\":\"ATests\",\"methodName\":\"measures\",\"outcome\":\"Passed\","
+      + "\"durationMilliseconds\":2,\"attachments\":{\"ratio\":\"1.234\",\"count\":\"3\"}},{\"packageName\":\"Sample\",\"filePath\":\"a.test.js\","
+      + "\"className\":\"ATests\",\"methodName\":\"adds\",\"outcome\":\"Passed\",\"durationMilliseconds\":1}]", text);
+    Assert.areEqual("ratio=1.234,count=3", [...read?.attachments ?? []].map(t => `${t.key}=${t.value}`).join());
+    Assert.areEqual(0, readPlain?.attachments.count());
+  }
+
+  @TestMethod
+  public listsTheAttachmentsOfEachTestOfARun(): void {
+    const measured = new TestMethodResult("Sample", "ATests", "measures", undefined, [], TestOutcome.Passed, 2, undefined, undefined,
+      new Dictionary([new KeyValuePair("ratio", "1.234")]));
+
+    const [record] = TestTimeRecord.fromResult(new TestRunResult([new TestClassResult("Sample", "ATests", "a.test.js", [measured])]));
+
+    Assert.areEqual("1.234", record?.attachments.get("ratio"));
   }
 
   @TestMethod

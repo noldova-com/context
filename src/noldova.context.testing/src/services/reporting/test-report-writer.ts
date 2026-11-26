@@ -47,13 +47,14 @@ export class TestReportWriter {
     const duration = `${Math.round(methodResult.durationMilliseconds)} ${Resources.millisecondUnit}`;
     const methodName = this.formatMethodName(methodResult);
 
+    const attachmentLines = [...methodResult.attachments].map(t => `${Resources.reportIndent.repeat(2)}${t.key}: ${t.value}`);
     if (methodResult.outcome === TestOutcome.Passed)
-      return [`  ${Resources.terminalGreen}${Resources.passedMark}${Resources.terminalReset} ${methodName} (${duration})`];
+      return [`  ${Resources.terminalGreen}${Resources.passedMark}${Resources.terminalReset} ${methodName} (${duration})`, ...attachmentLines];
 
     if (methodResult.outcome === TestOutcome.Skipped)
       return [`  ${Resources.terminalYellow}${Resources.skippedMark}${Resources.terminalReset} ${Resources.skippedTest(methodName, methodResult.skipReason)}`];
 
-    const lines = [`  ${Resources.terminalRed}${Resources.failedMark}${Resources.terminalReset} ${methodName} (${duration})`];
+    const lines = [`  ${Resources.terminalRed}${Resources.failedMark}${Resources.terminalReset} ${methodName} (${duration})`, ...attachmentLines];
     lines.push(...this.formatFailureLines(methodResult.failure));
     return lines;
   }

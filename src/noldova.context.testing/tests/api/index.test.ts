@@ -24,7 +24,7 @@ export class TestingApiTests {
     const exportNames = [
       "Assert", "AssertFailedException", "BlockCoverage", "Category", "CoverageAnalyzer", "CoverageProject", "CoverageReportWriter",
       "CoverageResult", "DiscoveredTestClass", "DiscoveredTestMethod", "FileCoverage", "LineRange", "TestFileTiming", "TestTimeRecord", "TestTimingCheck",
-      "ParallelTestRunner", "Skip", "SourceMap", "MappedSourceLine", "TestClass", "TestClassResult", "TestConsoleReporter", "TestData", "TestDiscovery",
+      "ParallelTestRunner", "Skip", "SourceMap", "MappedSourceLine", "TestClass", "TestClassResult", "TestConsoleReporter", "TestContext", "TestData", "TestDiscovery",
       "TestExecutor", "TestingException", "TestMethod", "TestMethodResult", "TestOutcome",
       "TestProject", "TestReportWriter", "TestRunner", "TestRunResult", "TestRunTotals", "TestSelection", "TestTimeoutException", "Timeout",
     ];
