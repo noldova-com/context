@@ -31,6 +31,7 @@ Its providers are the project's `sdk`, `noldova.context.sdk` when left out, then
 The host has no command of its own: every command comes from the project's providers, and the host itself answers only `-h` or `--help`, which list the commands, and `-v` or `--version`, which print its version.
 A command name offered by two providers, a provider that is missing or offers no command, and a command no provider offers each fail with the reason, never by picking one.
 Development commands belong to the SDK, among them `build`, `serve` and `run`, which builds the executable and starts the static `main` of its entry class with the arguments after `--`.
+The SDK's package is `noldova.context.sdk`, and `build` is its first command: it builds the project and the projects it depends on, in the order `PACKAGE-CONTRACT.md` section 5 sets, each with the TypeScript compiler installed for it and the arguments given.
 Starting a built app without the SDK is the Runtime's, once it loads `.ctx` artifacts, and is not a command.
 
 ## 3. SDK ownership

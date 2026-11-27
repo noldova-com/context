@@ -22,8 +22,8 @@ The project names it in its `.ctxp`:
 
 ## Use
 
-Build the project first: the command imports the compiled context, the
-compiled model snapshot and the provider.
+Build the project first, with `ctx build`: the command imports the compiled
+context, the compiled model snapshot and the provider.
 
 ```bash
 ctx migrations add AddNotes --provider noldova.context.data.sql.sqlite
@@ -68,7 +68,7 @@ import { NotesContextModelSnapshot } from "./migrations/sqlite/notes-context-mod
 super(options, NotesContextMigrations.all, new NotesContextModelSnapshot());
 ```
 
-Build the project before each run, and leave the files the command writes
+Build the project with `ctx build` before each run, and leave the files the command writes
 as it wrote them: it reads the last snapshot from the compiled project, and
 fails when that doesn't match the snapshot's source, such as on a second run
 without a build in between.

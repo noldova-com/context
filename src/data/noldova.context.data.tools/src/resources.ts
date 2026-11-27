@@ -116,6 +116,10 @@ export class Resources {
     return `The compiled "${compiled}" of "${source}" is missing: build the project first.`;
   }
 
+  public static formatCompiledStale(entity: string): string {
+    return `The compiled "${entity}" doesn't match its source: build the project with ctx build, then run the command again.`;
+  }
+
   public static formatCompiledUnloadable(compiled: string, error: unknown): string {
     return `The compiled "${compiled}" can't be loaded: ${String(error)}`;
   }

@@ -154,7 +154,7 @@ export class MigrationAdderTests {
   }
 
   @TestMethod
-  public async failsForAModelItCannotBuildAsync(): Promise<void> {
+  public async failsForABuildOlderThanItsSourceAsync(): Promise<void> {
     await using project = await ToolProject.createAsync();
     await project.writeAsync("src/context.ts", MigrationAdderTests.thingSource);
     await project.writeAsync("build/context.js", [
@@ -163,9 +163,23 @@ export class MigrationAdderTests {
       "export class ThingContext extends DbContext { onModelCreating(builder) { builder.entity(Thing); } }"
     ].join("\n"));
 
+    Assert.areEqual("The compiled \"Thing\" doesn't match its source: build the project with ctx build, then run the command again.",
+      await MigrationAdderTests.failureAsync(project, ["AddThings", "--provider", MigrationAdderTests.sqlite]));
+  }
+
+  @TestMethod
+  public async failsForAModelItCannotBuildAsync(): Promise<void> {
+    await using project = await ToolProject.createAsync();
+    await project.writeAsync("src/context.ts", MigrationAdderTests.thingSource);
+    await project.writeAsync("build/context.js", [
+      "import { DbContext } from \"@noldova/context.data\";",
+      "export class Thing { name = \"\"; }",
+      "export class ThingContext extends DbContext { onModelCreating(builder) { builder.entity(Thing); } }"
+    ].join("\n"));
+
     const message = await MigrationAdderTests.failureAsync(project, ["AddThings", "--provider", MigrationAdderTests.sqlite]);
 
-    Assert.isTrue(message.startsWith("The model of \"ThingContext\" can't be built: "), message);
+    Assert.isTrue(message.startsWith("The model of \"ThingContext\" can't be built: EntityKeyMissingException"), message);
   }
 
   @TestMethod

@@ -68,6 +68,7 @@ Each name opens the package's folder and its own README; each badge opens it on 
 | Package | npm | What it is |
 |---|---|---|
 | [`context`](src/noldova.context) | [![npm](https://badgen.net/npm/v/@noldova/context)](https://www.npmjs.com/package/@noldova/context) | The `ctx` command: it reads the project file, and runs the commands of the SDK and tools the project names |
+| [`context.sdk`](src/noldova.context.sdk) | [![npm](https://badgen.net/npm/v/@noldova/context.sdk)](https://www.npmjs.com/package/@noldova/context.sdk) | The SDK's commands for `ctx`: `ctx build` builds a project and the projects it depends on, in order |
 
 ### Testing
 
