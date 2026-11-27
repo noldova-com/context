@@ -85,7 +85,7 @@ export class ProjectGraphReader {
     const dependencyPath = BuildHost.resolve(project.directory, entry);
     if (named.has(dependencyPath))
       throw new SDKException(Resources.formatDependencyRepeated(project.name, entry));
-    if (!await BuildHost.existsExactlyAsync(project.directory, entry))
+    if (!await BuildHost.isFileAtExactPathAsync(project.directory, entry))
       throw new SDKException(Resources.formatDependencyMissing(project.name, entry));
 
     named.add(dependencyPath);

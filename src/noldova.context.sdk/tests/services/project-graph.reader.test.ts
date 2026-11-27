@@ -47,10 +47,12 @@ export class ProjectGraphReaderTests {
   @TestData("B/b.ctxp")
   @TestData("b/B.ctxp")
   @TestData("notes.ctxp/b.ctxp")
+  @TestData("b/folder.ctxp")
   public async refusesADependencyWithNoProjectFileAtItsExactPathAsync(dependency: string): Promise<void> {
     await using project = await SDKProject.createAsync(SDKProject.validSource);
     await project.writeManifestAsync({ name: "notes", kind: "library", dependencies: { projects: [dependency] } });
     await project.writeProjectAsync("b", { name: "b", kind: "library" });
+    await project.writeAsync("b/folder.ctxp/b.ctxp", JSON.stringify({ name: "b", kind: "library" }));
 
     const exception = await Assert.throwsAsync(() => ProjectGraphReader.readAsync(project.projectFilePath), SDKException);
 

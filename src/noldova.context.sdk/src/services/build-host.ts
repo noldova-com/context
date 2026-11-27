@@ -10,7 +10,7 @@
 
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { access, readdir, readFile } from "node:fs/promises";
+import { access, readdir, readFile, stat } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join, resolve, win32 } from "node:path";
 import { createInterface } from "node:readline";
@@ -38,7 +38,7 @@ export class BuildHost {
     return win32.isAbsolute(path);
   }
 
-  public static async existsExactlyAsync(folder: string, path: string): Promise<boolean> {
+  public static async isFileAtExactPathAsync(folder: string, path: string): Promise<boolean> {
     let current = folder;
     for (const segment of path.split(Resources.pathSeparator)) {
       if (!Resources.relativeSegments.includes(segment) && !(await BuildHost.namesOfAsync(current)).includes(segment))
@@ -47,7 +47,7 @@ export class BuildHost {
       current = join(current, segment);
     }
 
-    return true;
+    return (await stat(current)).isFile();
   }
 
   public static async compileAsync(project: Project, arguments_: readonly string[], output: CommandOutput): Promise<boolean> {
