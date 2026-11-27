@@ -76,21 +76,21 @@ export class BuildHost {
     return code === 0;
   }
 
+  public static compilerOf(project: Project): string {
+    try {
+      return join(dirname(createRequire(project.manifestPath).resolve(Resources.compilerManifest)), ...Resources.compilerPath);
+    }
+    catch (exception) {
+      throw new SDKException(Resources.formatCompilerMissing(project.name), new ExceptionOptions(exception));
+    }
+  }
+
   private static async namesOfAsync(folder: string): Promise<readonly string[]> {
     try {
       return await readdir(folder);
     }
     catch {
       return [];
-    }
-  }
-
-  private static compilerOf(project: Project): string {
-    try {
-      return join(dirname(createRequire(project.manifestPath).resolve(Resources.compilerManifest)), ...Resources.compilerPath);
-    }
-    catch (exception) {
-      throw new SDKException(Resources.formatCompilerMissing(project.name), new ExceptionOptions(exception));
     }
   }
 }

@@ -264,14 +264,15 @@ It depends on the command host, Core, Collections, Diagnostics, Exceptions, JSON
 It owns the project graph `PACKAGE-CONTRACT.md` section 5 sets: `ProjectGraphReader` reads `dependencies.projects` from each project file, validates every reference before any build, and gives the projects dependencies first, in their declared order.
 
 Before a project's `tsc`, the build runs the plugins (`RUNTIME-AND-SDK.md` section 3) of the packages its `dependencies.packages` names, in their order, and never their dependencies' plugins.
+It reads the project's `tsconfig.json` as `tsc` does, through the project's own `tsc --showConfig`, which needs `rootDir` and `outDir` set there or in a configuration it extends.
 A plugin reads the project's sources, parsed once with the TypeScript parser, resolves the declaration a name stands for through imports and re-exports to a project source or a package's declaration file, and changes the build's copy: it replaces text, adds files and reports diagnostics, and an error stops the build before `tsc`.
 Two plugins changing the same text fail, naming both.
-The project's own source never changes: the build writes the changed copy to `_build/.generated`, checks the original with `tsc --noEmit`, then emits the copy into the project's `outDir` with `tsc --noCheck`, and a project no plugin changes gets the one plain `tsc` run.
+The project's own source never changes: the build writes a copy of every file under `rootDir` but `outDir`, `_build` and `node_modules`, with the plugins' changes, to `_build/.generated`, checks the original with `tsc --noEmit`, then emits the copy into the project's `outDir` with `tsc --noCheck`, and a project no plugin changes gets the one plain `tsc` run.
 Every position names the original source: a plugin's diagnostics are made on it, and the build maps `tsc`'s errors in the copy and the emitted source maps back to it, so `node --enable-source-maps` shows original lines.
 The plugins and their mechanics live in the SDK's `plugins` folder, and none is public: they exist for the `tsc` bridge, and a public plugin contract, with types, waits for the SDK's own compiler.
 The folder keeps its own `PluginResources` and `PluginHost`, so it can be removed whole, without a change elsewhere but the call that runs it.
 
 The package's host boundaries are `BuildHost` and, for plugins, `PluginHost`.
 During the Node bootstrap `BuildHost` reads project files and lists folders through `node:fs/promises`, builds paths with `node:path`, resolves each project's `typescript` package from its project file's folder with `node:module`'s `createRequire`, and runs that package's `tsc` through `node:child_process`, reading its output with `node:readline`.
-`PluginHost` reads and writes the generated copy and lists sources through `node:fs` and `node:fs/promises`, reads `tsconfig.json` folders, and finds a package's root with `createRequire`.
+`PluginHost` reads and writes the generated copy and lists inputs through `node:fs` and `node:fs/promises`, reads the configuration with `tsc --showConfig` through `node:child_process`, and finds a package's root with `createRequire`.
 Both files carry the Node note in `TESTING-CONTRACT.md` section 1, and when the SDK's own compiler builds projects, `BuildHost` is the only part of the command to change, and the `plugins` folder goes with the `tsc` bridge.

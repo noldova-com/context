@@ -20,6 +20,7 @@ import { MappedOutput } from "../models/mapped-output.js";
 import type { Plugin } from "../models/plugin.js";
 import { PositionMap } from "../models/position-map.js";
 import { PositionSegment } from "../models/position-segment.js";
+import type { ProjectConfiguration } from "../models/project-configuration.js";
 import { ProjectPluginContext } from "../models/project-plugin-context.js";
 import { SourceFile } from "../models/source-file.js";
 import { PluginResources } from "../plugin-resources.js";
@@ -31,11 +32,21 @@ import { SourceRewriter } from "./source-rewriter.js";
 export class PluginBuilder {
   public static async buildAsync(build: BuildProject, plugins: IReadOnlyList<Plugin>, arguments_: readonly string[], output: CommandOutput): Promise<boolean> {
     const project = build.project;
-    const selected = plugins.where(t => build.packages.contains(t.packageName)).toList();
+    await PluginHost.clearAsync(PluginBuilder.generatedRootOf(project.directory));
+    const selected = build.packages.selectMany(name => plugins.where(t => t.packageName === name)).toList();
     if (!selected.any())
       return BuildHost.compileAsync(project, arguments_, output);
 
-    const context = await PluginBuilder.runAsync(build, selected, output);
+    const configurationPath = PluginHost.join(project.directory, Resources.configurationFileName);
+    const configuration = await PluginHost.readConfigurationAsync(project, configurationPath);
+    if (Object.isUndefined(configuration)) {
+      if (!await BuildHost.compileAsync(project, [PluginResources.noEmitOption, ...arguments_], output))
+        return false;
+
+      throw new SDKException(PluginResources.formatConfigurationFoldersMissing(configurationPath));
+    }
+
+    const context = await PluginBuilder.runAsync(build, configuration, selected, output);
     if (context.hasErrors)
       return false;
     if (!context.isChanged)
@@ -53,22 +64,21 @@ export class PluginBuilder {
     return true;
   }
 
-  private static async runAsync(build: BuildProject, plugins: IReadOnlyList<Plugin>, output: CommandOutput): Promise<ProjectPluginContext> {
+  private static async runAsync(build: BuildProject, configuration: ProjectConfiguration, plugins: IReadOnlyList<Plugin>, output: CommandOutput): Promise<ProjectPluginContext> {
     const project = build.project;
-    const configuration = PluginHost.join(project.directory, Resources.configurationFileName);
-    const rootDirectory = await PluginHost.readConfigurationFolderAsync(configuration, PluginResources.rootDirectoryField);
-    const outputDirectory = await PluginHost.readConfigurationFolderAsync(configuration, PluginResources.outputDirectoryField);
-    if (rootDirectory !== project.directory && !PluginHost.isInside(project.directory, rootDirectory))
-      throw new SDKException(PluginResources.formatRootOutsideProject(project.name, rootDirectory));
+    if (configuration.rootDirectory !== project.directory && !PluginHost.isInside(project.directory, configuration.rootDirectory))
+      throw new SDKException(PluginResources.formatRootOutsideProject(project.name, configuration.rootDirectory));
 
-    const paths = await PluginHost.listSourcesAsync(rootDirectory, new List([PluginHost.join(project.directory, PluginResources.buildFolderName), outputDirectory]));
+    const inputs = await PluginHost.listInputsAsync(configuration.rootDirectory,
+      new List([PluginHost.join(project.directory, PluginResources.buildFolderName), configuration.outputDirectory]));
     const sources = new List<SourceFile>();
-    for (const path of paths) {
+    for (const path of configuration.files.where(t => PluginHost.isInside(configuration.rootDirectory, t) && t.endsWith(PluginResources.sourceExtension)
+      && !t.endsWith(PluginResources.declarationExtension))) {
       const text = await BuildHost.readAsync(path);
       sources.add(SourceFile.parse(path, text, TypeScriptSourceKind.Code));
     }
 
-    const context = new ProjectPluginContext(project, rootDirectory, outputDirectory, sources, new DeclarationResolver(project.manifestPath, sources));
+    const context = new ProjectPluginContext(project, configuration, inputs, sources, new DeclarationResolver(project.manifestPath, sources));
     for (const plugin of plugins)
       context.run(plugin);
     for (const line of context.lines)
@@ -78,30 +88,38 @@ export class PluginBuilder {
   }
 
   private static async writeAsync(context: ProjectPluginContext): Promise<GeneratedProject> {
-    const root = PluginHost.join(context.projectDirectory, ...PluginResources.generatedFolder);
-    await PluginHost.clearAsync(root);
+    const root = PluginBuilder.generatedRootOf(context.projectDirectory);
+    const copyOf = (path: string): string => PluginHost.join(root, PluginHost.relativePath(context.projectDirectory, path));
+    for (const input of context.inputs)
+      await PluginHost.copyAsync(input, copyOf(input));
+
     const maps = new Dictionary<string, PositionMap>();
-    for (const source of context.sources) {
-      const path = PluginHost.join(root, PluginHost.relativePath(context.projectDirectory, source.path));
-      maps.set(path, SourceRewriter.rewrite(path, source, context.editsOf(source)));
-    }
+    for (const source of context.sources)
+      maps.set(copyOf(source.path), SourceRewriter.rewrite(copyOf(source.path), source, context.editsOf(source)));
     for (const file of context.addedFiles) {
-      const path = PluginHost.join(root, PluginHost.relativePath(context.projectDirectory, context.rootDirectory), file.path);
+      const path = PluginHost.join(copyOf(context.configuration.rootDirectory), file.path);
       maps.set(path, new PositionMap(path, file.text, new PositionSegment(0, file.text.length, file.origin.source, file.origin.span.startOffset, true), new List<PositionSegment>()));
     }
     for (const map of maps.values())
       await PluginHost.writeAsync(map.path, map.text);
 
+    const files = context.configuration.files.select(t => PluginHost.isInside(context.configuration.rootDirectory, t) ? copyOf(t) : t)
+      .concat(context.addedFiles.select(t => PluginHost.join(copyOf(context.configuration.rootDirectory), t.path)));
     const configurationPath = PluginHost.join(root, Resources.configurationFileName);
     await PluginHost.writeAsync(configurationPath, JSON.stringify({
       extends: PluginHost.relativePath(root, PluginHost.join(context.projectDirectory, Resources.configurationFileName)),
       compilerOptions: {
-        rootDir: PluginHost.relativePath(root, PluginHost.join(root, PluginHost.relativePath(context.projectDirectory, context.rootDirectory))),
-        outDir: PluginHost.relativePath(root, context.outputDirectory)
+        rootDir: PluginHost.relativePath(root, copyOf(context.configuration.rootDirectory)),
+        outDir: PluginHost.relativePath(root, context.configuration.outputDirectory)
       },
-      include: [PluginResources.includeEverything]
+      files: files.select(t => PluginHost.relativePath(root, t)).toArray(),
+      include: []
     }, undefined, 2));
 
-    return new GeneratedProject(configurationPath, context.outputDirectory, maps);
+    return new GeneratedProject(configurationPath, context.configuration.outputDirectory, maps);
+  }
+
+  private static generatedRootOf(projectDirectory: string): string {
+    return PluginHost.join(projectDirectory, ...PluginResources.generatedFolder);
   }
 }

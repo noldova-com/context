@@ -49,4 +49,17 @@ export class SourceMapComposerTests {
     Assert.areEqual(other, await project.readAsync("build/b.js.map"));
     Assert.areEqual(empty, await project.readAsync("build/c.js.map"));
   }
+
+  @TestMethod
+  public async leavesAScriptWithoutAMapOfTheSourcesAsItIsAsync(): Promise<void> {
+    await using project = await SDKProject.createAsync(SDKProject.validSource);
+    const other = `b;\n//# sourceMappingURL=data:application/json;base64,${Buffer.from(JSON.stringify({ version: 3, sources: ["../src/b.ts"], names: [], mappings: "AAAA" })).toString("base64")}`;
+    await project.writeAsync("build/b.js", other);
+    await project.writeAsync("build/c.mjs", "c;\n");
+
+    await SourceMapComposer.composeAsync(project.path("build"), new Dictionary<string, PositionMap>());
+
+    Assert.areEqual(other, await project.readAsync("build/b.js"));
+    Assert.areEqual("c;\n", await project.readAsync("build/c.mjs"));
+  }
 }

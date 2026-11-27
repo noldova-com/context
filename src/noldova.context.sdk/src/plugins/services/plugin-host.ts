@@ -8,17 +8,21 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
+import { spawn } from "node:child_process";
+import { once } from "node:events";
 import { readFileSync } from "node:fs";
-import { access, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, copyFile, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join, relative, resolve, sep, win32 } from "node:path";
 
 import { Enumerable, type IReadOnlyList, List } from "@noldova/context.collections";
-import { ExceptionOptions } from "@noldova/context.exceptions";
+import type { Project } from "@noldova/context";
 import { JsonReader } from "@noldova/context.json";
+import { StringBuilder } from "@noldova/context.text";
 
-import { SDKException } from "../../exceptions/sdk.exception.js";
 import { Resources } from "../../resources.js";
+import { BuildHost } from "../../services/build-host.js";
+import { ProjectConfiguration } from "../models/project-configuration.js";
 import { PluginResources } from "../plugin-resources.js";
 
 export class PluginHost {
@@ -38,6 +42,11 @@ export class PluginHost {
   public static async writeAsync(path: string, text: string): Promise<void> {
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, text, Resources.textEncoding);
+  }
+
+  public static async copyAsync(from: string, to: string): Promise<void> {
+    await mkdir(dirname(to), { recursive: true });
+    await copyFile(from, to);
   }
 
   public static clearAsync(folder: string): Promise<void> {
@@ -69,18 +78,25 @@ export class PluginHost {
     return relativePath !== "" && !relativePath.startsWith("..") && !win32.isAbsolute(relativePath);
   }
 
-  public static async listFilesAsync(folder: string, extension: string): Promise<IReadOnlyList<string>> {
+  public static decodeBase64(text: string): string {
+    return Buffer.from(text, PluginResources.base64Encoding).toString(Resources.textEncoding);
+  }
+
+  public static encodeBase64(text: string): string {
+    return Buffer.from(text, Resources.textEncoding).toString(PluginResources.base64Encoding);
+  }
+
+  public static async listFilesAsync(folder: string): Promise<IReadOnlyList<string>> {
     if (!await PluginHost.existsAsync(folder))
       return new List<string>();
 
     const entries = await readdir(folder, { recursive: true, withFileTypes: true });
 
-    return Enumerable.from(entries).where(t => t.isFile() && t.name.endsWith(extension)).select(t => join(t.parentPath, t.name)).orderBy(t => t).toList();
+    return Enumerable.from(entries).where(t => t.isFile()).select(t => join(t.parentPath, t.name)).orderBy(t => t).toList();
   }
 
-  public static async listSourcesAsync(rootDirectory: string, excluded: IReadOnlyList<string>): Promise<IReadOnlyList<string>> {
-    return (await PluginHost.listFilesAsync(rootDirectory, PluginResources.sourceExtension))
-      .where(t => !t.endsWith(PluginResources.declarationExtension))
+  public static async listInputsAsync(rootDirectory: string, excluded: IReadOnlyList<string>): Promise<IReadOnlyList<string>> {
+    return (await PluginHost.listFilesAsync(rootDirectory))
       .where(t => !relative(rootDirectory, t).split(sep).includes(PluginResources.packagesFolderName))
       .where(t => !excluded.any(e => PluginHost.isInside(e, t)))
       .toList();
@@ -95,33 +111,23 @@ export class PluginHost {
     }
   }
 
-  public static async readConfigurationFolderAsync(configurationPath: string, field: string): Promise<string> {
-    let text: string;
-    try {
-      text = await readFile(configurationPath, Resources.textEncoding);
-    }
-    catch (exception) {
-      throw new SDKException(PluginResources.formatConfigurationUnreadable(configurationPath), new ExceptionOptions(exception));
-    }
+  public static async readConfigurationAsync(project: Project, configurationPath: string): Promise<ProjectConfiguration | undefined> {
+    const child = spawn(process.execPath, [BuildHost.compilerOf(project), PluginResources.showConfigOption, Resources.projectOption, configurationPath],
+      { cwd: project.directory, stdio: ["ignore", "pipe", "ignore"], windowsHide: true });
+    const output = new StringBuilder();
+    child.stdout.setEncoding(Resources.textEncoding).on(PluginResources.dataEvent, (chunk: string) => output.append(chunk));
+    const [code]: readonly unknown[] = await once(child, Resources.closeEvent);
+    if (code !== 0)
+      return undefined;
 
-    let basePath: string;
-    try {
-      const reader = JsonReader.parse(text, configurationPath);
-      const options = reader.hasField(PluginResources.compilerOptionsField) ? reader.readObject(PluginResources.compilerOptionsField) : undefined;
-      if (!Object.isUndefined(options) && options.hasField(field))
-        return resolve(dirname(configurationPath), options.readNonBlankString(field));
-      if (!reader.hasField(PluginResources.extendsField))
-        throw new SDKException(PluginResources.formatConfigurationFolderMissing(configurationPath, field));
+    const reader = JsonReader.parse(output.toString(), configurationPath);
+    const options = reader.readObject(PluginResources.compilerOptionsField);
+    if (!options.hasField(PluginResources.rootDirectoryField) || !options.hasField(PluginResources.outputDirectoryField))
+      return undefined;
 
-      basePath = resolve(dirname(configurationPath), reader.readNonBlankString(PluginResources.extendsField));
-    }
-    catch (exception) {
-      if (exception instanceof SDKException)
-        throw exception;
+    const folder = dirname(configurationPath);
 
-      throw new SDKException(PluginResources.formatConfigurationInvalid(configurationPath, exception), new ExceptionOptions(exception));
-    }
-
-    return PluginHost.readConfigurationFolderAsync(basePath, field);
+    return new ProjectConfiguration(resolve(folder, options.readString(PluginResources.rootDirectoryField)), resolve(folder, options.readString(PluginResources.outputDirectoryField)),
+      Enumerable.from(reader.hasField(PluginResources.filesField) ? reader.readStringArray(PluginResources.filesField) : []).select(t => resolve(folder, t)).toList());
   }
 }

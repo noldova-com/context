@@ -25,14 +25,31 @@ export class PluginBuilderTests {
   private static readonly manifest: object = { name: "notes", kind: "library", dependencies: { packages: [TestPlugin.packageIdentity] } };
 
   @TestMethod
-  public async runsOnlyThePluginsOfThePackagesTheProjectNamesAsync(): Promise<void> {
+  @TestData([])
+  @TestData(["noldova.context.other"])
+  public async runsOnlyThePluginsOfThePackagesTheProjectNamesAsync(packages: readonly string[]): Promise<void> {
     await using project = await SDKProject.createAsync(SDKProject.validSource);
+    await project.writeManifestAsync({ name: "notes", kind: "library", dependencies: { packages } });
     const plugin = TestPlugin.replacing("= 1", "= 2");
 
     Assert.isTrue(await PluginBuilder.buildAsync(await project.readBuildAsync(), new List<Plugin>([plugin]), [], new RecordingOutput()));
     Assert.areEqual(0, plugin.runs);
     Assert.isTrue((await project.readAsync("build/index.js")).includes("value = 1"));
     Assert.isFalse(await project.existsAsync("_build"));
+  }
+
+  @TestMethod
+  public async runsThePluginsInTheOrderOfThePackagesTheProjectNamesAsync(): Promise<void> {
+    await using project = await SDKProject.createAsync(SDKProject.validSource);
+    await project.writeManifestAsync({ name: "notes", kind: "library", dependencies: { packages: ["noldova.context.second", TestPlugin.packageIdentity] } });
+    const order: string[] = [];
+    const plugins = new List<Plugin>([
+      new TestPlugin("first", () => order.push("first")),
+      new TestPlugin("second", () => order.push("second"), "noldova.context.second")
+    ]);
+
+    Assert.isTrue(await PluginBuilder.buildAsync(await project.readBuildAsync(), plugins, [], new RecordingOutput()));
+    Assert.areEqual("second,first", order.join(","));
   }
 
   @TestMethod
@@ -80,9 +97,11 @@ export class PluginBuilderTests {
   }
 
   @TestMethod
-  public async pointsAStackTraceAtTheOriginalSourceAsync(): Promise<void> {
+  @TestData("sourceMap")
+  @TestData("inlineSourceMap")
+  public async pointsAStackTraceAtTheOriginalSourceAsync(option: string): Promise<void> {
     await using project = await PluginBuilderTests.createAsync("/* lines */\nexport function fail(): void {\n  throw new Error(\"failed\");\n}\nfail();\n");
-    await project.writeConfigurationAsync({ sourceMap: true });
+    await project.writeConfigurationAsync({ [option]: true });
 
     Assert.isTrue(await PluginBuilder.buildAsync(await project.readBuildAsync(),
       new List<Plugin>([TestPlugin.replacing("/* lines */", "const first: number = 1;\nconst second: number = 2;\nconst third: number = first + second;")]), [], new RecordingOutput()));
@@ -105,6 +124,36 @@ export class PluginBuilderTests {
     Assert.isTrue(await project.existsAsync("build/models/added.js"));
     Assert.isTrue(await project.existsAsync("build/index.js"));
     Assert.isFalse(await project.existsAsync("src/models/added.ts"));
+  }
+
+  @TestMethod
+  public async compilesTheProjectsOtherInputsWithThePluginsChangesAsync(): Promise<void> {
+    await using project = await PluginBuilderTests.createAsync([
+      "import data from \"./data.json\" with { type: \"json\" };",
+      "import { other } from \"./other.mjs\";",
+      "export const value: Counted = 1 + data.count + other;"
+    ].join("\n"));
+    await project.writeAsync("package.json", JSON.stringify({ type: "module" }));
+    await project.writeAsync("tsconfig.json", JSON.stringify({
+      compilerOptions: { rootDir: "src", outDir: "build", module: "nodenext", target: "es2022", strict: true, resolveJsonModule: true, types: [] },
+      include: ["src", "types"]
+    }));
+    await project.writeAsync("src/data.json", JSON.stringify({ count: 2 }));
+    await project.writeAsync("src/other.mts", "export const other: number = 3;");
+    await project.writeAsync("types/globals.d.ts", "type Counted = number;");
+
+    Assert.isTrue(await PluginBuilder.buildAsync(await project.readBuildAsync(), new List<Plugin>([TestPlugin.replacing("= 1", "= 2")]), [], new RecordingOutput()));
+    Assert.isTrue((await project.readAsync("build/index.js")).includes("value = 2 + data.count"));
+    Assert.isTrue((await project.readAsync("build/data.json")).includes("\"count\": 2"));
+    Assert.isTrue(await project.existsAsync("build/other.mjs"));
+  }
+
+  @TestMethod
+  public async writesNoOutputForANoEmitBuildAsync(): Promise<void> {
+    await using project = await PluginBuilderTests.createAsync(SDKProject.validSource);
+
+    Assert.isTrue(await PluginBuilder.buildAsync(await project.readBuildAsync(), new List<Plugin>([TestPlugin.replacing("= 1", "= 2")]), ["--noEmit"], new RecordingOutput()));
+    Assert.isFalse(await project.existsAsync("build"));
   }
 
   @TestMethod
@@ -162,27 +211,69 @@ export class PluginBuilderTests {
   }
 
   @TestMethod
-  public async readsTheFoldersFromTheConfigurationItExtendsAsync(): Promise<void> {
+  public async readsAConfigurationTheWayTheCompilerDoesAsync(): Promise<void> {
     await using project = await PluginBuilderTests.createAsync(SDKProject.validSource);
-    await project.writeAsync("tsconfig.json", JSON.stringify({ extends: "./configurations/base.json", include: ["src"] }));
-    await project.writeConfigurationAsync({ rootDir: "../src", outDir: "../build" }, "configurations/base.json");
+    await project.writeAsync("tsconfig.json", [
+      "{",
+      "  // Written by hand.",
+      "  \"extends\": [\"./configurations/base.json\", \"./configurations/folders\"],",
+      "  \"include\": [\"src\",],",
+      "}"
+    ].join("\n"));
+    await project.writeConfigurationAsync({}, "configurations/base.json");
+    await project.writeAsync("configurations/folders.json", JSON.stringify({ compilerOptions: { rootDir: "../src", outDir: "../build" } }));
 
     Assert.isTrue(await PluginBuilder.buildAsync(await project.readBuildAsync(), new List<Plugin>([TestPlugin.replacing("= 1", "= 2")]), [], new RecordingOutput()));
     Assert.isTrue((await project.readAsync("build/index.js")).includes("value = 2"));
   }
 
   @TestMethod
-  @TestData("{ \"compilerOptions\": { \"outDir\": \"build\" } }", "\"{0}\" sets no \"compilerOptions.rootDir\", which a build with plugins needs.")
-  @TestData("{}", "\"{0}\" sets no \"compilerOptions.rootDir\", which a build with plugins needs.")
-  @TestData("{ \"extends\": \"./missing.json\" }", "\"{1}\" can't be read.")
-  @TestData("{", "\"{0}\" can't be read: ")
-  public async refusesAConfigurationWithoutItsFoldersAsync(configuration: string, message: string): Promise<void> {
+  public async givesThePluginNoSourcesForAConfigurationWithNoInputsAsync(): Promise<void> {
+    await using project = await PluginBuilderTests.createAsync(SDKProject.validSource);
+    await project.writeAsync("tsconfig.json", JSON.stringify({ compilerOptions: { rootDir: "src", outDir: "build" }, include: ["nothing"] }));
+    const seen: number[] = [];
+    const plugin = new TestPlugin("reader", context => seen.push(context.sources.count()));
+
+    Assert.isFalse(await PluginBuilder.buildAsync(await project.readBuildAsync(), new List<Plugin>([plugin]), [], new RecordingOutput()));
+    Assert.areEqual("0", seen.join(","));
+  }
+
+  @TestMethod
+  @TestData("{ \"compilerOptions\": { \"outDir\": \"build\" } }")
+  @TestData("{ \"compilerOptions\": { \"rootDir\": \"src\" } }")
+  @TestData("{}")
+  public async refusesAConfigurationWithoutItsFoldersAsync(configuration: string): Promise<void> {
     await using project = await PluginBuilderTests.createAsync(SDKProject.validSource);
     await project.writeAsync("tsconfig.json", configuration);
 
     const exception = await Assert.throwsAsync(() => PluginBuilderTests.buildAsync(project, [TestPlugin.replacing("= 1", "= 2")]), SDKException);
 
-    Assert.isTrue(exception.message.startsWith(message.replace("{0}", project.path("tsconfig.json")).replace("{1}", project.path("missing.json"))), exception.message);
+    Assert.areEqual(`"${project.path("tsconfig.json")}" doesn't set both "compilerOptions.rootDir" and "compilerOptions.outDir", which a build with plugins needs.`,
+      exception.message);
+  }
+
+  @TestMethod
+  @TestData("{ \"extends\": \"./missing.json\" }")
+  @TestData("{")
+  public async writesTheCompilersErrorsForAConfigurationItCannotReadAsync(configuration: string): Promise<void> {
+    await using project = await PluginBuilderTests.createAsync(SDKProject.validSource);
+    await project.writeAsync("tsconfig.json", configuration);
+    const output = new RecordingOutput();
+    const plugin = TestPlugin.replacing("= 1", "= 2");
+
+    Assert.isFalse(await PluginBuilder.buildAsync(await project.readBuildAsync(), new List<Plugin>([plugin]), [], output));
+    Assert.areEqual(0, plugin.runs);
+    Assert.isTrue(output.lines.some(t => t.includes("error TS")), output.lines.join("\n"));
+  }
+
+  @TestMethod
+  public async refusesAProjectWithoutAConfigurationAsync(): Promise<void> {
+    await using project = await PluginBuilderTests.createAsync(SDKProject.validSource);
+    await project.removeAsync("tsconfig.json");
+
+    const exception = await Assert.throwsAsync(() => PluginBuilderTests.buildAsync(project, [TestPlugin.replacing("= 1", "= 2")]), SDKException);
+
+    Assert.areEqual(`"notes" has no "${project.path("tsconfig.json")}" beside its project file.`, exception.message);
   }
 
   @TestMethod

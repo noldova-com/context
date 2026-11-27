@@ -6,17 +6,21 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { type IReadOnlyList, List } from "@noldova/context.collections";
+
 export class PluginResources {
   public static readonly base64Digits: string = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  public static readonly base64Encoding: BufferEncoding = "base64";
   public static readonly buildFolderName: string = "_build";
   public static readonly compiledExtensionPattern: RegExp = /\.js$/u;
   public static readonly compilerLocationPattern: RegExp = /^(.+?)\((\d+),(\d+)\)(: .*)$/u;
   public static readonly compilerOptionsField: string = "compilerOptions";
+  public static readonly dataEvent: string = "data";
   public static readonly declarationExtension: string = ".d.ts";
-  public static readonly extendsField: string = "extends";
   public static readonly fileField: string = "file";
+  public static readonly filesField: string = "files";
   public static readonly generatedFolder: readonly string[] = [PluginResources.buildFolderName, ".generated"];
-  public static readonly includeEverything: string = "**/*";
+  public static readonly inlineSourceMapPattern: RegExp = /\/\/# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+)\s*$/u;
   public static readonly mappingLineSeparator: string = ";";
   public static readonly mappingSegmentSeparator: string = ",";
   public static readonly mappingsField: string = "mappings";
@@ -29,6 +33,8 @@ export class PluginResources {
   public static readonly relativePrefix: string = ".";
   public static readonly rootDirectoryField: string = "rootDir";
   public static readonly scopePrefix: string = "@";
+  public static readonly scriptExtensions: IReadOnlyList<string> = new List([".js", ".mjs", ".cjs"]);
+  public static readonly showConfigOption: string = "--showConfig";
   public static readonly sourceExtension: string = ".ts";
   public static readonly sourceMapExtension: string = ".map";
   public static readonly sourceRootField: string = "sourceRoot";
@@ -51,16 +57,8 @@ export class PluginResources {
     return `${path}(${String(line)},${String(character)})${rest}`;
   }
 
-  public static formatConfigurationFolderMissing(configuration: string, field: string): string {
-    return `"${configuration}" sets no "compilerOptions.${field}", which a build with plugins needs.`;
-  }
-
-  public static formatConfigurationInvalid(configuration: string, error: unknown): string {
-    return `"${configuration}" can't be read: ${String(error)}`;
-  }
-
-  public static formatConfigurationUnreadable(configuration: string): string {
-    return `"${configuration}" can't be read.`;
+  public static formatConfigurationFoldersMissing(configuration: string): string {
+    return `"${configuration}" doesn't set both "compilerOptions.rootDir" and "compilerOptions.outDir", which a build with plugins needs.`;
   }
 
   public static formatDiagnostic(path: string, line: number, character: number, category: string, code: string, text: string): string {
@@ -73,6 +71,10 @@ export class PluginResources {
 
   public static formatEditsOverlap(path: string, first: string, second: string): string {
     return `The plugins "${first}" and "${second}" change the same text of "${path}".`;
+  }
+
+  public static formatInlineSourceMap(encoded: string): string {
+    return `//# sourceMappingURL=data:application/json;base64,${encoded}`;
   }
 
   public static formatPluginFailed(plugin: string, error: unknown): string {

@@ -20,25 +20,40 @@ import { PluginHost } from "./plugin-host.js";
 
 export class SourceMapComposer {
   public static async composeAsync(outputDirectory: string, maps: IReadOnlyDictionary<string, PositionMap>): Promise<void> {
-    for (const path of await PluginHost.listFilesAsync(outputDirectory, PluginResources.sourceMapExtension)) {
-      const reader = JsonReader.parse(await BuildHost.readAsync(path), path);
-      const folder = BuildHost.folderOf(path);
-      const root = BuildHost.resolve(folder, reader.readOptionalString(PluginResources.sourceRootField) ?? "");
-      const paths = Enumerable.from(reader.readStringArray(PluginResources.sourcesField)).select(t => BuildHost.resolve(root, t)).toList();
-      if (!paths.any() || !paths.all(t => maps.containsKey(t)))
-        continue;
-
-      const sourceMaps = paths.select(t => maps.get(t)).toList();
-      const sources = new List<string>();
-      const lines = Base64Vlq.decode(reader.readString(PluginResources.mappingsField)).select(line => line.select(t => SourceMapComposer.compose(t, sourceMaps, sources)).toList()).toList();
-      await PluginHost.writeAsync(path, JSON.stringify({
-        version: reader.readInteger(PluginResources.versionField),
-        file: reader.readOptionalString(PluginResources.fileField),
-        sources: sources.select(t => PluginHost.relativePath(folder, t)).toArray(),
-        names: reader.readStringArray(PluginResources.namesField),
-        mappings: Base64Vlq.encode(lines)
-      }));
+    const files = await PluginHost.listFilesAsync(outputDirectory);
+    for (const path of files.where(t => t.endsWith(PluginResources.sourceMapExtension))) {
+      const composed = SourceMapComposer.composeMap(await BuildHost.readAsync(path), path, maps);
+      if (!Object.isUndefined(composed))
+        await PluginHost.writeAsync(path, composed);
     }
+    for (const path of files.where(t => PluginResources.scriptExtensions.any(e => t.endsWith(e)))) {
+      const text = await BuildHost.readAsync(path);
+      const encoded = PluginResources.inlineSourceMapPattern.exec(text)?.[1];
+      const composed = Object.isUndefined(encoded) ? undefined : SourceMapComposer.composeMap(PluginHost.decodeBase64(encoded), path, maps);
+      if (!Object.isUndefined(composed))
+        await PluginHost.writeAsync(path, text.replace(PluginResources.inlineSourceMapPattern, PluginResources.formatInlineSourceMap(PluginHost.encodeBase64(composed))));
+    }
+  }
+
+  private static composeMap(text: string, path: string, maps: IReadOnlyDictionary<string, PositionMap>): string | undefined {
+    const reader = JsonReader.parse(text, path);
+    const folder = BuildHost.folderOf(path);
+    const root = BuildHost.resolve(folder, reader.readOptionalString(PluginResources.sourceRootField) ?? "");
+    const paths = Enumerable.from(reader.readStringArray(PluginResources.sourcesField)).select(t => BuildHost.resolve(root, t)).toList();
+    if (!paths.any() || !paths.all(t => maps.containsKey(t)))
+      return undefined;
+
+    const sourceMaps = paths.select(t => maps.get(t)).toList();
+    const sources = new List<string>();
+    const lines = Base64Vlq.decode(reader.readString(PluginResources.mappingsField)).select(line => line.select(t => SourceMapComposer.compose(t, sourceMaps, sources)).toList()).toList();
+
+    return JSON.stringify({
+      version: reader.readInteger(PluginResources.versionField),
+      file: reader.readOptionalString(PluginResources.fileField),
+      sources: sources.select(t => PluginHost.relativePath(folder, t)).toArray(),
+      names: reader.readStringArray(PluginResources.namesField),
+      mappings: Base64Vlq.encode(lines)
+    });
   }
 
   private static compose(mapping: SourceMapping, maps: IReadOnlyList<PositionMap>, sources: List<string>): SourceMapping {

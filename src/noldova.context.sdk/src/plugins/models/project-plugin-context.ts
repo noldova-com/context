@@ -22,6 +22,7 @@ import { AddedFile } from "./added-file.js";
 import type { Declaration } from "./declaration.js";
 import { PluginContext } from "./plugin-context.js";
 import type { Plugin } from "./plugin.js";
+import type { ProjectConfiguration } from "./project-configuration.js";
 import { SourceEdit } from "./source-edit.js";
 import type { SourceFile } from "./source-file.js";
 import type { SourceOrigin } from "./source-origin.js";
@@ -30,8 +31,8 @@ export class ProjectPluginContext extends PluginContext {
   public override readonly projectName: string;
   public override readonly sources: IReadOnlyList<SourceFile>;
   public readonly projectDirectory: string;
-  public readonly rootDirectory: string;
-  public readonly outputDirectory: string;
+  public readonly configuration: ProjectConfiguration;
+  public readonly inputs: IReadOnlyList<string>;
   public readonly lines: List<string> = new List<string>();
   public readonly addedFiles: List<AddedFile> = new List<AddedFile>();
   private readonly resolver: DeclarationResolver;
@@ -39,12 +40,12 @@ export class ProjectPluginContext extends PluginContext {
   private plugin: string = "";
   private failed: boolean = false;
 
-  public constructor(project: Project, rootDirectory: string, outputDirectory: string, sources: IReadOnlyList<SourceFile>, resolver: DeclarationResolver) {
+  public constructor(project: Project, configuration: ProjectConfiguration, inputs: IReadOnlyList<string>, sources: IReadOnlyList<SourceFile>, resolver: DeclarationResolver) {
     super();
     this.projectName = project.name;
     this.projectDirectory = project.directory;
-    this.rootDirectory = rootDirectory;
-    this.outputDirectory = outputDirectory;
+    this.configuration = configuration;
+    this.inputs = inputs;
     this.sources = sources;
     this.resolver = resolver;
   }
@@ -87,7 +88,7 @@ export class ProjectPluginContext extends PluginContext {
     if (path.includes(Resources.backslash) || path.startsWith(Resources.pathSeparator) || Enumerable.from(path.split(Resources.pathSeparator)).any(t => Resources.relativeSegments.contains(t))
       || !path.endsWith(PluginResources.sourceExtension) || path.endsWith(PluginResources.declarationExtension))
       throw new SDKException(PluginResources.formatAddedFilePathInvalid(this.plugin, path));
-    if (this.sources.any(t => PluginHost.relativePath(this.rootDirectory, t.path) === path) || this.addedFiles.any(t => t.path === path))
+    if (this.sources.any(t => PluginHost.relativePath(this.configuration.rootDirectory, t.path) === path) || this.addedFiles.any(t => t.path === path))
       throw new SDKException(PluginResources.formatAddedFileRepeated(this.plugin, path));
 
     this.addedFiles.add(new AddedFile(path, text, origin));

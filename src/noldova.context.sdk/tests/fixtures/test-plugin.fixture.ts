@@ -15,14 +15,15 @@ export class TestPlugin extends Plugin {
   public static readonly packageIdentity: string = "noldova.context.plugintest";
 
   public override readonly name: string;
-  public override readonly packageName: string = TestPlugin.packageIdentity;
+  public override readonly packageName: string;
   public runs: number = 0;
 
   private readonly action: (context: PluginContext) => void;
 
-  public constructor(name: string, action: (context: PluginContext) => void) {
+  public constructor(name: string, action: (context: PluginContext) => void, packageName: string = TestPlugin.packageIdentity) {
     super();
     this.name = name;
+    this.packageName = packageName;
     this.action = action;
   }
 

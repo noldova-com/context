@@ -46,17 +46,21 @@ export class DeclarationResolver {
   }
 
   public resolve(source: SourceFile, name: string): Declaration | undefined {
-    return DeclarationResolver.localOf(source, name) ?? this.importedOf(source, name);
+    return this.resolveIn(source, name, new HashSet<SourceFile>());
   }
 
-  private importedOf(source: SourceFile, name: string): Declaration | undefined {
+  private resolveIn(source: SourceFile, name: string, seen: HashSet<SourceFile>): Declaration | undefined {
+    return DeclarationResolver.localOf(source, name) ?? this.importedOf(source, name, seen);
+  }
+
+  private importedOf(source: SourceFile, name: string, seen: HashSet<SourceFile>): Declaration | undefined {
     for (const node of source.rootNode.children) {
       if (!(node instanceof TypeScriptImportDeclarationNode) || !(node.importClauseNode?.namedBindingsNode instanceof TypeScriptNamedImportsNode))
         continue;
 
       for (const specifier of node.importClauseNode.namedBindingsNode.children)
         if (specifier instanceof TypeScriptImportSpecifierNode && DeclarationResolver.valueOf(specifier.aliasNode ?? specifier.nameNode) === name)
-          return this.exportedOf(this.moduleOf(source, node.moduleSpecifierNode), DeclarationResolver.valueOf(specifier.nameNode), new HashSet<SourceFile>());
+          return this.exportedOf(this.moduleOf(source, node.moduleSpecifierNode), DeclarationResolver.valueOf(specifier.nameNode), seen);
     }
 
     return undefined;
@@ -87,7 +91,7 @@ export class DeclarationResolver {
       for (const specifier of node.exportClauseNode.children)
         if (specifier instanceof TypeScriptExportSpecifierNode && DeclarationResolver.valueOf(specifier.aliasNode ?? specifier.nameNode) === name)
           return Object.isUndefined(target)
-            ? this.resolve(file, DeclarationResolver.valueOf(specifier.nameNode))
+            ? this.resolveIn(file, DeclarationResolver.valueOf(specifier.nameNode), seen)
             : this.exportedOf(target, DeclarationResolver.valueOf(specifier.nameNode), seen);
     }
 
