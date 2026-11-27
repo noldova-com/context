@@ -932,7 +932,10 @@ export declare class MigrationBuilder {
 
   /**
    * Changes a column's type and returns its builder, which may make it
-   * nullable; otherwise it becomes `NOT NULL`.
+   * nullable; otherwise it becomes `NOT NULL`. A default given to the builder
+   * becomes the column's default, and a `NOT NULL` column takes it in each
+   * row that holds `NULL`; without one, a row that holds `NULL` fails the
+   * change.
    */
   public alterColumn(table: string, name: string, type: string): ColumnBuilder;
 

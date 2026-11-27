@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "@noldova/context.core";
 import { PropertyType } from "@noldova/context.data";
 import { type Column, SqlDialect } from "@noldova/context.data.sql";
 
@@ -30,7 +31,10 @@ export class PostgreSQLDialect extends SqlDialect {
 
   public override renderAlterColumn(table: string, column: Column): string {
     const name = this.quoteIdentifier(column.name);
+    const value = Resources.formatCast(name, column.type);
+    const filled = column.isNullable || Object.isNull(column.defaultValueSql) ? value : Resources.formatCoalesce(value, column.defaultValueSql);
 
-    return Resources.formatAlterColumn(this.renderAlterTable(table), name, column.type, column.isNullable ? Resources.dropNotNull : Resources.setNotNull);
+    return Resources.formatAlterColumn(this.renderAlterTable(table), name, column.type, filled, column.defaultValueSql,
+      column.isNullable ? Resources.dropNotNull : Resources.setNotNull);
   }
 }

@@ -45,8 +45,16 @@ export class Resources {
     return `SQLite can't alter the column "${table}.${column}" in place; the migrator rebuilds the table instead.`;
   }
 
-  public static formatCopyRows(target: string, columns: string, source: string): string {
-    return `INSERT INTO ${target} (${columns}) SELECT ${columns} FROM ${source}`;
+  public static formatCoalesce(value: string, fallback: string): string {
+    return `COALESCE(${value}, ${fallback})`;
+  }
+
+  public static formatCopyRows(target: string, columns: string, values: string, source: string): string {
+    return `INSERT INTO ${target} (${columns}) SELECT ${values} FROM ${source}`;
+  }
+
+  public static formatExpression(sql: string): string {
+    return `(${sql})`;
   }
 
   public static formatRenameTable(table: string, name: string): string {

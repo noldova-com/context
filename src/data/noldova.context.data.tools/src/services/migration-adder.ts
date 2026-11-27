@@ -50,10 +50,7 @@ export class MigrationAdder {
     const prefix = Naming.toKebabCase(context.name);
     const snapshotClassName = `${context.name}${Resources.snapshotSuffix}`;
     const snapshotPath = project.join(folder, `${prefix}${Resources.snapshotFileSuffix}`);
-    const previous = await project.existsAsync(snapshotPath)
-      ? new (MigrationAdder.exportOf(await project.importCompiledAsync(snapshotPath), snapshotClassName, MigrationAdder.isSnapshotClass,
-        Resources.formatExportMissing(snapshotPath, snapshotClassName)))()
-      : new ShapeSnapshot([]);
+    const previous = await MigrationAdder.readSnapshotAsync(project, snapshotPath, snapshotClassName);
     const snapshot = SnapshotWriter.write(snapshotClassName, new MappedSnapshot(model, shapes).toEntities());
     if (snapshot === SnapshotWriter.write(snapshotClassName, previous.toEntities()))
       return [];
@@ -64,10 +61,10 @@ export class MigrationAdder {
       throw new DataToolsException(Resources.formatMigrationNameTaken(arguments_.name, taken.moduleName));
 
     const stamp = MigrationStamp.next(now, migrations.at(-1)?.moduleName.substring(0, Resources.stampLength) ?? null);
-    const migration = new MigrationFile(`${stamp}-${Naming.toKebabCase(arguments_.name)}`, arguments_.name);
+    const migration = new MigrationFile(Resources.formatMigrationModule(stamp, Naming.toKebabCase(arguments_.name)), arguments_.name);
     const differences = SchemaDiffer.diff(SqlSchema.fromSnapshot(previous, dialect), SqlSchema.fromModel(model, dialect));
     const files = new Map([
-      [project.join(folder, `${migration.moduleName}${Resources.sourceExtension}`), MigrationWriter.write(migration.className, `${stamp}_${migration.className}`,
+      [project.join(folder, `${migration.moduleName}${Resources.sourceExtension}`), MigrationWriter.write(migration.className, Resources.formatMigrationId(stamp, migration.className),
         differences)],
       [snapshotPath, snapshot],
       [project.join(folder, `${prefix}${Resources.listFileSuffix}`), MigrationListWriter.write(`${context.name}${Resources.listSuffix}`, [...migrations, migration])]
@@ -76,6 +73,19 @@ export class MigrationAdder {
       await project.writeAsync(path, text);
 
     return [...files.keys()];
+  }
+
+  private static async readSnapshotAsync(project: ProjectSources, path: string, className: string): Promise<ModelSnapshot> {
+    if (!await project.existsAsync(path))
+      return new ShapeSnapshot([]);
+
+    const snapshot = new (MigrationAdder.exportOf(await project.importCompiledAsync(path), className, MigrationAdder.isSnapshotClass,
+      Resources.formatExportMissing(path, className)))();
+    const source = (await project.readAsync(path)).replace(Resources.lineBreakPattern, Resources.lineBreak);
+    if (SnapshotWriter.write(className, snapshot.toEntities()) !== source)
+      throw new DataToolsException(Resources.formatSnapshotStale(path));
+
+    return snapshot;
   }
 
   private static async readMigrationsAsync(project: ProjectSources, folder: string): Promise<readonly MigrationFile[]> {

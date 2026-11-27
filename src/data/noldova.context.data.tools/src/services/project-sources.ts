@@ -93,7 +93,7 @@ export class ProjectSources {
   }
 
   public async importCompiledAsync(sourcePath: string): Promise<Readonly<Record<string, unknown>>> {
-    const compiledPath = join(this.outputDirectory, relative(this.rootDirectory, sourcePath)).replace(/\.ts$/, Resources.compiledExtension);
+    const compiledPath = join(this.outputDirectory, relative(this.rootDirectory, sourcePath)).replace(Resources.sourceExtensionPattern, Resources.compiledExtension);
     if (!await this.existsAsync(compiledPath))
       throw new DataToolsException(Resources.formatCompiledMissing(sourcePath, compiledPath));
 

@@ -8,7 +8,7 @@ export class ChangeOwnerKey extends SqlMigration {
   public override apply(builder: MigrationBuilder): void {
     builder.dropForeignKey("notes", "ownerId");
     builder.dropColumn("notes", "ownerId");
-    builder.alterColumn("notes", "title", "TEXT");
+    builder.alterColumn("notes", "title", "TEXT").hasDefaultValueSql("''");
     builder.alterColumn("notes", "rank", "TEXT");
     builder.dropPrimaryKey("owners");
     builder.dropColumn("owners", "id");

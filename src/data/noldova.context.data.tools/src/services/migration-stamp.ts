@@ -8,23 +8,24 @@
 
 import "@noldova/context.core";
 
+import { Resources } from "../resources.js";
+
 export class MigrationStamp {
   public static next(now: Date, last: string | null): string {
-    const after = Object.isNull(last) ? now : new Date(Math.max(now.getTime(), MigrationStamp.parse(last).getTime() + 1000));
+    const after = Object.isNull(last) ? now : new Date(Math.max(now.getTime(), MigrationStamp.parse(last).getTime() + Resources.stampStepMilliseconds));
+    const parts = [after.getUTCMonth() + 1, after.getUTCDate(), after.getUTCHours(), after.getUTCMinutes(), after.getUTCSeconds()];
 
     return [
-      after.getUTCFullYear(),
-      after.getUTCMonth() + 1,
-      after.getUTCDate(),
-      after.getUTCHours(),
-      after.getUTCMinutes(),
-      after.getUTCSeconds()
-    ].map((t, index) => String(t).padStart(index === 0 ? 4 : 2, "0")).join("");
+      String(after.getUTCFullYear()).padStart(Resources.stampYearLength, Resources.stampPad),
+      ...parts.map(t => String(t).padStart(Resources.stampPartLength, Resources.stampPad))
+    ].join("");
   }
 
   private static parse(stamp: string): Date {
-    const part = (start: number, length: number): number => Number(stamp.substring(start, start + length));
+    const year = Resources.stampYearLength;
+    const length = Resources.stampPartLength;
+    const part = (index: number): number => Number(stamp.substring(year + (index * length), year + ((index + 1) * length)));
 
-    return new Date(Date.UTC(part(0, 4), part(4, 2) - 1, part(6, 2), part(8, 2), part(10, 2), part(12, 2)));
+    return new Date(Date.UTC(Number(stamp.substring(0, year)), part(0) - 1, part(1), part(2), part(3), part(4)));
   }
 }

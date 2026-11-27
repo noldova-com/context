@@ -21,7 +21,7 @@ export class ContextLocator {
     if (named.count() === 1)
       return named.get(0);
     if (named.count() > 1)
-      throw new DataToolsException(Resources.formatContextAmbiguous(named.select(t => `${t.name} (${t.filePath})`).toArray()));
+      throw new DataToolsException(Resources.formatContextAmbiguous(named.select(t => Resources.formatContextWithFile(t.name, t.filePath)).toArray()));
 
     throw new DataToolsException(Object.isNull(name) ? Resources.contextMissing : Resources.formatContextNotFound(name));
   }

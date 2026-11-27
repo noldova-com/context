@@ -7,20 +7,21 @@
  */
 
 import type { MigrationFile } from "../models/migrations/migration-file.js";
+import { Resources } from "../resources.js";
 
 export class MigrationListWriter {
   public static write(className: string, migrations: readonly MigrationFile[]): string {
     return [
-      "import type { SqlMigration } from \"@noldova/context.data.sql\";",
+      Resources.migrationListImport,
       "",
-      ...migrations.map(t => `import { ${t.className} } from ${JSON.stringify(`./${t.moduleName}.js`)};`),
+      ...migrations.map(t => Resources.formatMigrationImport(t.className, JSON.stringify(Resources.formatModulePath(t.moduleName)))),
       "",
-      `export class ${className} {`,
-      "  public static readonly all: readonly SqlMigration[] = [",
-      ...migrations.map((t, index) => `    new ${t.className}()${index === migrations.length - 1 ? "" : ","}`),
-      "  ];",
-      "}",
+      Resources.formatListClass(className),
+      Resources.listStart,
+      ...migrations.map((t, index) => `${Resources.formatListItem(t.className)}${index === migrations.length - 1 ? "" : Resources.listItemSeparator}`),
+      Resources.listEnd,
+      Resources.classEnd,
       ""
-    ].join("\n");
+    ].join(Resources.lineBreak);
   }
 }

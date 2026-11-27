@@ -68,7 +68,27 @@ import { NotesContextModelSnapshot } from "./migrations/sqlite/notes-context-mod
 super(options, NotesContextMigrations.all, new NotesContextModelSnapshot());
 ```
 
-A rename is written as a drop and an add.
+Build the project before each run, and leave the files the command writes
+as it wrote them: it reads the last snapshot from the compiled project, and
+fails when that doesn't match the snapshot's source, such as on a second run
+without a build in between.
+
+What the command doesn't do yet:
+
+- A rename is written as a drop and an add, which loses the column's or the
+  table's rows.
+- A foreign key over more than one column is written as one foreign key for
+  each column. PostgreSQL refuses each one unless its column alone refers to
+  a unique key.
+- On PostgreSQL, a migration that changes a primary key that unchanged
+  foreign keys refer to fails, because the key can't be dropped while they
+  depend on it.
+- A required column's default is written as the provider's SQL, such as
+  `''` or `0`, so each provider has its own migrations; a default set by
+  hand in a migration isn't read back.
+- The `tsconfig.json` is plain JSON, without comments, and its `extends` is
+  read as a path beside it; one that names a package fails as a file the
+  command can't read.
 
 ## License
 

@@ -25,7 +25,7 @@ export class AddMigrationArguments {
   }
 
   public get providerName(): string {
-    return this.provider.substring(this.provider.lastIndexOf(".") + 1);
+    return this.provider.substring(this.provider.lastIndexOf(Resources.identitySeparator) + 1);
   }
 
   public static parse(arguments_: readonly string[]): AddMigrationArguments {

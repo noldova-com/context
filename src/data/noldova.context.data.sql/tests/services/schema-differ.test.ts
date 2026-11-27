@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { Column, ForeignKey, PrimaryKey, SchemaDiffer, Table } from "@noldova/context.data.sql";
+import { AlterColumnOperation, Column, ForeignKey, PrimaryKey, SchemaDiffer, Table } from "@noldova/context.data.sql";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { TestDialect } from "../fixtures/test-dialect.fixture.js";
@@ -56,6 +56,16 @@ export class SchemaDifferTests {
         + "CONSTRAINT \"FK_posts_authorId\" FOREIGN KEY (\"authorId\") REFERENCES \"authors\" (\"id\"))",
       "ALTER TABLE \"notes\" ADD CONSTRAINT \"FK_notes_draftId\" FOREIGN KEY (\"draftId\") REFERENCES \"drafts\" (\"id\")"
     ].join("\n"), statements.join("\n"));
+  }
+
+  @TestMethod
+  public givesAColumnMadeRequiredItsDefaultForTheRowsThatHoldNone(): void {
+    const source = [SchemaDifferTests.table("notes", ["id"], [], "id TEXT", "title TEXT?", "rank INTEGER", "body TEXT")];
+    const target = [SchemaDifferTests.table("notes", ["id"], [], "id TEXT", "title TEXT=''", "rank TEXT=''", "body TEXT?=''")];
+
+    const columns = SchemaDiffer.diff(source, target).filter(t => t instanceof AlterColumnOperation).map(t => t.column);
+
+    Assert.areEqual("title:false:'',rank:false:null,body:true:null", columns.map(t => `${t.name}:${t.isNullable}:${t.defaultValueSql}`).join(","));
   }
 
   @TestMethod

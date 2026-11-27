@@ -21,70 +21,78 @@ import {
   type Table
 } from "@noldova/context.data.sql";
 
+import { Resources } from "../resources.js";
+
 export class MigrationWriter {
   public static write(className: string, id: string, differences: readonly SchemaDifference[]): string {
     const statements = differences.flatMap(t => MigrationWriter.statementOf(t));
     const body = statements.length === 0
-      ? ["  public override apply(_builder: MigrationBuilder): void { }"]
-      : ["  public override apply(builder: MigrationBuilder): void {", ...statements.map(t => `    ${t}`), "  }"];
+      ? [Resources.applyEmpty]
+      : [Resources.applyStart, ...statements.map(t => `${Resources.statementIndent}${t}`), Resources.blockEnd];
 
     return [
-      "import { type MigrationBuilder, SqlMigration } from \"@noldova/context.data.sql\";",
+      Resources.migrationImport,
       "",
-      `export class ${className} extends SqlMigration {`,
-      "  public constructor() {",
-      `    super(${JSON.stringify(id)});`,
-      "  }",
+      Resources.formatMigrationClass(className),
+      ...Resources.formatMigrationConstructor(JSON.stringify(id)),
       "",
       ...body,
-      "}",
+      Resources.classEnd,
       ""
-    ].join("\n");
+    ].join(Resources.lineBreak);
   }
 
   private static statementOf(difference: SchemaDifference): readonly string[] {
     if (difference instanceof CreateTableOperation)
       return MigrationWriter.createTableOf(difference.table);
     if (difference instanceof AddColumnOperation)
-      return [`builder.addColumn${MigrationWriter.columnOf([difference.table], difference.column)};`];
+      return [MigrationWriter.columnOf(Resources.formatBuilderCall(Resources.addColumnMethod,
+        MigrationWriter.argumentsOf([difference.table, difference.column.name, difference.column.type])), difference.column)];
     if (difference instanceof AlterColumnOperation)
-      return [`builder.alterColumn${MigrationWriter.columnOf([difference.table], difference.column)};`];
+      return [MigrationWriter.columnOf(Resources.formatBuilderCall(Resources.alterColumnMethod,
+        MigrationWriter.argumentsOf([difference.table, difference.column.name, difference.column.type])), difference.column)];
     if (difference instanceof DropColumnOperation)
-      return [`builder.dropColumn(${MigrationWriter.argumentsOf([difference.table, difference.column])});`];
+      return [MigrationWriter.callOf(Resources.dropColumnMethod, [difference.table, difference.column])];
     if (difference instanceof AddPrimaryKeyOperation)
-      return [`builder.addPrimaryKey(${MigrationWriter.argumentsOf([difference.table, ...difference.primaryKey.columns])});`];
+      return [MigrationWriter.callOf(Resources.addPrimaryKeyMethod, [difference.table, ...difference.primaryKey.columns])];
     if (difference instanceof DropPrimaryKeyOperation)
-      return [`builder.dropPrimaryKey(${MigrationWriter.argumentsOf([difference.table])});`];
+      return [MigrationWriter.callOf(Resources.dropPrimaryKeyMethod, [difference.table])];
     if (difference instanceof AddForeignKeyOperation)
-      return [`builder.addForeignKey(${MigrationWriter.argumentsOf([difference.table, difference.foreignKey.column, difference.foreignKey.principalTable,
-        difference.foreignKey.principalColumn])});`];
+      return [MigrationWriter.callOf(Resources.addForeignKeyMethod, [difference.table, difference.foreignKey.column, difference.foreignKey.principalTable,
+        difference.foreignKey.principalColumn])];
     if (difference instanceof DropForeignKeyOperation)
-      return [`builder.dropForeignKey(${MigrationWriter.argumentsOf([difference.table, difference.column])});`];
+      return [MigrationWriter.callOf(Resources.dropForeignKeyMethod, [difference.table, difference.column])];
 
-    return [`builder.dropTable(${MigrationWriter.argumentsOf([difference.table])});`];
+    return [MigrationWriter.callOf(Resources.dropTableMethod, [difference.table])];
   }
 
   private static createTableOf(table: Table): readonly string[] {
     const constraints = [
-      ...Object.isNull(table.primaryKey) ? [] : [`constraints.addPrimaryKey(${MigrationWriter.argumentsOf(table.primaryKey.columns)});`],
-      ...table.foreignKeys.map(t => `constraints.addForeignKey(${MigrationWriter.argumentsOf([t.column, t.principalTable, t.principalColumn])});`)
-    ];
-    const columns = table.columns.map(t => `    table.addColumn${MigrationWriter.columnOf([], t)};`);
+      ...Object.isNull(table.primaryKey) ? [] : [Resources.formatConstraintsCall(Resources.addPrimaryKeyMethod, MigrationWriter.argumentsOf(table.primaryKey.columns))],
+      ...table.foreignKeys.map(t => Resources.formatConstraintsCall(Resources.addForeignKeyMethod,
+        MigrationWriter.argumentsOf([t.column, t.principalTable, t.principalColumn])))
+    ].map(t => `${Resources.statementIndent}${t}${Resources.statementEnd}`);
+    const columns = table.columns.map(t => `${Resources.statementIndent}${MigrationWriter.columnOf(Resources.formatTableCall(Resources.addColumnMethod,
+      MigrationWriter.argumentsOf([t.name, t.type])), t)}`);
     const callbacks = constraints.length === 0
-      ? ["  table => {", ...columns, "  });"]
-      : ["  table => {", ...columns, "  },", "  constraints => {", ...constraints.map(t => `    ${t}`), "  });"];
+      ? [Resources.tableCallbackStart, ...columns, Resources.callbacksEnd]
+      : [Resources.tableCallbackStart, ...columns, Resources.callbackEnd, Resources.constraintsCallbackStart, ...constraints, Resources.callbacksEnd];
 
-    return [`builder.createTable(${JSON.stringify(table.name)},`, ...callbacks];
+    return [Resources.formatCreateTableStart(JSON.stringify(table.name)), ...callbacks];
   }
 
-  private static columnOf(leading: readonly string[], column: Column): string {
-    const nullable = column.isNullable ? ".makeNullable()" : "";
-    const defaultValue = Object.isNull(column.defaultValueSql) ? "" : `.hasDefaultValueSql(${JSON.stringify(column.defaultValueSql)})`;
+  private static columnOf(call: string, column: Column): string {
+    const nullable = column.isNullable ? Resources.nullableCall : "";
+    const defaultValue = Object.isNull(column.defaultValueSql) ? "" : Resources.formatDefaultValueSqlCall(JSON.stringify(column.defaultValueSql));
 
-    return `(${MigrationWriter.argumentsOf([...leading, column.name, column.type])})${nullable}${defaultValue}`;
+    return `${call}${nullable}${defaultValue}${Resources.statementEnd}`;
+  }
+
+  private static callOf(method: string, values: readonly string[]): string {
+    return `${Resources.formatBuilderCall(method, MigrationWriter.argumentsOf(values))}${Resources.statementEnd}`;
   }
 
   private static argumentsOf(values: readonly string[]): string {
-    return values.map(t => JSON.stringify(t)).join(", ");
+    return values.map(t => JSON.stringify(t)).join(Resources.argumentSeparator);
   }
 }

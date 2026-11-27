@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { PropertyType, type SnapshotBuilder } from "@noldova/context.data";
 import {
   AddColumnOperation,
   AddForeignKeyOperation,
@@ -19,13 +20,43 @@ import {
   DropTableOperation,
   ForeignKey,
   PrimaryKey,
+  SchemaDiffer,
+  SqlSchema,
   Table
 } from "@noldova/context.data.sql";
+import { SQLiteDialect } from "@noldova/context.data.sql.sqlite";
 import { MigrationWriter } from "@noldova/context.data.tools/services/migration-writer.js";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
+import { RecordedSnapshot } from "../fixtures/recorded-snapshot.fixture.js";
+
 @TestClass
 export class MigrationWriterTests {
+  @TestMethod
+  public writesAForeignKeyOverTwoColumnsAsOneForEachColumn(): void {
+    const region = (t: SnapshotBuilder): void => {
+      t.entity("Region").property("code", PropertyType.String).property("year", PropertyType.Integer).hasKey("code", "year");
+    };
+    const source = new RecordedSnapshot(t => {
+      region(t);
+      t.entity("Office").property("id", PropertyType.Integer).property("regionCode", PropertyType.String).property("regionYear", PropertyType.Integer).hasKey("id");
+    });
+    const target = new RecordedSnapshot(t => {
+      region(t);
+      t.entity("Office").property("id", PropertyType.Integer).property("regionCode", PropertyType.String).property("regionYear", PropertyType.Integer).hasKey("id")
+        .hasForeignKey("Region", "regionCode", "regionYear");
+    });
+    const dialect = new SQLiteDialect();
+
+    const text = MigrationWriter.write("LinkRegions", "20261127150000_LinkRegions",
+      SchemaDiffer.diff(SqlSchema.fromSnapshot(source, dialect), SqlSchema.fromSnapshot(target, dialect)));
+
+    Assert.areEqual([
+      "    builder.addForeignKey(\"Office\", \"regionCode\", \"Region\", \"code\");",
+      "    builder.addForeignKey(\"Office\", \"regionYear\", \"Region\", \"year\");"
+    ].join(","), text.split("\n").filter(t => t.includes("builder.")).join(","));
+  }
+
   @TestMethod
   public writesOneBuilderCallForEachDifference(): void {
     const differences = [

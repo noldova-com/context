@@ -30,6 +30,24 @@ export class SQLiteTableRebuildTests {
   }
 
   @TestMethod
+  public async rebuildsATableWithoutAutoincrementKeepingAnExpressionDefaultAsWrittenAsync(): Promise<void> {
+    using directory = new TemporaryDirectory();
+    await using connection = await SQLiteTableRebuildTests.openAsync(directory);
+    await SQLiteTableRebuildTests.migrateAsync(connection, "20261127120001_Counters", t => {
+      t.executeSql("CREATE TABLE \"counters\" (\"id\" INTEGER PRIMARY KEY AUTOINCREMENT, \"name\" TEXT NOT NULL DEFAULT (lower('A')))");
+      t.executeSql("INSERT INTO \"counters\" (\"name\") VALUES ('first')");
+    });
+
+    await SQLiteTableRebuildTests.migrateAsync(connection, "20261127120002_Alter", t => t.alterColumn("counters", "name", "TEXT").makeNullable());
+    await connection.executeAsync(new SqlQuery("INSERT INTO \"counters\" DEFAULT VALUES"));
+
+    const sql = await connection.queryAsync(new SqlQuery("SELECT \"sql\" FROM sqlite_master WHERE \"name\" = 'counters'"));
+    const rows = await connection.queryAsync(new SqlQuery("SELECT \"id\", \"name\" FROM \"counters\" ORDER BY \"id\""));
+    Assert.isFalse(sql.map(t => t.readString("sql")).join(",").includes("AUTOINCREMENT"));
+    Assert.areEqual("1:first,2:a", rows.map(t => `${t.readInteger("id")}:${t.readString("name")}`).join(","));
+  }
+
+  @TestMethod
   public async dropsAColumnWithTheIndexesOverItAsync(): Promise<void> {
     using directory = new TemporaryDirectory();
     await using connection = await SQLiteTableRebuildTests.openAsync(directory);

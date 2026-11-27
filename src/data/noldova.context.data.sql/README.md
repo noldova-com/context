@@ -60,7 +60,9 @@ builder.addPrimaryKey("notes", "id", "rank");
 builder.addForeignKey("notes", "ownerId", "owners", "id");
 ```
 
-A dialect names keys `PK_<table>` and foreign keys `FK_<table>_<column>`.
+A column made `NOT NULL` with a default takes that default in each row that
+holds `NULL`; without one, such a row fails the migration. A dialect names
+keys `PK_<table>` and foreign keys `FK_<table>_<column>`.
 PostgreSQL alters a table in place. SQLite can't alter a column, so it
 rebuilds a changed table from the live schema. It creates the new table,
 copies the rows of the columns both keep, drops the old table, renames the

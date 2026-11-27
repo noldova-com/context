@@ -89,6 +89,30 @@ export class SchemaChangeTests {
   @TestMethod
   @TestData("sqlite")
   @TestData("postgresql")
+  public async fillsTheRowsThatHoldNoValueOfAColumnMadeRequiredWithItsDefault(provider: string): Promise<void> {
+    await using database = await ProviderDatabase.createAsync(provider);
+    await using context = new ShapeContext(database.options(), [new ShapeMigration("20261127140000_Notes", t => {
+      t.createTable("notes", c => {
+        c.addColumn("id", "TEXT");
+        c.addColumn("title", "TEXT").makeNullable();
+      }, c => c.addPrimaryKey("id"));
+      t.executeSql("INSERT INTO \"notes\" (\"id\", \"title\") VALUES ('1', NULL), ('2', 'kept')");
+    }), new ShapeMigration("20261127140001_Required", t => {
+      t.alterColumn("notes", "title", "TEXT").hasDefaultValueSql("'none'");
+    })]);
+
+    await context.database.migrateAsync();
+    const connection = context.database.connection;
+    const rows = await connection.queryAsync(new SqlQuery("SELECT \"id\", \"title\" FROM \"notes\" ORDER BY \"id\""));
+
+    Assert.areEqual("1:none,2:kept", rows.map(t => `${t.readString("id")}:${t.readString("title")}`).join(","));
+    Assert.areEqual("id TEXT NOT NULL, title TEXT NOT NULL; key id; references ", await database.describeAsync(connection, "notes"));
+    Assert.areEqual(1, await connection.executeAsync(new SqlQuery("INSERT INTO \"notes\" (\"id\") VALUES ('3')")));
+  }
+
+  @TestMethod
+  @TestData("sqlite")
+  @TestData("postgresql")
   public async rollsBackAChangeThatLeavesARowReferringToNoRow(provider: string): Promise<void> {
     await using database = await ProviderDatabase.createAsync(provider);
     await using context = new ShapeContext(database.options(), [SchemaChangeTests.created, new ShapeMigration("20261127130001_Owner", t => {
@@ -103,6 +127,28 @@ export class SchemaChangeTests {
     Assert.areEqual("id TEXT NOT NULL, ownerId TEXT NOT NULL, rank TEXT, text TEXT NOT NULL, title TEXT NOT NULL; key id; references ",
       await database.describeAsync(connection, "notes"));
     Assert.areEqual(1, (await connection.queryAsync(database.findIndex("IX_notes_text"))).length);
+  }
+
+  @TestMethod
+  public async failsOnPostgreSQLToChangeAKeyThatAForeignKeyRefersTo(): Promise<void> {
+    await using database = await ProviderDatabase.createAsync("postgresql");
+    await using context = new ShapeContext(database.options(), [new ShapeMigration("20261127150000_Owners", t => {
+      t.createTable("owners", c => c.addColumn("id", "TEXT"), c => c.addPrimaryKey("id"));
+      t.addColumn("owners", "code", "TEXT").hasDefaultValueSql("''");
+      t.createTable("notes", c => {
+        c.addColumn("id", "TEXT");
+        c.addColumn("ownerId", "TEXT");
+      }, c => c.addPrimaryKey("id"));
+      t.addForeignKey("notes", "ownerId", "owners", "id");
+    }), new ShapeMigration("20261127150001_OwnerKey", t => {
+      t.dropPrimaryKey("owners");
+      t.addPrimaryKey("owners", "id", "code");
+    })]);
+
+    const exception = await Assert.throwsAsync(async () => context.database.migrateAsync(), Error);
+
+    Assert.areEqual("cannot drop constraint PK_owners on table owners because other objects depend on it", exception.message);
+    Assert.areEqual("20261127150000_Owners", (await context.database.getAppliedMigrationsAsync()).join(","));
   }
 
   private static async notesAsync(connection: SqlConnection): Promise<string> {

@@ -30,11 +30,20 @@ export class AlterColumnOperationTests {
     const foreignKeys = [new ForeignKey("ownerId", "owners", "id")];
     const table = new Table("notes", [new Column("id", "TEXT", false), new Column("title", "TEXT", false, "''")], key, foreignKeys);
 
-    const changed = new AlterColumnOperation("notes", new Column("title", "INTEGER", true, "0")).applyTo(table);
+    const changed = new AlterColumnOperation("notes", new Column("title", "INTEGER", true)).applyTo(table);
 
     Assert.areEqual("id:TEXT:false:null,title:INTEGER:true:''", changed.columns.map(t => `${t.name}:${t.type}:${t.isNullable}:${t.defaultValueSql}`).join(","));
     Assert.areEqual(key, changed.primaryKey);
     Assert.areEqual("ownerId", changed.foreignKeys.map(t => t.column).join(","));
+  }
+
+  @TestMethod
+  public givesTheColumnTheDefaultTheChangeHas(): void {
+    const table = new Table("notes", [new Column("id", "TEXT", false), new Column("title", "TEXT", true, "''")], null, []);
+
+    const changed = new AlterColumnOperation("notes", new Column("title", "TEXT", false, "'none'")).applyTo(table);
+
+    Assert.areEqual("title:false:'none'", changed.columns.filter(t => t.name === "title").map(t => `${t.name}:${t.isNullable}:${t.defaultValueSql}`).join(","));
   }
 
   @TestMethod

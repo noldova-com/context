@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "@noldova/context.core";
+
 export class Resources {
   public static readonly abortEvent: string = "abort";
   public static readonly allowMode: string = "allow";
@@ -197,8 +199,10 @@ export class Resources {
     return `SELECT pg_advisory_xact_lock(hashtext('${resource}'))`;
   }
 
-  public static formatAlterColumn(table: string, column: string, type: string, nullability: string): string {
-    return `${table} ALTER COLUMN ${column} TYPE ${type} USING ${column}::${type}, ALTER COLUMN ${column} ${nullability}`;
+  public static formatAlterColumn(table: string, column: string, type: string, value: string, defaultValue: string | null, nullability: string): string {
+    const setDefault = Object.isNull(defaultValue) ? "" : `, ALTER COLUMN ${column} SET DEFAULT ${defaultValue}`;
+
+    return `${table} ALTER COLUMN ${column} TYPE ${type} USING ${value}${setDefault}, ALTER COLUMN ${column} ${nullability}`;
   }
 
   public static formatBatchFailed(index: number): string {
@@ -225,8 +229,16 @@ export class Resources {
     return `The server did not answer within the cancel timeout (${seconds} seconds) after a query was canceled, so whether it ran is unknown.`;
   }
 
+  public static formatCast(value: string, type: string): string {
+    return `${value}::${type}`;
+  }
+
   public static formatChannelBindingUnsupported(value: string): string {
     return `channel_binding ${value} is not supported.`;
+  }
+
+  public static formatCoalesce(value: string, fallback: string): string {
+    return `COALESCE(${value}, ${fallback})`;
   }
 
   public static formatConnectionClosed(host: string, port: number): string {

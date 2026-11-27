@@ -70,6 +70,30 @@ export class MigrationAdderTests {
   }
 
   @TestMethod
+  public async readsASnapshotWithWindowsLineBreaksAsItsCompiledSnapshotAsync(): Promise<void> {
+    await using project = await ToolProject.createAsync();
+    await project.copyVersionAsync("v3", "v3", "sqlite");
+    const snapshot = "src/migrations/sqlite/notes-context-model-snapshot.ts";
+    await project.writeAsync(snapshot, (await project.readAsync(snapshot)).replaceAll("\n", "\r\n"));
+
+    Assert.areEqual(0, (await MigrationAdderTests.addAsync(project, ["Again", "--provider", MigrationAdderTests.sqlite], new Date())).length);
+  }
+
+  @TestMethod
+  public async failsWhenTheCompiledSnapshotIsOlderThanItsSourceAsync(): Promise<void> {
+    await using project = await ToolProject.createAsync();
+    await project.copyVersionAsync("v2", "v1", "sqlite");
+    await MigrationAdderTests.addAsync(project, ["AddOwners", "--provider", MigrationAdderTests.sqlite], new Date(Date.UTC(2026, 10, 27, 13)));
+
+    const message = await MigrationAdderTests.failureAsync(project, ["Again", "--provider", MigrationAdderTests.sqlite]);
+
+    Assert.areEqual(`The compiled snapshot of "${project.path("src/migrations/sqlite/notes-context-model-snapshot.ts")}" doesn't match its source: `
+      + "build the project first, and leave the files the tool writes as it wrote them.", message);
+    Assert.areEqual("20261127120000-add-notes.ts,20261127130000-add-owners.ts,notes-context-migrations.ts,notes-context-model-snapshot.ts",
+      (await project.listAsync("src/migrations/sqlite")).join(","));
+  }
+
+  @TestMethod
   @TestData("sqlite")
   @TestData("postgresql")
   public async appliesTheWrittenMigrationsInTurnKeepingTheRowsAsync(provider: string): Promise<void> {
@@ -93,7 +117,7 @@ export class MigrationAdderTests {
       Assert.areEqual("first:0:null:null",
         notes.map(t => `${t.readString("body")}:${t.readInteger("rank")}:${t.readNullableString("title")}:${t.readNullableInteger("ownerId")}`).join(","));
       await connection.executeAsync(new SqlQuery("INSERT INTO \"owners\" (\"id\", \"name\") VALUES (?, ?)", [7, "owner"]));
-      await connection.executeAsync(new SqlQuery("UPDATE \"notes\" SET \"ownerId\" = ?, \"title\" = ?", [7, "titled"]));
+      await connection.executeAsync(new SqlQuery("UPDATE \"notes\" SET \"ownerId\" = ?", [7]));
     }
     await using context = third.open(database.options(), provider);
     Assert.areEqual("20261127140000_ChangeOwnerKey", (await context.database.migrateAsync()).join(","));
@@ -102,7 +126,7 @@ export class MigrationAdderTests {
     const owners = await connection.queryAsync(new SqlQuery("SELECT \"code\", \"name\" FROM \"owners\""));
     const notes = await connection.queryAsync(new SqlQuery("SELECT \"id\", \"title\", \"body\", \"rank\" FROM \"notes\""));
     Assert.areEqual(":owner", owners.map(t => `${t.readString("code")}:${t.readString("name")}`).join(","));
-    Assert.areEqual("1:titled:first:0", notes.map(t => `${t.readInteger("id")}:${t.readString("title")}:${t.readString("body")}:${t.readString("rank")}`).join(","));
+    Assert.areEqual("1::first:0", notes.map(t => `${t.readInteger("id")}:${t.readString("title")}:${t.readString("body")}:${t.readString("rank")}`).join(","));
   }
 
   @TestMethod
