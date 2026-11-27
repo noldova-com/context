@@ -8,7 +8,7 @@
 
 import "@noldova/context.core";
 import { SqlModelValidator, SqlQuery } from "@noldova/context.data.sql";
-import { DataToolsException } from "@noldova/context.data.tools";
+import { DataToolsException, EntityPropertyTypeException } from "@noldova/context.data.tools";
 import { AddMigrationArguments } from "@noldova/context.data.tools/models/migrations/add-migration-arguments.js";
 import { MigrationAdder } from "@noldova/context.data.tools/services/migration-adder.js";
 import { ProjectSources } from "@noldova/context.data.tools/services/project-sources.js";
@@ -93,16 +93,30 @@ export class MigrationAdderTests {
       Assert.areEqual("first:0:null:null",
         notes.map(t => `${t.readString("body")}:${t.readInteger("rank")}:${t.readNullableString("title")}:${t.readNullableInteger("ownerId")}`).join(","));
       await connection.executeAsync(new SqlQuery("INSERT INTO \"owners\" (\"id\", \"name\") VALUES (?, ?)", [7, "owner"]));
-      await connection.executeAsync(new SqlQuery("UPDATE \"notes\" SET \"ownerId\" = ?", [7]));
+      await connection.executeAsync(new SqlQuery("UPDATE \"notes\" SET \"ownerId\" = ?, \"title\" = ?", [7, "titled"]));
     }
     await using context = third.open(database.options(), provider);
     Assert.areEqual("20261127140000_ChangeOwnerKey", (await context.database.migrateAsync()).join(","));
     SqlModelValidator.validate(context.model, third.snapshot(provider), context.database.connection.dialect);
     const connection = context.database.connection;
     const owners = await connection.queryAsync(new SqlQuery("SELECT \"code\", \"name\" FROM \"owners\""));
-    const notes = await connection.queryAsync(new SqlQuery("SELECT \"id\", \"body\" FROM \"notes\""));
+    const notes = await connection.queryAsync(new SqlQuery("SELECT \"id\", \"title\", \"body\", \"rank\" FROM \"notes\""));
     Assert.areEqual(":owner", owners.map(t => `${t.readString("code")}:${t.readString("name")}`).join(","));
-    Assert.areEqual("1:first", notes.map(t => `${t.readInteger("id")}:${t.readString("body")}`).join(","));
+    Assert.areEqual("1:titled:first:0", notes.map(t => `${t.readInteger("id")}:${t.readString("title")}:${t.readString("body")}:${t.readString("rank")}`).join(","));
+  }
+
+  @TestMethod
+  public async writesNothingForAPropertyTypeItCannotMapAsync(): Promise<void> {
+    await using project = await ToolProject.createAsync();
+    await project.copyVersionAsync("v1", null, "sqlite");
+    await project.writeAsync("src/entities.ts", (await project.readAsync("src/entities.ts")).replace("public text: string = \"\";", "public text: Date = new Date();"));
+
+    const exception = await Assert.throwsAsync(() => MigrationAdderTests.addAsync(project, ["AddNotes", "--provider", MigrationAdderTests.sqlite], new Date()),
+      EntityPropertyTypeException);
+
+    Assert.areEqual("Note.text", `${exception.entity}.${exception.property}`);
+    Assert.areEqual("build,notes.ctxp,src,tsconfig.json", (await project.listAsync(".")).join(","));
+    Assert.areEqual("entities.ts,notes-context.ts", (await project.listAsync("src")).join(","));
   }
 
   @TestMethod

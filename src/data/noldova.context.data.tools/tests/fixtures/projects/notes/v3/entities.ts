@@ -13,7 +13,7 @@ export class Owner {
 
 export class Note {
   public id: number = 0;
-  public title: string | null = null;
+  public title: string = "";
   public text: string | null = null;
-  public rank: number = 0;
+  public rank: string = "";
 }
