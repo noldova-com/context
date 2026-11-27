@@ -6,7 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { ColumnType, SqlDialect } from "@noldova/context.data.sql";
+import { PropertyType } from "@noldova/context.data";
+import { SqlDialect } from "@noldova/context.data.sql";
 
 import { Resources } from "../resources.js";
 
@@ -15,8 +16,8 @@ export class PostgreSQLDialect extends SqlDialect {
     return Resources.beginTransaction;
   }
 
-  public override formatColumnType(type: ColumnType): string {
-    return type === ColumnType.Integer ? Resources.integerType : Resources.textType;
+  public override formatColumnType(type: PropertyType): string {
+    return type === PropertyType.Integer ? Resources.integerType : Resources.textType;
   }
 
   public override formatIdentityColumnType(): string {

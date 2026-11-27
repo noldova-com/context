@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { Column, ColumnType, CreateTableOperation, PrimaryKey, Table } from "@noldova/context.data.sql";
+import { Column, CreateTableOperation, PrimaryKey, Table } from "@noldova/context.data.sql";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { TestDialect } from "../../fixtures/test-dialect.fixture.js";
@@ -15,7 +15,7 @@ import { TestDialect } from "../../fixtures/test-dialect.fixture.js";
 export class CreateTableOperationTests {
   @TestMethod
   public rendersTheTableInTheDialect(): void {
-    const table = new Table("notes", [new Column("id", ColumnType.Text, false)], new PrimaryKey(["id"]), []);
+    const table = new Table("notes", [new Column("id", "TEXT", false)], new PrimaryKey(["id"]), []);
     const operation = new CreateTableOperation(table);
 
     Assert.areEqual(table, operation.table);

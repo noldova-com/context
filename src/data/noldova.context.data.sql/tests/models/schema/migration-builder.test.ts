@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { ColumnType, CreateIndexOperation, CreateTableOperation, MigrationBuilder, SqlStatementOperation } from "@noldova/context.data.sql";
+import { CreateIndexOperation, CreateTableOperation, MigrationBuilder, SqlStatementOperation } from "@noldova/context.data.sql";
 import { ArgumentException, InvalidOperationException } from "@noldova/context.exceptions";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
@@ -22,8 +22,8 @@ export class MigrationBuilderTests {
     builder.createIndex<Note>("notes", t => t.ownerId);
     builder.createTable<Note>("notes",
       table => {
-        table.addColumn(t => t.id, ColumnType.Text);
-        table.addColumn(t => t.ownerId, ColumnType.Text).makeNullable();
+        table.addColumn(t => t.id, "TEXT");
+        table.addColumn(t => t.ownerId, "TEXT").makeNullable();
       },
       constraints => constraints.addPrimaryKey(t => t.id).addForeignKey<Owner>(t => t.ownerId, "owners", t => t.id));
     builder.createUniqueIndex<Note>("notes", t => t.ownerId, t => t.id);
@@ -41,7 +41,7 @@ export class MigrationBuilderTests {
   @TestMethod
   public createsATableWithoutConstraints(): void {
     const builder = new MigrationBuilder();
-    builder.createTable<Note>("log", table => table.addColumn(t => t.text, ColumnType.Text));
+    builder.createTable<Note>("log", table => table.addColumn(t => t.text, "TEXT"));
 
     Assert.areEqual("CREATE TABLE \"log\" (\"text\" TEXT NOT NULL)", builder.toOperations()[0]?.render(new TestDialect()));
   }

@@ -14,7 +14,7 @@ npm install @noldova/context.core
 ## Use
 
 ```ts
-import { nameof } from "@noldova/context.core";
+import { nameof, StringComparison } from "@noldova/context.core";
 
 class Options {
   public timeout: number = 0;
@@ -25,6 +25,7 @@ nameof<Options>(t => t.timeout); // "timeout"
 
 Object.isNullOrUndefined(0); // false: zero is a value.
 Object.isString(""); // true
+String.equals("Id", "id", StringComparison.OrdinalIgnoreCase); // true
 String.format("Expected {0} of {1}", 3, 5); // "Expected 3 of 5"
 String.isNullOrWhitespace(" \t\r\n "); // true
 String.join(", ", ["a", "b", "c"]); // "a, b, c"

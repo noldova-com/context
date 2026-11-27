@@ -6,19 +6,40 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { DbContextOptions } from "./db-context-options.js";
-import type { Migration } from "./migration.js";
 import type { Connection } from "./connection.js";
 import { DatabaseFacade } from "./database-facade.js";
+import type { DbContextOptions } from "./db-context-options.js";
+import { ModelBuilder } from "./entities/model-builder.js";
+import type { Model } from "./entities/model.js";
+import type { Migration } from "./migration.js";
+import type { ModelSnapshot } from "./snapshots/model-snapshot.js";
 
 export abstract class DbContext<TConnection extends Connection, TMigration extends Migration> implements AsyncDisposable {
-  public readonly database: DatabaseFacade<TConnection, TMigration>;
+  private static readonly models: WeakMap<object, Model> = new WeakMap();
 
-  protected constructor(options: DbContextOptions<TConnection, TMigration>, migrations: readonly TMigration[]) {
+  public readonly database: DatabaseFacade<TConnection, TMigration>;
+  private readonly snapshot: ModelSnapshot | null;
+
+  protected constructor(options: DbContextOptions<TConnection, TMigration>, migrations: readonly TMigration[], snapshot: ModelSnapshot | null = null) {
     this.database = new DatabaseFacade(options, migrations);
+    this.snapshot = snapshot;
+  }
+
+  public get model(): Model {
+    let model = DbContext.models.get(this.constructor);
+    if (Object.isUndefined(model)) {
+      const builder = new ModelBuilder();
+      this.onModelCreating(builder);
+      model = builder.build(this.snapshot);
+      DbContext.models.set(this.constructor, model);
+    }
+
+    return model;
   }
 
   public async [Symbol.asyncDispose](): Promise<void> {
     await this.database.connection.closeAsync();
   }
+
+  protected onModelCreating(_builder: ModelBuilder): void { }
 }

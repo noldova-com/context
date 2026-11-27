@@ -6,16 +6,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { ColumnType } from "../../enums/column-type.js";
 import { Column } from "./column.js";
 
 export class ColumnBuilder {
   private isNullable: boolean = false;
 
   public readonly name: string;
-  public readonly type: ColumnType;
+  public readonly type: string;
 
-  public constructor(name: string, type: ColumnType) {
+  public constructor(name: string, type: string) {
     this.name = name;
     this.type = type;
   }

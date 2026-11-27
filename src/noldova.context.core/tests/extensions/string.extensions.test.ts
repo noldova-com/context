@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { nameof } from "@noldova/context.core";
+import { nameof, StringComparison } from "@noldova/context.core";
 import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
 @TestClass
@@ -25,6 +25,38 @@ export class StringExtensionsTests {
     Assert.areEqual<boolean | undefined>(false, descriptor.writable);
     Assert.areEqual<boolean | undefined>(false, descriptor.enumerable);
     Assert.areEqual<boolean | undefined>(false, descriptor.configurable);
+  }
+
+  @TestMethod
+  public equalsIsImmutable(): void {
+    const descriptor = Object.getOwnPropertyDescriptor(String, nameof<StringConstructor>(t => t.equals));
+
+    Assert.isDefined(descriptor);
+    Assert.areEqual<boolean | undefined>(false, descriptor.writable);
+    Assert.areEqual<boolean | undefined>(false, descriptor.enumerable);
+    Assert.areEqual<boolean | undefined>(false, descriptor.configurable);
+  }
+
+  @TestMethod
+  public equalsOrdinallyCountsLetterCase(): void {
+    Assert.isTrue(String.equals("NoteId", "NoteId", StringComparison.Ordinal));
+    Assert.isFalse(String.equals("NoteId", "noteid", StringComparison.Ordinal));
+    Assert.isFalse(String.equals("Note", "NoteId", StringComparison.Ordinal));
+  }
+
+  @TestMethod
+  public equalsIgnoringCaseMatchesEachLetterInEitherCase(): void {
+    Assert.isTrue(String.equals("NoteId", "nOTEiD", StringComparison.OrdinalIgnoreCase));
+    Assert.isTrue(String.equals("été", "ÉTÉ", StringComparison.OrdinalIgnoreCase));
+    Assert.isTrue(String.equals(String.empty, String.empty, StringComparison.OrdinalIgnoreCase));
+    Assert.isFalse(String.equals("NoteId", "NoteIs", StringComparison.OrdinalIgnoreCase));
+  }
+
+  @TestMethod
+  public equalsIgnoringCaseComparesOneCharacterAtATime(): void {
+    Assert.isFalse(String.equals("ß", "ss", StringComparison.OrdinalIgnoreCase));
+    Assert.isFalse(String.equals("ßs", "sß", StringComparison.OrdinalIgnoreCase));
+    Assert.isFalse(String.equals("ß", "s", StringComparison.OrdinalIgnoreCase));
   }
 
   @TestMethod

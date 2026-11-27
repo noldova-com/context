@@ -46,6 +46,7 @@ export class Resources {
   public static readonly selectChangesAfter: string = "SELECT \"sequence\", \"entity\", \"entityId\", \"operation\", \"payload\", \"createdAt\" FROM \"__changes\" WHERE \"sequence\" > ? ORDER BY \"sequence\" LIMIT ?";
   public static readonly sequenceColumn: string = "sequence";
   public static readonly textParameterName: string = "text";
+  public static readonly typeParameterName: string = "type";
   public static readonly statementParameterName: string = "statement";
   public static readonly uniqueIndexNamePrefix: string = "UX";
   public static readonly unknownOperation: string = "The change holds an operation the feed does not know.";
@@ -55,8 +56,36 @@ export class Resources {
     return `CREATE TABLE IF NOT EXISTS "__changes" ("sequence" ${identityColumnType}, "entity" TEXT NOT NULL, "entityId" TEXT NOT NULL, "operation" TEXT NOT NULL, "payload" TEXT NOT NULL, "createdAt" TEXT NOT NULL)`;
   }
 
+  public static formatColumnMissing(table: string, column: string): string {
+    return `The table "${table}" has no column "${column}".`;
+  }
+
+  public static formatColumnNotNull(table: string, column: string): string {
+    return `The column "${table}.${column}" is NOT NULL, but its property is optional.`;
+  }
+
+  public static formatColumnNullable(table: string, column: string): string {
+    return `The column "${table}.${column}" allows NULL, but its property is required.`;
+  }
+
+  public static formatColumnTypeMismatch(table: string, column: string, type: string, expected: string): string {
+    return `The column "${table}.${column}" is ${type}, but its property needs ${expected}.`;
+  }
+
+  public static formatForeignKeyMissing(table: string, column: string, principalTable: string, principalColumn: string): string {
+    return `The table "${table}" has no foreign key from "${column}" to "${principalTable}.${principalColumn}".`;
+  }
+
   public static formatIndexNameRepeated(name: string, existing: string): string {
     return `The index name "${name}" is the same as "${existing}", which the migration already creates, once ASCII letters are lower-cased and both are cut to 63 bytes.`;
+  }
+
+  public static formatPrimaryKeyMismatch(table: string, columns: string, expected: string): string {
+    return `The primary key of "${table}" is (${columns}), but the model's key is (${expected}).`;
+  }
+
+  public static formatTableMissing(table: string): string {
+    return `The migrations create no table "${table}".`;
   }
 
   public static formatTableWithoutColumns(table: string): string {

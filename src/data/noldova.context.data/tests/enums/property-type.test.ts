@@ -6,15 +6,15 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { ColumnType } from "@noldova/context.data.sql";
+import { PropertyType } from "@noldova/context.data";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 @TestClass
-export class ColumnTypeTests {
+export class PropertyTypeTests {
   @TestMethod
   public usesMemberNamesAsValues(): void {
-    Assert.areEqual("Text", ColumnType.Text);
-    Assert.areEqual("Integer", ColumnType.Integer);
-    Assert.areEqual(2, Object.values(ColumnType).length);
+    Assert.areEqual("String", PropertyType.String);
+    Assert.areEqual("Integer", PropertyType.Integer);
+    Assert.areEqual(2, Object.values(PropertyType).length);
   }
 }

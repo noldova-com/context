@@ -21,6 +21,24 @@
  * nameof<StringConstructor>(selectEmpty); // "empty"
  * ```
  */
+/**
+ * How {@link StringConstructor.equals} compares two strings.
+ */
+export declare enum StringComparison {
+  /**
+   * The same UTF-16 code units in the same order, so letter case counts.
+   */
+  Ordinal = "Ordinal",
+
+  /**
+   * The same UTF-16 code units in the same order, after each is upper-cased
+   * on its own as {@link String.toUpperCase} does, without a locale. Letters
+   * outside the Basic Multilingual Plane compare as in `Ordinal`, and a few,
+   * such as the dotless `ı` and the long `ſ`, match their ASCII letter.
+   */
+  OrdinalIgnoreCase = "OrdinalIgnoreCase",
+}
+
 export declare type NameofSelector<T> = { readonly [TName in keyof T]-?: TName; };
 
 /**
@@ -280,6 +298,25 @@ declare global {
      * ```
      */
     readonly empty: string;
+
+    /**
+     * Compares two strings as the comparison says.
+     *
+     * @param left The first string; neither is trimmed or normalized.
+     * @param right The second string.
+     * @param comparison Whether letter case counts.
+     * @returns `true` when the strings are equal under the comparison;
+     * otherwise `false`, always for strings of different lengths.
+     * @example
+     * ```ts
+     * import { StringComparison } from "@noldova/context.core";
+     *
+     * String.equals("Id", "id", StringComparison.Ordinal); // false
+     * String.equals("Id", "id", StringComparison.OrdinalIgnoreCase); // true
+     * String.equals("ß", "ss", StringComparison.OrdinalIgnoreCase); // false
+     * ```
+     */
+    equals(left: string, right: string, comparison: StringComparison): boolean;
 
     /**
      * Substitutes string or number arguments into positional placeholders.

@@ -6,12 +6,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { StringComparison } from "../enums/string-comparison.js";
 import { nameof } from "../intrinsics/nameof.js";
 import { Resources } from "../resources.js";
 
 declare global {
   interface StringConstructor {
     readonly empty: string;
+    equals(left: string, right: string, comparison: StringComparison): boolean;
     format(template: string, ...formatArguments: (string | number)[]): string;
     isAsciiDigit(character: string): boolean;
     isAsciiHexDigit(character: string): boolean;
@@ -31,6 +33,23 @@ const ASCII_UPPERCASE_A: string = "A";
 const ASCII_UPPERCASE_F: string = "F";
 const ASCII_UPPERCASE_Z: string = "Z";
 const DECIMAL_RADIX: number = 10;
+
+function equals(left: string, right: string, comparison: StringComparison): boolean {
+  if (comparison === StringComparison.Ordinal)
+    return left === right;
+
+  if (left.length !== right.length)
+    return false;
+
+  for (let index = 0; index < left.length; index++) {
+    const leftCharacter = left.charAt(index);
+    const rightCharacter = right.charAt(index);
+    if (leftCharacter !== rightCharacter && leftCharacter.toUpperCase() !== rightCharacter.toUpperCase())
+      return false;
+  }
+
+  return true;
+}
 
 function isAsciiDigit(character: string): boolean {
   if (character.length !== 1)
@@ -112,6 +131,7 @@ function join(separator: string, values: Iterable<string>): string {
 }
 
 Object.defineProperty(String, nameof<StringConstructor>(t => t.empty), { value: "", writable: false, enumerable: false, configurable: false });
+Object.defineProperty(String, nameof<StringConstructor>(t => t.equals), { value: equals, writable: false, enumerable: false, configurable: false });
 Object.defineProperty(String, nameof<StringConstructor>(t => t.format), { value: format, writable: false, enumerable: false, configurable: false });
 Object.defineProperty(String, nameof<StringConstructor>(t => t.isAsciiDigit), { value: isAsciiDigit, writable: false, enumerable: false, configurable: false });
 Object.defineProperty(String, nameof<StringConstructor>(t => t.isAsciiHexDigit), { value: isAsciiHexDigit, writable: false, enumerable: false, configurable: false });

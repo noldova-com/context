@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import type { IReadOnlyList } from "@noldova/context.collections";
+import type { NameofSelector } from "@noldova/context.core";
 import type { ExceptionOptions } from "@noldova/context.exceptions";
 import { Exception } from "@noldova/context.exceptions";
 
@@ -547,6 +549,506 @@ export declare class DatabaseFacade<TConnection extends Connection, TMigration e
 }
 
 /**
+ * The type of a property's values, as a model snapshot records it: a string or
+ * an integer.
+ */
+export declare enum PropertyType {
+  /**
+   * A string.
+   */
+  String = "String",
+  /**
+   * An integer number.
+   */
+  Integer = "Integer"
+}
+
+/**
+ * How many dependents a relation's principal has.
+ */
+export declare enum RelationKind {
+  /**
+   * The principal has any number of dependents.
+   */
+  OneToMany = "OneToMany",
+  /**
+   * The principal has at most one dependent.
+   */
+  OneToOne = "OneToOne"
+}
+
+/**
+ * An entity class a model maps. The model constructs it without arguments to
+ * compare its fields with the model snapshot.
+ */
+export declare type EntityClass<TEntity extends object> = new () => TEntity;
+
+/**
+ * Names one property of an entity, as `t => t.title`; the property's name is
+ * read with `nameof`.
+ */
+export declare type PropertySelector<TEntity> = (t: NameofSelector<TEntity>) => keyof TEntity & string;
+
+/**
+ * Raised when two navigations on a relation's principal could each be the way
+ * back to its dependent.
+ */
+export declare class AmbiguousRelationException extends DataException {
+  /**
+   * The dependent entity's name.
+   */
+  public readonly entity: string;
+
+  /**
+   * The dependent's navigation to its principal.
+   */
+  public readonly navigation: string;
+
+  /**
+   * Initializes the exception for the entity and the navigation.
+   */
+  public constructor(entity: string, navigation: string);
+}
+
+/**
+ * Raised when a model maps two properties of one entity to the same column.
+ */
+export declare class ColumnMappedTwiceException extends DataException {
+  /**
+   * The entity's table.
+   */
+  public readonly table: string;
+
+  /**
+   * The column both properties map to.
+   */
+  public readonly column: string;
+
+  /**
+   * Initializes the exception for the table and the column.
+   */
+  public constructor(table: string, column: string);
+}
+
+/**
+ * Raised when a model's entity has no key: the configuration names none, and
+ * the entity has neither an `id` property nor one named after the entity,
+ * such as `noteId`, in any letter case.
+ */
+export declare class EntityKeyMissingException extends DataException {
+  /**
+   * The entity's name.
+   */
+  public readonly entity: string;
+
+  /**
+   * Initializes the exception for the entity.
+   */
+  public constructor(entity: string);
+}
+
+/**
+ * Raised when the configuration or a relation's foreign key names a property
+ * the entity doesn't have.
+ */
+export declare class EntityPropertyMissingException extends DataException {
+  /**
+   * The entity's name.
+   */
+  public readonly entity: string;
+
+  /**
+   * The property's name.
+   */
+  public readonly property: string;
+
+  /**
+   * Initializes the exception for the entity and the property.
+   */
+  public constructor(entity: string, property: string);
+}
+
+/**
+ * Raised when a relation's foreign key differs from its principal's key in
+ * the number of properties or in their types.
+ */
+export declare class ForeignKeyMismatchException extends DataException {
+  /**
+   * The name of the entity whose navigation the relation follows.
+   */
+  public readonly entity: string;
+
+  /**
+   * The relation's navigation.
+   */
+  public readonly navigation: string;
+
+  /**
+   * Initializes the exception for the entity and the navigation.
+   */
+  public constructor(entity: string, navigation: string);
+}
+
+/**
+ * Raised when a foreign key is configured on a navigation the entity's
+ * snapshot doesn't record as a reference, such as a collection or a property.
+ */
+export declare class ReferenceMissingException extends DataException {
+  /**
+   * The name of the entity the foreign key is configured on.
+   */
+  public readonly entity: string;
+
+  /**
+   * The navigation the foreign key is configured on.
+   */
+  public readonly navigation: string;
+
+  /**
+   * Initializes the exception for the entity and the navigation.
+   */
+  public constructor(entity: string, navigation: string);
+}
+
+/**
+ * Raised when a navigation leads to an entity the model doesn't map.
+ */
+export declare class RelationTargetUnmappedException extends DataException {
+  /**
+   * The name of the entity the navigation belongs to.
+   */
+  public readonly entity: string;
+
+  /**
+   * The navigation.
+   */
+  public readonly navigation: string;
+
+  /**
+   * The name of the entity the navigation leads to.
+   */
+  public readonly target: string;
+
+  /**
+   * Initializes the exception for the entity, the navigation and the target.
+   */
+  public constructor(entity: string, navigation: string, target: string);
+}
+
+/**
+ * Raised when an entity no longer matches the model snapshot: the context
+ * maps it and the snapshot doesn't, the snapshot has it and the context
+ * doesn't map it, or its fields differ from the snapshot's. Adding a
+ * migration writes a new snapshot.
+ */
+export declare class StaleSnapshotException extends DataException {
+  /**
+   * The entity's name.
+   */
+  public readonly entity: string;
+
+  /**
+   * Initializes the exception for the entity.
+   */
+  public constructor(entity: string);
+}
+
+/**
+ * Raised when a model maps two entities to the same table.
+ */
+export declare class TableMappedTwiceException extends DataException {
+  /**
+   * The table both entities map to.
+   */
+  public readonly table: string;
+
+  /**
+   * Initializes the exception for the table.
+   */
+  public constructor(table: string);
+}
+
+/**
+ * Records one entity's properties and navigations in a model snapshot.
+ */
+export declare class SnapshotEntityBuilder {
+  private constructor();
+
+  /**
+   * Records a required property of the type.
+   */
+  public property(name: string, type: PropertyType): this;
+
+  /**
+   * Records a property of the type that may hold no value.
+   */
+  public optionalProperty(name: string, type: PropertyType): this;
+
+  /**
+   * Records a navigation to one entity of the named target.
+   */
+  public reference(name: string, target: string): this;
+
+  /**
+   * Records a navigation to any number of entities of the named target.
+   */
+  public collection(name: string, target: string): this;
+}
+
+/**
+ * Records the entities of a model snapshot.
+ */
+export declare class SnapshotBuilder {
+  private constructor();
+
+  /**
+   * Records an entity by its class's name and returns its builder.
+   */
+  public entity(name: string): SnapshotEntityBuilder;
+}
+
+/**
+ * The shape of a context's entities when its last migration was added: each
+ * entity's properties with their types and whether they are optional, and its
+ * navigations. Types are not known at run time, so the model reads them
+ * here; the migration tool writes the snapshot.
+ *
+ * @example
+ * ```ts
+ * class BlogModelSnapshot extends ModelSnapshot {
+ *   protected override buildModel(builder: SnapshotBuilder): void {
+ *     builder.entity("Author")
+ *       .property("id", PropertyType.Integer)
+ *       .property("name", PropertyType.String)
+ *       .collection("posts", "Post");
+ *     builder.entity("Post")
+ *       .property("id", PropertyType.Integer)
+ *       .optionalProperty("body", PropertyType.String)
+ *       .property("authorId", PropertyType.Integer)
+ *       .reference("author", "Author");
+ *   }
+ * }
+ * ```
+ */
+export declare abstract class ModelSnapshot {
+  /**
+   * Records the entities.
+   */
+  protected abstract buildModel(builder: SnapshotBuilder): void;
+}
+
+/**
+ * One property of an entity mapped to a column of its table.
+ */
+export declare class EntityProperty {
+  /**
+   * The property's name.
+   */
+  public readonly name: string;
+
+  /**
+   * The type of the property's values.
+   */
+  public readonly type: PropertyType;
+
+  /**
+   * The column the property maps to: the property's name unless configured.
+   */
+  public readonly columnName: string;
+
+  /**
+   * False only for an optional property in the snapshot; a key property is
+   * always required.
+   */
+  public readonly isRequired: boolean;
+
+  private constructor();
+}
+
+/**
+ * A relation from a dependent entity, which holds the foreign key, to its
+ * principal.
+ */
+export declare class EntityRelation {
+  /**
+   * One to many, or one to one when the principal's navigation back is a
+   * reference.
+   */
+  public readonly kind: RelationKind;
+
+  /**
+   * The dependent's navigation to its principal, or `null` when only the
+   * principal has a navigation.
+   */
+  public readonly navigation: string | null;
+
+  /**
+   * The principal entity class.
+   */
+  public readonly principal: EntityClass<object>;
+
+  /**
+   * The principal's navigation back to its dependents, or `null` when it has
+   * none.
+   */
+  public readonly inverseNavigation: string | null;
+
+  /**
+   * The dependent's foreign key properties, in the order of the principal's
+   * key.
+   */
+  public readonly foreignKey: IReadOnlyList<EntityProperty>;
+
+  private constructor();
+}
+
+/**
+ * One entity class mapped to a table: its properties, its key and its
+ * relations to principals.
+ */
+export declare class EntityType {
+  /**
+   * The entity class.
+   */
+  public readonly type: EntityClass<object>;
+
+  /**
+   * The table: the class's name unless configured.
+   */
+  public readonly tableName: string;
+
+  /**
+   * The properties, in the snapshot's order.
+   */
+  public readonly properties: IReadOnlyList<EntityProperty>;
+
+  /**
+   * The key properties, in the order configured; by convention, the `id`
+   * property, or the one named after the entity, such as `noteId`, in any
+   * letter case.
+   */
+  public readonly key: IReadOnlyList<EntityProperty>;
+
+  /**
+   * The relations in which this entity holds the foreign key.
+   */
+  public readonly relations: IReadOnlyList<EntityRelation>;
+
+  private constructor();
+
+  /**
+   * Returns the property of that name, or `null` when the entity has none.
+   */
+  public findProperty(name: string): EntityProperty | null;
+}
+
+/**
+ * The entities a context maps.
+ */
+export declare class Model {
+  /**
+   * The mapped entities, in the order first configured.
+   */
+  public readonly entityTypes: IReadOnlyList<EntityType>;
+
+  private constructor();
+
+  /**
+   * Returns the mapping of the entity class, or `null` when the model maps
+   * none.
+   */
+  public findEntityType(type: EntityClass<object>): EntityType | null;
+}
+
+/**
+ * Configures one property of an entity.
+ */
+export declare class PropertyBuilder {
+  private constructor();
+
+  /**
+   * Maps the property to the named column. An empty or whitespace name throws
+   * `ArgumentException`.
+   */
+  public hasColumnName(name: string): this;
+}
+
+/**
+ * Configures a relation from a dependent entity's navigation to its
+ * principal.
+ */
+export declare class RelationBuilder<TEntity> {
+  private constructor();
+
+  /**
+   * Names the dependent's foreign key properties, in the order of the
+   * principal's key. Without it, each is the navigation's name followed by the
+   * principal's key property's name, such as `authorId`, in any letter case.
+   * No properties throws `ArgumentException`.
+   */
+  public hasForeignKey(...properties: readonly PropertySelector<TEntity>[]): this;
+}
+
+/**
+ * Configures one entity: its table, key, columns and foreign keys. Each
+ * builder of the same class configures the same entity.
+ */
+export declare class EntityTypeBuilder<TEntity> {
+  private constructor();
+
+  /**
+   * Maps the entity to the named table. An empty or whitespace name throws
+   * `ArgumentException`.
+   */
+  public toTable(name: string): this;
+
+  /**
+   * Names the key properties, in order. No properties throws
+   * `ArgumentException`.
+   */
+  public hasKey(...properties: readonly PropertySelector<TEntity>[]): this;
+
+  /**
+   * Returns the builder of the property.
+   */
+  public property(property: PropertySelector<TEntity>): PropertyBuilder;
+
+  /**
+   * Returns the builder of the relation the reference navigation follows. A
+   * foreign key configured on a navigation the snapshot doesn't record as a
+   * reference throws `ReferenceMissingException` when the model is built.
+   */
+  public hasOne(navigation: PropertySelector<TEntity>): RelationBuilder<TEntity>;
+}
+
+/**
+ * Configures the entities a context maps. What the configuration leaves out
+ * follows conventions: the table is the class's name, a column the
+ * property's, the key `id` or the property named after the entity, and a
+ * foreign key the navigation's name followed by the principal's key; key and
+ * foreign key names match in any letter case, preferring their own. A
+ * relation pairs a reference with the one navigation back on its principal;
+ * when the principal has only a collection, the dependent's foreign key is
+ * named after the principal, such as `authorId`.
+ *
+ * @example
+ * ```ts
+ * protected override onModelCreating(builder: ModelBuilder): void {
+ *   builder.entity(Author).toTable("authors");
+ *   builder.entity(Post).property(t => t.body).hasColumnName("text");
+ * }
+ * ```
+ */
+export declare class ModelBuilder {
+  private constructor();
+
+  /**
+   * Maps the entity class and returns its builder.
+   */
+  public entity<TEntity extends object>(type: EntityClass<TEntity>): EntityTypeBuilder<TEntity>;
+}
+
+/**
  * The one object an application talks to for one store. Constructed from options and its migrations, it opens its
  * connection and exposes it with the migrations as `database`; disposal
  * closes the connection. Applications extend it with their record sets.
@@ -559,12 +1061,27 @@ export declare abstract class DbContext<TConnection extends Connection, TMigrati
 
   /**
    * Opens the store the options describe with the migrations, in id order;
-   * migrations out of order throw `DataException`.
+   * migrations out of order throw `DataException`. The snapshot holds the
+   * entities' shapes; without one, mapping an entity throws
+   * `StaleSnapshotException`.
    */
-  protected constructor(options: DbContextOptions<TConnection, TMigration>, migrations: readonly TMigration[]);
+  protected constructor(options: DbContextOptions<TConnection, TMigration>, migrations: readonly TMigration[], snapshot?: ModelSnapshot | null);
+
+  /**
+   * The entities the context's class maps, built from `onModelCreating` and
+   * the snapshot the first time any instance of the class asks, and shared by
+   * all of them. An invalid model throws the `DataException` that names its
+   * fault, such as `EntityKeyMissingException`, each time it is asked for.
+   */
+  public get model(): Model;
 
   /**
    * Closes the connection.
    */
   public [Symbol.asyncDispose](): Promise<void>;
+
+  /**
+   * Configures the entities the context maps; maps none unless overridden.
+   */
+  protected onModelCreating(builder: ModelBuilder): void;
 }

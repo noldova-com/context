@@ -6,7 +6,6 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export enum ColumnType {
-  Text = "Text",
-  Integer = "Integer"
-}
+import type { NameofSelector } from "@noldova/context.core";
+
+export type PropertySelector<TEntity> = (t: NameofSelector<TEntity>) => keyof TEntity & string;

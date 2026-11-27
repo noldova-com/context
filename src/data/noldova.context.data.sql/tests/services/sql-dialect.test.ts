@@ -7,7 +7,7 @@
  */
 
 import { Index } from "@noldova/context.data";
-import { Column, ColumnType, ForeignKey, PrimaryKey, SqlDialect, Table } from "@noldova/context.data.sql";
+import { Column, ForeignKey, PrimaryKey, SqlDialect, Table } from "@noldova/context.data.sql";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { TestDialect } from "../fixtures/test-dialect.fixture.js";
@@ -20,9 +20,9 @@ export class SqlDialectTests {
   public rendersColumnsAndConstraints(): void {
     const dialect = SqlDialectTests.dialect;
 
-    Assert.areEqual("\"name\" TEXT NOT NULL", dialect.renderColumn(new Column("name", ColumnType.Text, false)));
-    Assert.areEqual("\"count\" INTEGER NOT NULL", dialect.renderColumn(new Column("count", ColumnType.Integer, false)));
-    Assert.areEqual("\"title\" TEXT", dialect.renderColumn(new Column("title", ColumnType.Text, true)));
+    Assert.areEqual("\"name\" TEXT NOT NULL", dialect.renderColumn(new Column("name", "TEXT", false)));
+    Assert.areEqual("\"count\" INTEGER NOT NULL", dialect.renderColumn(new Column("count", "INTEGER", false)));
+    Assert.areEqual("\"title\" TEXT", dialect.renderColumn(new Column("title", "TEXT", true)));
     Assert.areEqual("PRIMARY KEY (\"conversationId\", \"sequence\")", dialect.renderPrimaryKey(new PrimaryKey(["conversationId", "sequence"])));
     Assert.areEqual("FOREIGN KEY (\"projectId\") REFERENCES \"projects\" (\"id\")", dialect.renderForeignKey(new ForeignKey("projectId", "projects", "id")));
   }
@@ -30,9 +30,9 @@ export class SqlDialectTests {
   @TestMethod
   public rendersTablesAndIndexes(): void {
     const dialect = SqlDialectTests.dialect;
-    const columns = [new Column("id", ColumnType.Text, false), new Column("projectId", ColumnType.Text, false), new Column("text", ColumnType.Text, true)];
+    const columns = [new Column("id", "TEXT", false), new Column("projectId", "TEXT", false), new Column("text", "TEXT", true)];
     const notes = new Table("notes", columns, new PrimaryKey(["id"]), [new ForeignKey("projectId", "projects", "id")]);
-    const log = new Table("log", [new Column("text", ColumnType.Text, true)], null, []);
+    const log = new Table("log", [new Column("text", "TEXT", true)], null, []);
 
     Assert.areEqual(
       "CREATE TABLE \"notes\" (\"id\" TEXT NOT NULL, \"projectId\" TEXT NOT NULL, \"text\" TEXT, PRIMARY KEY (\"id\"), " +

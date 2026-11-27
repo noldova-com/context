@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { Column, ColumnType } from "@noldova/context.data.sql";
+import { Column } from "@noldova/context.data.sql";
 import { ArgumentException } from "@noldova/context.exceptions";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
@@ -14,15 +14,16 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 export class ColumnTests {
   @TestMethod
   public holdsADeclaration(): void {
-    const column = new Column("title", ColumnType.Text, true);
+    const column = new Column("title", "TEXT", true);
 
     Assert.areEqual("title", column.name);
-    Assert.areEqual(ColumnType.Text, column.type);
+    Assert.areEqual("TEXT", column.type);
     Assert.isTrue(column.isNullable);
   }
 
   @TestMethod
-  public rejectsABlankName(): void {
-    Assert.areEqual("name", Assert.throws(() => new Column(" ", ColumnType.Integer, false), ArgumentException).parameterName);
+  public rejectsABlankNameOrType(): void {
+    Assert.areEqual("name", Assert.throws(() => new Column(" ", "INTEGER", false), ArgumentException).parameterName);
+    Assert.areEqual("type", Assert.throws(() => new Column("count", "", false), ArgumentException).parameterName);
   }
 }

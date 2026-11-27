@@ -8,16 +8,16 @@
 
 import { ArgumentException } from "@noldova/context.exceptions";
 
-import type { ColumnType } from "../../enums/column-type.js";
 import { Resources } from "../../resources.js";
 
 export class Column {
   public readonly name: string;
-  public readonly type: ColumnType;
+  public readonly type: string;
   public readonly isNullable: boolean;
 
-  public constructor(name: string, type: ColumnType, isNullable: boolean) {
+  public constructor(name: string, type: string, isNullable: boolean) {
     ArgumentException.throwIfNullOrWhitespace(name, Resources.nameParameterName);
+    ArgumentException.throwIfNullOrWhitespace(type, Resources.typeParameterName);
 
     this.name = name;
     this.type = type;
