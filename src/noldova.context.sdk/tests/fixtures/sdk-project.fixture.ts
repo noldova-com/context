@@ -8,7 +8,7 @@
 
 // This file uses Node APIs and will change when we replace Node.
 
-import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -67,6 +67,10 @@ export class SDKProject {
     await this.writeAsync(`${folder}/${folder}.ctxp`, JSON.stringify(manifest));
     await this.writeAsync(`${folder}/tsconfig.json`, JSON.stringify(SDKProject.configuration));
     await this.writeAsync(`${folder}/src/index.ts`, source);
+  }
+
+  public writeDanglingLinkAsync(relativePath: string): Promise<void> {
+    return symlink(this.path("missing"), this.path(relativePath), "junction");
   }
 
   public removeAsync(relativePath: string): Promise<void> {

@@ -47,7 +47,12 @@ export class BuildHost {
       current = join(current, segment);
     }
 
-    return (await stat(current)).isFile();
+    try {
+      return (await stat(current)).isFile();
+    }
+    catch {
+      return false;
+    }
   }
 
   public static async compileAsync(project: Project, arguments_: readonly string[], output: CommandOutput): Promise<boolean> {
