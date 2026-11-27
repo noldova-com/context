@@ -6,8 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { AlterColumnOperation, Column, ForeignKey, PrimaryKey, SchemaDiffer, Table } from "@noldova/context.data.sql";
-import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
+import { AddColumnOperation, AlterColumnOperation, Column, ForeignKey, PrimaryKey, SchemaDiffer, Table } from "@noldova/context.data.sql";
+import { Assert, TestClass, TestData, TestMethod } from "@noldova/context.testing";
 
 import { TestDialect } from "../fixtures/test-dialect.fixture.js";
 
@@ -66,6 +66,23 @@ export class SchemaDifferTests {
     const columns = SchemaDiffer.diff(source, target).filter(t => t instanceof AlterColumnOperation).map(t => t.column);
 
     Assert.areEqual("title:false:'',rank:false:'',body:true:null", columns.map(t => `${t.name}:${t.isNullable}:${t.defaultValueSql}`).join(","));
+  }
+
+  @TestMethod
+  @TestData("rank INTEGER?", "rank TEXT?=''")
+  @TestData("rank INTEGER?", "rank TEXT=''")
+  @TestData("rank TEXT", "rank TEXT?=''")
+  @TestData("rank TEXT?", "rank TEXT=''")
+  public givesAnAlteredColumnTheDefaultAnAddedOneGets(existing: string, wanted: string): void {
+    const target = [SchemaDifferTests.table("notes", ["id"], [], "id TEXT", wanted)];
+
+    const added = SchemaDiffer.diff([SchemaDifferTests.table("notes", ["id"], [], "id TEXT")], target)
+      .filter(t => t instanceof AddColumnOperation).map(t => t.column);
+    const altered = SchemaDiffer.diff([SchemaDifferTests.table("notes", ["id"], [], "id TEXT", existing)], target)
+      .filter(t => t instanceof AlterColumnOperation).map(t => t.column);
+
+    Assert.areEqual(added.map(t => `${t.name}:${t.type}:${t.isNullable}:${t.defaultValueSql}`).join(","),
+      altered.map(t => `${t.name}:${t.type}:${t.isNullable}:${t.defaultValueSql}`).join(","));
   }
 
   @TestMethod

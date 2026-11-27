@@ -32,7 +32,7 @@ export class AlterColumnOperation extends TableChangeOperation {
     if (Object.isUndefined(existing))
       throw new InvalidOperationException(Resources.formatColumnMissing(table.name, this.column.name));
 
-    const altered = new Column(this.column.name, this.column.type, this.column.isNullable, this.column.defaultValueSql ?? existing.defaultValueSql);
+    const altered = new Column(this.column.name, this.column.type, this.column.isNullable, this.column.defaultValueSql);
 
     return new Table(table.name, table.columns.map(t => t === existing ? altered : t), table.primaryKey, table.foreignKeys);
   }

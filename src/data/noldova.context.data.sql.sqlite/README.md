@@ -8,9 +8,10 @@ action, every statement goes through the transaction the action receives.
 A migration that changes an existing table rebuilds it from the live schema,
 keeping its rows and the indexes whose columns remain. Foreign keys are off
 around the migration's transaction and checked before it commits. The
-rebuilt table keeps each column's default as the SQL the live schema holds,
-but not `AUTOINCREMENT`: an `INTEGER PRIMARY KEY` still numbers new rows,
-and may reuse the number of a deleted last row.
+rebuilt table keeps the default of each column the migration doesn't alter,
+as the SQL the live schema holds, but not `AUTOINCREMENT`: an
+`INTEGER PRIMARY KEY` still numbers new rows, and may reuse the number of a
+deleted last row.
 
 ## Install
 

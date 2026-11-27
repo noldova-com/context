@@ -25,14 +25,14 @@ export class AlterColumnOperationTests {
   }
 
   @TestMethod
-  public changesTheColumnKeepingItsDefaultAndTheRestOfTheTable(): void {
+  public changesTheColumnToTheOneGivenKeepingTheRestOfTheTable(): void {
     const key = new PrimaryKey(["id"]);
     const foreignKeys = [new ForeignKey("ownerId", "owners", "id")];
     const table = new Table("notes", [new Column("id", "TEXT", false), new Column("title", "TEXT", false, "''")], key, foreignKeys);
 
     const changed = new AlterColumnOperation("notes", new Column("title", "INTEGER", true)).applyTo(table);
 
-    Assert.areEqual("id:TEXT:false:null,title:INTEGER:true:''", changed.columns.map(t => `${t.name}:${t.type}:${t.isNullable}:${t.defaultValueSql}`).join(","));
+    Assert.areEqual("id:TEXT:false:null,title:INTEGER:true:null", changed.columns.map(t => `${t.name}:${t.type}:${t.isNullable}:${t.defaultValueSql}`).join(","));
     Assert.areEqual(key, changed.primaryKey);
     Assert.areEqual("ownerId", changed.foreignKeys.map(t => t.column).join(","));
   }

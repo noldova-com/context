@@ -932,12 +932,12 @@ export declare class MigrationBuilder {
 
   /**
    * Changes a column's type and returns its builder, which may make it
-   * nullable; otherwise it becomes `NOT NULL`. A default given to the builder
-   * becomes the column's default, and a `NOT NULL` column takes it in each
-   * row that holds `NULL`; without one, a row that holds `NULL` fails the
-   * change. Give one, too, when the type changes and the column has a default
-   * of the old type: PostgreSQL drops the old default before it converts the
-   * column, then sets the new one.
+   * nullable; otherwise it becomes `NOT NULL`. The column's default becomes
+   * the one given to the builder, and without one the column has none; the
+   * old default is dropped before the column is converted, so a default of
+   * the old type doesn't fail the change. A `NOT NULL` column takes the
+   * default in each row that holds `NULL`; without one, such a row fails the
+   * change.
    */
   public alterColumn(table: string, name: string, type: string): ColumnBuilder;
 

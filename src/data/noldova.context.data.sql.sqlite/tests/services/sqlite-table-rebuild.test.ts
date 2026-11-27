@@ -34,11 +34,11 @@ export class SQLiteTableRebuildTests {
     using directory = new TemporaryDirectory();
     await using connection = await SQLiteTableRebuildTests.openAsync(directory);
     await SQLiteTableRebuildTests.migrateAsync(connection, "20261127120001_Counters", t => {
-      t.executeSql("CREATE TABLE \"counters\" (\"id\" INTEGER PRIMARY KEY AUTOINCREMENT, \"name\" TEXT NOT NULL DEFAULT (lower('A')))");
-      t.executeSql("INSERT INTO \"counters\" (\"name\") VALUES ('first')");
+      t.executeSql("CREATE TABLE \"counters\" (\"id\" INTEGER PRIMARY KEY AUTOINCREMENT, \"name\" TEXT NOT NULL DEFAULT (lower('A')), \"note\" TEXT NOT NULL)");
+      t.executeSql("INSERT INTO \"counters\" (\"name\", \"note\") VALUES ('first', 'x')");
     });
 
-    await SQLiteTableRebuildTests.migrateAsync(connection, "20261127120002_Alter", t => t.alterColumn("counters", "name", "TEXT").makeNullable());
+    await SQLiteTableRebuildTests.migrateAsync(connection, "20261127120002_Alter", t => t.alterColumn("counters", "note", "TEXT").makeNullable());
     await connection.executeAsync(new SqlQuery("INSERT INTO \"counters\" DEFAULT VALUES"));
 
     const sql = await connection.queryAsync(new SqlQuery("SELECT \"sql\" FROM sqlite_master WHERE \"name\" = 'counters'"));

@@ -151,6 +151,26 @@ export class SchemaChangeTests {
   }
 
   @TestMethod
+  @TestData("sqlite")
+  @TestData("postgresql")
+  public async removesTheDefaultOfAColumnAlteredWithoutOne(provider: string): Promise<void> {
+    await using database = await ProviderDatabase.createAsync(provider);
+    await using context = new ShapeContext(database.options(), [new ShapeMigration("20261127170000_Notes", t => {
+      t.createTable("notes", c => c.addColumn("id", "TEXT"), c => c.addPrimaryKey("id"));
+      t.addColumn("notes", "rank", "TEXT").hasDefaultValueSql("'none'");
+    }), new ShapeMigration("20261127170001_Rank", t => {
+      t.alterColumn("notes", "rank", "TEXT").makeNullable();
+    })]);
+
+    await context.database.migrateAsync();
+    const connection = context.database.connection;
+    await connection.executeAsync(new SqlQuery("INSERT INTO \"notes\" (\"id\") VALUES ('1')"));
+    const rows = await connection.queryAsync(new SqlQuery("SELECT \"rank\" FROM \"notes\""));
+
+    Assert.areEqual("null", rows.map(t => String(t.readNullableString("rank"))).join(","));
+  }
+
+  @TestMethod
   public async failsOnPostgreSQLToChangeAKeyThatAForeignKeyRefersTo(): Promise<void> {
     await using database = await ProviderDatabase.createAsync("postgresql");
     await using context = new ShapeContext(database.options(), [new ShapeMigration("20261127150000_Owners", t => {

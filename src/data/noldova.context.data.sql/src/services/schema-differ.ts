@@ -62,18 +62,21 @@ export class SchemaDiffer {
     for (const column of target.columns) {
       const existing = source.columns.find(t => t.name === column.name);
       if (Object.isUndefined(existing)) {
-        operations.push(new AddColumnOperation(target.name, column.isNullable ? new Column(column.name, column.type, true) : column));
+        operations.push(new AddColumnOperation(target.name, SchemaDiffer.columnOf(column)));
         continue;
       }
       const retyped = existing.type.toUpperCase() !== column.type.toUpperCase();
       if (retyped || existing.isNullable !== column.isNullable)
-        operations.push(new AlterColumnOperation(target.name, new Column(column.name, column.type, column.isNullable,
-          retyped || (existing.isNullable && !column.isNullable) ? column.defaultValueSql : null)));
+        operations.push(new AlterColumnOperation(target.name, SchemaDiffer.columnOf(column)));
     }
     if (keyChanged && !Object.isNull(target.primaryKey))
       operations.push(new AddPrimaryKeyOperation(target.name, target.primaryKey));
 
     return operations;
+  }
+
+  private static columnOf(column: Column): Column {
+    return column.isNullable ? new Column(column.name, column.type, true) : column;
   }
 
   private static order(tables: readonly Table[], isReady: (table: Table, remaining: readonly Table[]) => boolean): readonly Table[] {
