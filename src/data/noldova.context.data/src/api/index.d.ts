@@ -578,6 +578,20 @@ export declare enum RelationKind {
 }
 
 /**
+ * A data context's class, as `DbContext.createModelBuilder` takes it: every
+ * class that extends `DbContext` is one.
+ *
+ * @typeParam TConnection The connection the context opens.
+ * @typeParam TMigration The migrations the context applies.
+ */
+export declare interface IDbContextClass<TConnection extends Connection, TMigration extends Migration> {
+  /**
+   * The class's prototype, on which `onModelCreating` runs.
+   */
+  readonly prototype: DbContext<TConnection, TMigration>;
+}
+
+/**
  * An entity class a model maps. The model constructs it without arguments to
  * compare its fields with the model snapshot.
  */
@@ -769,20 +783,139 @@ export declare class TableMappedTwiceException extends DataException {
 }
 
 /**
- * Records one entity's properties and navigations in a model snapshot.
+ * One property of an entity in a model snapshot.
+ */
+export declare class SnapshotProperty {
+  private constructor();
+
+  /**
+   * The property's name.
+   */
+  public readonly name: string;
+
+  /**
+   * The type of the property's values.
+   */
+  public readonly type: PropertyType;
+
+  /**
+   * Whether the property may hold no value.
+   */
+  public readonly isOptional: boolean;
+
+  /**
+   * The column the property maps to.
+   */
+  public readonly columnName: string;
+}
+
+/**
+ * One foreign key of an entity in a model snapshot.
+ */
+export declare class SnapshotForeignKey {
+  private constructor();
+
+  /**
+   * The name of the entity whose key the foreign key refers to.
+   */
+  public readonly principal: string;
+
+  /**
+   * The dependent's properties that hold the principal's key, in key order.
+   */
+  public readonly properties: IReadOnlyList<string>;
+}
+
+/**
+ * One navigation of an entity in a model snapshot.
+ */
+export declare class SnapshotNavigation {
+  private constructor();
+
+  /**
+   * The navigation's name.
+   */
+  public readonly name: string;
+
+  /**
+   * The name of the entity it leads to.
+   */
+  public readonly target: string;
+
+  /**
+   * Whether it leads to any number of entities rather than one.
+   */
+  public readonly isCollection: boolean;
+}
+
+/**
+ * One entity of a model snapshot, as its last migration left it.
+ */
+export declare class SnapshotEntity {
+  private constructor();
+
+  /**
+   * The entity's class name.
+   */
+  public readonly name: string;
+
+  /**
+   * The table the entity maps to.
+   */
+  public readonly tableName: string;
+
+  /**
+   * The entity's properties, in the order recorded.
+   */
+  public readonly properties: IReadOnlyList<SnapshotProperty>;
+
+  /**
+   * The names of the key's properties, in key order; empty when none was recorded.
+   */
+  public readonly key: IReadOnlyList<string>;
+
+  /**
+   * The entity's foreign keys, in the order recorded.
+   */
+  public readonly foreignKeys: IReadOnlyList<SnapshotForeignKey>;
+
+  /**
+   * The entity's navigations, in the order recorded.
+   */
+  public readonly navigations: IReadOnlyList<SnapshotNavigation>;
+}
+
+/**
+ * Records one entity in a model snapshot: its table, properties and the
+ * columns they map to, key, foreign keys and navigations.
  */
 export declare class SnapshotEntityBuilder {
   private constructor();
 
   /**
-   * Records a required property of the type.
+   * Records the table the entity maps to; the entity's name when not recorded.
    */
-  public property(name: string, type: PropertyType): this;
+  public toTable(name: string): this;
 
   /**
-   * Records a property of the type that may hold no value.
+   * Records a required property of the type, mapped to the column, which is the property's name when left out.
    */
-  public optionalProperty(name: string, type: PropertyType): this;
+  public property(name: string, type: PropertyType, columnName?: string): this;
+
+  /**
+   * Records a property of the type that may hold no value, mapped to the column, which is the property's name when left out.
+   */
+  public optionalProperty(name: string, type: PropertyType, columnName?: string): this;
+
+  /**
+   * Records the key's properties, in key order.
+   */
+  public hasKey(...properties: readonly string[]): this;
+
+  /**
+   * Records a foreign key: the properties, in the principal's key order, that hold the key of the named principal entity.
+   */
+  public hasForeignKey(principal: string, ...properties: readonly string[]): this;
 
   /**
    * Records a navigation to one entity of the named target.
@@ -808,29 +941,40 @@ export declare class SnapshotBuilder {
 }
 
 /**
- * The shape of a context's entities when its last migration was added: each
- * entity's properties with their types and whether they are optional, and its
- * navigations. Types are not known at run time, so the model reads them
- * here; the migration tool writes the snapshot.
+ * A context's model when its last migration was added: each entity's table,
+ * its properties with their types, columns and whether they are optional, its
+ * key, foreign keys and navigations. Types are not known at run time, so the
+ * model reads them here; tables, columns and keys come from the model's
+ * configuration, and the snapshot records them so that the next migration is
+ * found by comparing the model with it. `ctx migrations add` writes the
+ * snapshot.
  *
  * @example
  * ```ts
  * class BlogModelSnapshot extends ModelSnapshot {
  *   protected override buildModel(builder: SnapshotBuilder): void {
- *     builder.entity("Author")
+ *     builder.entity("Author").toTable("authors")
  *       .property("id", PropertyType.Integer)
  *       .property("name", PropertyType.String)
+ *       .hasKey("id")
  *       .collection("posts", "Post");
  *     builder.entity("Post")
  *       .property("id", PropertyType.Integer)
  *       .optionalProperty("body", PropertyType.String)
- *       .property("authorId", PropertyType.Integer)
+ *       .property("authorId", PropertyType.Integer, "author_id")
+ *       .hasKey("id")
+ *       .hasForeignKey("Author", "authorId")
  *       .reference("author", "Author");
  *   }
  * }
  * ```
  */
 export declare abstract class ModelSnapshot {
+  /**
+   * Records the entities and returns them in the order recorded.
+   */
+  public toEntities(): IReadOnlyList<SnapshotEntity>;
+
   /**
    * Records the entities.
    */
@@ -1043,9 +1187,25 @@ export declare class ModelBuilder {
   private constructor();
 
   /**
+   * The entity classes mapped so far, in the order they were first mapped.
+   */
+  public get entityClasses(): IReadOnlyList<EntityClass<object>>;
+
+  /**
    * Maps the entity class and returns its builder.
    */
   public entity<TEntity extends object>(type: EntityClass<TEntity>): EntityTypeBuilder<TEntity>;
+
+  /**
+   * Builds the model of the mapped entities, their property types taken from
+   * the snapshot. An invalid model throws the `DataException` that names its
+   * fault, such as `StaleSnapshotException` when an entity and the snapshot
+   * differ.
+   *
+   * @param snapshot The entities' shapes, or `null` for none.
+   * @returns The model.
+   */
+  public build(snapshot: ModelSnapshot | null): Model;
 }
 
 /**
@@ -1074,6 +1234,27 @@ export declare abstract class DbContext<TConnection extends Connection, TMigrati
    * fault, such as `EntityKeyMissingException`, each time it is asked for.
    */
   public get model(): Model;
+
+  /**
+   * Runs a context class's `onModelCreating` on a new model builder, without
+   * constructing the context, so no connection opens: a tool reads the
+   * entity classes it maps, then builds the model from a snapshot of their
+   * shapes. The configuration runs on the class's prototype, so it sees none
+   * of the fields the constructor sets.
+   *
+   * @param contextClass The context's class.
+   * @returns The configured builder.
+   *
+   * @example
+   * ```ts
+   * import { DbContext } from "@noldova/context.data";
+   *
+   * const builder = DbContext.createModelBuilder(BlogContext);
+   * builder.entityClasses.select(t => t.name).toArray(); // ["Author", "Post"]
+   * const model = builder.build(new BlogSnapshot());
+   * ```
+   */
+  public static createModelBuilder<TConnection extends Connection, TMigration extends Migration>(contextClass: IDbContextClass<TConnection, TMigration>): ModelBuilder;
 
   /**
    * Closes the connection.

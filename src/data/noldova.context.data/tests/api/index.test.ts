@@ -18,7 +18,8 @@ export class DataApiTests {
       "DataRecord", "DataSource", "DatabaseFacade", "DbContext", "DbContextOptions", "DbContextOptionsBuilder", "EntityKeyMissingException", "EntityProperty",
       "EntityPropertyMissingException", "EntityRelation", "EntityType", "EntityTypeBuilder", "ForeignKeyMismatchException", "Index", "Migration",
       "MigrationHistory", "Migrator", "Model", "ModelBuilder", "ModelSnapshot", "PropertyBuilder", "PropertyType", "ReferenceMissingException", "RelationBuilder", "RelationKind",
-      "RelationTargetUnmappedException", "SnapshotBuilder", "SnapshotEntityBuilder", "StaleSnapshotException", "TableMappedTwiceException", "Transaction"
+      "RelationTargetUnmappedException", "SnapshotBuilder", "SnapshotEntity", "SnapshotEntityBuilder", "SnapshotForeignKey",
+      "SnapshotNavigation", "SnapshotProperty", "StaleSnapshotException", "TableMappedTwiceException", "Transaction"
     ];
 
     Assert.areEqual(expected.join(","), Object.keys(api).sort().join(","));

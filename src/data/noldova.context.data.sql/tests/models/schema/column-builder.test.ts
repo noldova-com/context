@@ -19,6 +19,26 @@ export class ColumnBuilderTests {
     Assert.areEqual("name", column.name);
     Assert.areEqual("TEXT", column.type);
     Assert.isFalse(column.isNullable);
+    Assert.isNull(column.defaultValueSql);
+  }
+
+  @TestMethod
+  public quotesATextDefaultAndWritesANumberAsItIs(): void {
+    const builder = new ColumnBuilder("title", "TEXT");
+
+    Assert.areEqual(builder, builder.hasDefaultValue("it's"));
+    Assert.areEqual("'it''s'", builder.toColumn().defaultValueSql);
+    Assert.areEqual("0", new ColumnBuilder("count", "INTEGER").hasDefaultValue(0).toColumn().defaultValueSql);
+    Assert.areEqual("''", new ColumnBuilder("body", "TEXT").hasDefaultValue("").toColumn().defaultValueSql);
+  }
+
+  @TestMethod
+  public takesADefaultWrittenAsSql(): void {
+    const builder = new ColumnBuilder("createdAt", "TEXT");
+
+    Assert.areEqual(builder, builder.hasDefaultValueSql("CURRENT_TIMESTAMP"));
+    Assert.areEqual("CURRENT_TIMESTAMP", builder.toColumn().defaultValueSql);
+    Assert.areEqual("sql", Assert.throws(() => builder.hasDefaultValueSql(" "), ArgumentException).parameterName);
   }
 
   @TestMethod

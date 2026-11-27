@@ -46,6 +46,7 @@ export class ModelBuilderTests {
 
     const model = builder.build(new BlogSnapshot());
 
+    Assert.areEqual("Author,Post,Profile,Tag", builder.entityClasses.select(t => t.name).toArray().join(","));
     Assert.areEqual(4, model.entityTypes.count());
     Assert.areEqual("authors", model.findEntityType(Author)?.tableName);
   }

@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import "@noldova/context.core";
+
 export class Resources {
   public static readonly abortEvent: string = "abort";
   public static readonly allowMode: string = "allow";
@@ -53,6 +55,7 @@ export class Resources {
   public static readonly directSslUnsupported: string = "Direct SSL negotiation is not supported; leave sslnegotiation unset or set it to postgres.";
   public static readonly dollarQuote: string = "$";
   public static readonly domainKind: string = "d";
+  public static readonly dropNotNull: string = "DROP NOT NULL";
   public static readonly duplicatePreparedStatementState: string = "42P05";
   public static readonly elementColumn: string = "element";
   public static readonly endingStatement: RegExp = /^\s*(commit|end|abort|rollback(?!\s+to\b)|prepare\s+transaction)\b/i;
@@ -137,6 +140,7 @@ export class Resources {
   public static readonly serverError: string = "The server reported an error without a message.";
   public static readonly serverKey: string = "Server Key";
   public static readonly sessionPoolSize: number = 1;
+  public static readonly setNotNull: string = "SET NOT NULL";
   public static readonly severalHostsUnsupported: string = "Connecting to one of several hosts is not supported; give one host.";
   public static readonly severityField: string = "severity";
   public static readonly shapeSeparator: string = ":";
@@ -195,6 +199,12 @@ export class Resources {
     return `SELECT pg_advisory_xact_lock(hashtext('${resource}'))`;
   }
 
+  public static formatAlterColumn(table: string, column: string, type: string, value: string, defaultValue: string | null, nullability: string): string {
+    const setDefault = Object.isNull(defaultValue) ? "" : `, ALTER COLUMN ${column} SET DEFAULT ${defaultValue}`;
+
+    return `${table} ALTER COLUMN ${column} DROP DEFAULT, ALTER COLUMN ${column} TYPE ${type} USING ${value}${setDefault}, ALTER COLUMN ${column} ${nullability}`;
+  }
+
   public static formatBatchFailed(index: number): string {
     return `The batch failed at query ${index}.`;
   }
@@ -219,8 +229,16 @@ export class Resources {
     return `The server did not answer within the cancel timeout (${seconds} seconds) after a query was canceled, so whether it ran is unknown.`;
   }
 
+  public static formatCast(value: string, type: string): string {
+    return `${value}::${type}`;
+  }
+
   public static formatChannelBindingUnsupported(value: string): string {
     return `channel_binding ${value} is not supported.`;
+  }
+
+  public static formatCoalesce(value: string, fallback: string): string {
+    return `COALESCE(${value}, ${fallback})`;
   }
 
   public static formatConnectionClosed(host: string, port: number): string {

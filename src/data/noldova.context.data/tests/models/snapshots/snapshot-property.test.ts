@@ -14,10 +14,11 @@ import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 export class SnapshotPropertyTests {
   @TestMethod
   public keepsWhatItWasGiven(): void {
-    const property = new SnapshotProperty("body", PropertyType.String, true);
+    const property = new SnapshotProperty("body", PropertyType.String, true, "post_body");
 
     Assert.areEqual("body", property.name);
     Assert.areEqual(PropertyType.String, property.type);
     Assert.isTrue(property.isOptional);
+    Assert.areEqual("post_body", property.columnName);
   }
 }

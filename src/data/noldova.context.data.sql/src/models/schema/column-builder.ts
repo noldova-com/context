@@ -6,10 +6,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { ArgumentException } from "@noldova/context.exceptions";
+
+import { Resources } from "../../resources.js";
 import { Column } from "./column.js";
 
 export class ColumnBuilder {
   private isNullable: boolean = false;
+  private defaultValueSql: string | null = null;
 
   public readonly name: string;
   public readonly type: string;
@@ -24,7 +28,23 @@ export class ColumnBuilder {
     return this;
   }
 
+  public hasDefaultValue(value: string | number): this {
+    this.defaultValueSql = Object.isString(value)
+      ? Resources.stringQuote + value.replaceAll(Resources.stringQuote, Resources.escapedStringQuote) + Resources.stringQuote
+      : String(value);
+
+    return this;
+  }
+
+  public hasDefaultValueSql(sql: string): this {
+    ArgumentException.throwIfNullOrWhitespace(sql, Resources.sqlParameterName);
+
+    this.defaultValueSql = sql;
+
+    return this;
+  }
+
   public toColumn(): Column {
-    return new Column(this.name, this.type, this.isNullable);
+    return new Column(this.name, this.type, this.isNullable, this.defaultValueSql);
   }
 }

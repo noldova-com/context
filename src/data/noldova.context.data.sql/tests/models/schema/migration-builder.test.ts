@@ -6,7 +6,10 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { CreateIndexOperation, CreateTableOperation, MigrationBuilder, SqlStatementOperation } from "@noldova/context.data.sql";
+import {
+  AddColumnOperation, AddForeignKeyOperation, AddPrimaryKeyOperation, AlterColumnOperation, CreateIndexOperation, CreateTableOperation, DropColumnOperation,
+  DropForeignKeyOperation, DropPrimaryKeyOperation, DropTableOperation, MigrationBuilder, SqlStatementOperation
+} from "@noldova/context.data.sql";
 import { ArgumentException, InvalidOperationException } from "@noldova/context.exceptions";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
@@ -34,7 +37,8 @@ export class MigrationBuilderTests {
     Assert.isInstanceOf(operations[0], CreateIndexOperation);
     Assert.isInstanceOf(operations[1], CreateTableOperation);
     Assert.areEqual("CREATE INDEX \"IX_notes_ownerId\" ON \"notes\" (\"ownerId\")", statements[0]);
-    Assert.areEqual("CREATE TABLE \"notes\" (\"id\" TEXT NOT NULL, \"ownerId\" TEXT, PRIMARY KEY (\"id\"), FOREIGN KEY (\"ownerId\") REFERENCES \"owners\" (\"id\"))", statements[1]);
+    Assert.areEqual("CREATE TABLE \"notes\" (\"id\" TEXT NOT NULL, \"ownerId\" TEXT, CONSTRAINT \"PK_notes\" PRIMARY KEY (\"id\"), "
+      + "CONSTRAINT \"FK_notes_ownerId\" FOREIGN KEY (\"ownerId\") REFERENCES \"owners\" (\"id\"))", statements[1]);
     Assert.areEqual("CREATE UNIQUE INDEX \"UX_notes_ownerId_id\" ON \"notes\" (\"ownerId\", \"id\")", statements[2]);
   }
 
@@ -44,6 +48,48 @@ export class MigrationBuilderTests {
     builder.createTable<Note>("log", table => table.addColumn(t => t.text, "TEXT"));
 
     Assert.areEqual("CREATE TABLE \"log\" (\"text\" TEXT NOT NULL)", builder.toOperations()[0]?.render(new TestDialect()));
+  }
+
+  @TestMethod
+  public changesExistingTablesInDeclarationOrder(): void {
+    const builder = new MigrationBuilder();
+    builder.dropForeignKey("notes", "ownerId");
+    builder.dropPrimaryKey("notes");
+    builder.dropColumn("notes", "text");
+    builder.alterColumn("notes", "title", "INTEGER").makeNullable();
+    builder.addColumn("notes", "body", "TEXT").hasDefaultValue("");
+    builder.addPrimaryKey("notes", "id", "title");
+    builder.addForeignKey("notes", "ownerId", "owners", "id");
+    builder.dropTable("owners");
+
+    const operations = builder.toOperations();
+    const statements = operations.map(t => t.render(new TestDialect()));
+
+    Assert.areEqual("DropForeignKeyOperation,DropPrimaryKeyOperation,DropColumnOperation,AlterColumnOperation,AddColumnOperation,AddPrimaryKeyOperation,"
+      + "AddForeignKeyOperation,DropTableOperation", operations.map(t => t.constructor.name).join(","));
+    Assert.areEqual("ALTER notes.title INTEGER NULL", statements[3]);
+    Assert.areEqual("ALTER TABLE \"notes\" ADD COLUMN \"body\" TEXT NOT NULL DEFAULT ''", statements[4]);
+    Assert.areEqual("ALTER TABLE \"notes\" ADD CONSTRAINT \"PK_notes\" PRIMARY KEY (\"id\", \"title\")", statements[5]);
+    Assert.areEqual("DROP TABLE \"owners\"", statements[7]);
+    Assert.isInstanceOf(operations[0], DropForeignKeyOperation);
+    Assert.isInstanceOf(operations[1], DropPrimaryKeyOperation);
+    Assert.isInstanceOf(operations[2], DropColumnOperation);
+    Assert.isInstanceOf(operations[3], AlterColumnOperation);
+    Assert.isInstanceOf(operations[4], AddColumnOperation);
+    Assert.isInstanceOf(operations[5], AddPrimaryKeyOperation);
+    Assert.isInstanceOf(operations[6], AddForeignKeyOperation);
+    Assert.isInstanceOf(operations[7], DropTableOperation);
+  }
+
+  @TestMethod
+  public takesAColumnAsItsBuilderLeavesIt(): void {
+    const builder = new MigrationBuilder();
+    const column = builder.addColumn("notes", "body", "TEXT");
+    column.makeNullable();
+
+    const operation = builder.toOperations()[0];
+
+    Assert.isTrue(operation instanceof AddColumnOperation && operation.column.isNullable);
   }
 
   @TestMethod

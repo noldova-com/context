@@ -54,6 +54,7 @@ Package size never justifies moving an unrelated responsibility into Core.
 | `noldova.context.data.sql` | The SQL implementation of the data model: the schema model, the migration builder, the SQL dialect, and SQL connections, transactions, migration history and change feed |
 | `noldova.context.data.sql.sqlite` | The SQLite provider: its dialect, its connection, and `useSQLite` |
 | `noldova.context.data.sql.postgresql` | The PostgreSQL provider: its dialect, its connection, `usePostgreSQL`, and the PostgreSQL client it talks to its server through (section 7.5) |
+| `noldova.context.data.tools` | The data context's commands for `ctx`: `migrations add`, which writes a migration, the model snapshot and the migrations list from a context's model (section 7.6) |
 | `noldova.context.testing` | The test framework: discovery of decorated test classes, parallel runs in worker threads, assertions, reports and code coverage (`TESTING-CONTRACT.md`) |
 | `noldova.context.diagnostics` | The diagnostic model parsers and tools report through: codes, categories, message chains, locations and templates (`DIAGNOSTIC-CONTRACT.md`) |
 | `noldova.context.parsers` | The shared parser foundation: sources, spans, line positions, the reader, and the lexer and parser bases; no grammar |
@@ -87,6 +88,7 @@ The accepted direct library dependencies are:
 | Data.Sql | Core, Exceptions, Data |
 | Data.Sql.SQLite | Core, Exceptions, Data, Data.Sql |
 | Data.Sql.PostgreSQL | Core, Exceptions, Data, Data.Sql |
+| Data.Tools | Core, Exceptions, Collections, JSON, Context (the host), Data, Data.Sql, Diagnostics, Parsers, Parsers.TypeScript |
 | Testing | Core, Exceptions, Collections, Text, Processes |
 | Diagnostics | Core, Exceptions |
 | Parsers | Core, Exceptions, Collections, Text, Diagnostics |
@@ -224,6 +226,15 @@ It leaves out `subscribe.js` (logical replication), `large.js` (large objects), 
 It reads the TLS certificate options, `sslrootcert`, `sslcert`, `sslkey` and `sslpassword`, from the files the connection string names.
 The client is internal to the package: the provider's connection is its only user, and the package's public API is the provider's.
 
+### 7.6 The data tools
+
+`noldova.context.data.tools` gives `ctx` the `migrations` command, for development only: an application never loads it at run time.
+`migrations add` reads the project's sources and its compiled output, and compares the context's model with the snapshot of its last migration, as `SqlSchema` and `SchemaDiffer` give them; it writes the migration, the new snapshot and the list of the context's migrations, and reads no migration's operations.
+The model's types come from one place, `EntityTypeReader`, which reads each mapped entity's property types from its source with Parsers.TypeScript, so that it is the only part to change when the SDK's checker gives types.
+
+The package's one host boundary is `ProjectSources`: during the Node bootstrap it reads the project's `tsconfig.json` and sources and writes the generated files through `node:fs/promises`, builds paths with `node:path`, imports the compiled context, the compiled snapshot and the provider through `node:url`'s file URLs, and resolves the provider from the project file's folder with `node:module`'s `createRequire`, as the command host does.
+Its file carries the Node note in `TESTING-CONTRACT.md` section 1, and when the Runtime owns files and module loading it moves onto the Runtime's contracts without a change to the command.
+
 ## 8. Processes and its host boundary
 
 `noldova.context.processes` ends a process and every process it started, for any package or application that starts processes, so none of them needs a test package or a way of its own.
@@ -240,7 +251,7 @@ When the Runtime owns processes, the package moves onto its contracts, and its p
 ## 9. The command host and its host boundary
 
 `noldova.context` is the `ctx` command host that `RUNTIME-AND-SDK.md` section 2 describes, and its npm package `@noldova/context` installs the `ctx` command.
-It depends on Core, Exceptions and JSON only, and its public API is `CommandHost`, `Command`, `CommandContext`, `CommandOutput`, `ConsoleOutput`, `Project`, `ProjectEntryPoint`, `ProjectKind` and its exceptions; providers such as the SDK depend on it for `Command`, and it depends on none of them.
+It depends on Core, Exceptions and JSON only, and its public API is `CommandHost`, `Command`, `CommandContext`, `CommandOutput`, `ConsoleOutput`, `Project`, `ProjectEntryPoint`, `ProjectKind` and its exceptions; providers such as the SDK and Data.Tools depend on it for `Command`, and it depends on none of them.
 
 During the Node bootstrap it reads the project file through `node:fs/promises`, resolves each provider from the project file's folder with `node:module`'s `createRequire`, imports providers through `node:url`'s file URLs, builds paths with `node:path`, and writes through `process.stdout` and `process.stderr`; each file that does carries the Node note in `TESTING-CONTRACT.md` section 1.
 When the Runtime owns module loading and the console, the package moves onto its contracts, and its public API doesn't change for it.

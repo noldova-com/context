@@ -7,7 +7,7 @@
  */
 
 import type { DataSource, DbContextOptions, PropertyType } from "@noldova/context.data";
-import { SqlConnection, SqlDialect, type SqlMigration, SqlProvider } from "@noldova/context.data.sql";
+import { type Column, SqlConnection, SqlDialect, type SqlMigration, SqlProvider } from "@noldova/context.data.sql";
 
 declare module "@noldova/context.data" {
   interface DbContextOptionsBuilder {
@@ -109,6 +109,25 @@ export declare class PostgreSQLDialect extends SqlDialect {
    * ```
    */
   public override formatLock(resource: string): readonly string[];
+
+  /**
+   * One `ALTER TABLE` statement that sets the column's type, converting each
+   * value with a cast, and its nullability, in place.
+   *
+   * @param table The table's name.
+   * @param column The column as it is to be.
+   * @returns The statement.
+   *
+   * @example
+   * ```ts
+   * import { Column } from "@noldova/context.data.sql";
+   * import { PostgreSQLDialect } from "@noldova/context.data.sql.postgresql";
+   *
+   * new PostgreSQLDialect().renderAlterColumn("notes", new Column("rank", "BIGINT", true));
+   * // ALTER TABLE "notes" ALTER COLUMN "rank" TYPE BIGINT USING "rank"::BIGINT, ALTER COLUMN "rank" DROP NOT NULL
+   * ```
+   */
+  public override renderAlterColumn(table: string, column: Column): string;
 }
 
 /**

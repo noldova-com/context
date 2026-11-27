@@ -19,6 +19,8 @@ export class ColumnTests {
     Assert.areEqual("title", column.name);
     Assert.areEqual("TEXT", column.type);
     Assert.isTrue(column.isNullable);
+    Assert.isNull(column.defaultValueSql);
+    Assert.areEqual("0", new Column("count", "INTEGER", false, "0").defaultValueSql);
   }
 
   @TestMethod

@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { Dictionary, List } from "@noldova/context.collections";
+import { Dictionary, type IReadOnlyList, List } from "@noldova/context.collections";
 
 import { ModelFactory } from "../../services/model-factory.js";
 import type { EntityClass } from "../../types/entity-class.js";
@@ -18,6 +18,10 @@ import type { Model } from "./model.js";
 
 export class ModelBuilder {
   private readonly definitions: Dictionary<EntityClass<object>, EntityTypeDefinition> = new Dictionary();
+
+  public get entityClasses(): IReadOnlyList<EntityClass<object>> {
+    return this.definitions.keys().toList().asReadOnly();
+  }
 
   public entity<TEntity extends object>(type: EntityClass<TEntity>): EntityTypeBuilder<TEntity> {
     let definition = this.definitions.tryGet(type);

@@ -38,6 +38,14 @@ export class ConstraintsBuilderTests {
   }
 
   @TestMethod
+  public takesColumnsByName(): void {
+    const builder = new ConstraintsBuilder<Note>().addPrimaryKey("id", t => t.text).addForeignKey("ownerId", "owners", "id");
+
+    Assert.areEqual("id,text", builder.toPrimaryKey()?.columns.join(","));
+    Assert.areEqual("ownerId>owners.id", builder.toForeignKeys().map(t => `${t.column}>${t.principalTable}.${t.principalColumn}`).join(","));
+  }
+
+  @TestMethod
   public rejectsAKeyWithoutColumns(): void {
     Assert.throws(() => new ConstraintsBuilder<Note>().addPrimaryKey(), ArgumentException);
   }

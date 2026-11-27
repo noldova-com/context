@@ -19,6 +19,6 @@ export class CreateTableOperationTests {
     const operation = new CreateTableOperation(table);
 
     Assert.areEqual(table, operation.table);
-    Assert.areEqual("CREATE TABLE \"notes\" (\"id\" TEXT NOT NULL, PRIMARY KEY (\"id\"))", operation.render(new TestDialect()));
+    Assert.areEqual("CREATE TABLE \"notes\" (\"id\" TEXT NOT NULL, CONSTRAINT \"PK_notes\" PRIMARY KEY (\"id\"))", operation.render(new TestDialect()));
   }
 }

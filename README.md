@@ -61,6 +61,7 @@ Each name opens the package's folder and its own README; each badge opens it on 
 | [`context.data.sql`](src/data/noldova.context.data.sql) | [![npm](https://badgen.net/npm/v/@noldova/context.data.sql)](https://www.npmjs.com/package/@noldova/context.data.sql) | The data model over SQL: a schema and migration builder, SQL dialects, and SQL connections, migrations and change feed |
 | [`context.data.sql.sqlite`](src/data/noldova.context.data.sql.sqlite) | [![npm](https://badgen.net/npm/v/@noldova/context.data.sql.sqlite)](https://www.npmjs.com/package/@noldova/context.data.sql.sqlite) | The SQLite provider of the SQL data model, on the host's `node:sqlite` |
 | [`context.data.sql.postgresql`](src/data/noldova.context.data.sql.postgresql) | [![npm](https://badgen.net/npm/v/@noldova/context.data.sql.postgresql)](https://www.npmjs.com/package/@noldova/context.data.sql.postgresql) | The PostgreSQL provider of the SQL data model, ported from postgres.js |
+| [`context.data.tools`](src/data/noldova.context.data.tools) | [![npm](https://badgen.net/npm/v/@noldova/context.data.tools)](https://www.npmjs.com/package/@noldova/context.data.tools) | The `ctx migrations add` command, which writes a migration and the model snapshot from a data context's model |
 
 ### Command line
 

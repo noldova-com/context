@@ -14,13 +14,15 @@ export class Column {
   public readonly name: string;
   public readonly type: string;
   public readonly isNullable: boolean;
+  public readonly defaultValueSql: string | null;
 
-  public constructor(name: string, type: string, isNullable: boolean) {
+  public constructor(name: string, type: string, isNullable: boolean, defaultValueSql: string | null = null) {
     ArgumentException.throwIfNullOrWhitespace(name, Resources.nameParameterName);
     ArgumentException.throwIfNullOrWhitespace(type, Resources.typeParameterName);
 
     this.name = name;
     this.type = type;
     this.isNullable = isNullable;
+    this.defaultValueSql = defaultValueSql;
   }
 }

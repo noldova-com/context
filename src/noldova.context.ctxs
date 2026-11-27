@@ -12,6 +12,8 @@
     "data/noldova.context.data.sql.sqlite/tests/noldova.context.data.sql.sqlite.tests.ctxp",
     "data/noldova.context.data.sql.postgresql/src/noldova.context.data.sql.postgresql.ctxp",
     "data/noldova.context.data.sql.postgresql/tests/noldova.context.data.sql.postgresql.tests.ctxp",
+    "data/noldova.context.data.tools/src/noldova.context.data.tools.ctxp",
+    "data/noldova.context.data.tools/tests/noldova.context.data.tools.tests.ctxp",
     "noldova.context.diagnostics/src/noldova.context.diagnostics.ctxp",
     "noldova.context.diagnostics/tests/noldova.context.diagnostics.tests.ctxp",
     "noldova.context.exceptions/src/noldova.context.exceptions.ctxp",

@@ -7,7 +7,7 @@
  */
 
 import type { DataSource, DbContextOptions, PropertyType } from "@noldova/context.data";
-import { SqlConnection, SqlDialect, type SqlMigration, SqlProvider } from "@noldova/context.data.sql";
+import { type Column, type SchemaOperation, SqlConnection, SqlDialect, type SqlMigration, SqlProvider, type SqlTransaction } from "@noldova/context.data.sql";
 
 declare module "@noldova/context.data" {
   interface DbContextOptionsBuilder {
@@ -47,6 +47,44 @@ export declare class SQLiteDialect extends SqlDialect {
    * begins, so one transaction at a time runs.
    */
   public override formatLock(): readonly string[];
+
+  /**
+   * `PRAGMA foreign_keys = OFF`, run on the connection before a migration's
+   * transaction, since SQLite ignores the pragma inside one; a table rebuild
+   * drops a table that other tables refer to.
+   */
+  public override formatMigrationStart(): readonly string[];
+
+  /**
+   * `PRAGMA foreign_keys = ON`, run after the migration's transaction ends,
+   * whether it committed or rolled back.
+   */
+  public override formatMigrationEnd(): readonly string[];
+
+  /**
+   * A query for the first row whose foreign key refers to no row, with the
+   * table holding it in `table` and the table it refers to in `parent`; the
+   * migrator runs it before it commits.
+   */
+  public override formatForeignKeyCheck(): string;
+
+  /**
+   * Always throws `InvalidOperationException`: SQLite can't alter a column,
+   * so `applyAsync` rebuilds the table instead.
+   */
+  public override renderAlterColumn(table: string, column: Column): string;
+
+  /**
+   * Runs a statement operation as `SqlDialect` does. A change to an existing
+   * table rebuilds it: reads the live table, creates the changed one under a
+   * temporary name with its keys, copies the rows of the columns both keep,
+   * drops the old table, renames the new one and recreates each index whose
+   * columns all remain.
+   *
+   * @param operation The operation.
+   * @param transaction The migration's transaction.
+   */
+  public override applyAsync(operation: SchemaOperation, transaction: SqlTransaction): Promise<void>;
 }
 
 /**
