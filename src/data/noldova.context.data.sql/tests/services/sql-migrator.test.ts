@@ -6,12 +6,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { ChangeOperation, DataException, Migrator } from "@noldova/context.data";
+import { ChangeOperation, DataException, DataRecord, DataSource, Migrator } from "@noldova/context.data";
 import { SqlChangeFeed, SqlMigrator } from "@noldova/context.data.sql";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
+import { CheckingDialect } from "../fixtures/checking-dialect.fixture.js";
 import { NotesMigration } from "../fixtures/notes-migration.fixture.js";
 import { RecordingConnection } from "../fixtures/recording-connection.fixture.js";
+import { RecordingSession } from "../fixtures/recording-session.fixture.js";
 
 @TestClass
 export class SqlMigratorTests {
@@ -57,7 +59,7 @@ export class SqlMigratorTests {
     Assert.areEqual("LOCK __migrations", connection.statements[6]);
     Assert.isTrue(connection.statements[7]?.startsWith("CREATE TABLE IF NOT EXISTS \"__migrations\"") === true);
     Assert.isTrue(connection.statements[8]?.startsWith("SELECT \"id\" FROM \"__migrations\"") === true);
-    Assert.areEqual("CREATE TABLE \"notes\" (\"id\" TEXT NOT NULL, \"text\" TEXT NOT NULL, PRIMARY KEY (\"id\"))", connection.statements[9]);
+    Assert.areEqual("CREATE TABLE \"notes\" (\"id\" TEXT NOT NULL, \"text\" TEXT NOT NULL, CONSTRAINT \"PK_notes\" PRIMARY KEY (\"id\"))", connection.statements[9]);
     Assert.areEqual("CREATE INDEX \"IX_notes_text\" ON \"notes\" (\"text\")", connection.statements[10]);
     Assert.isTrue(connection.statements[11]?.startsWith("INSERT INTO \"__migrations\"") === true);
     Assert.areEqual("COMMIT", connection.statements[12]);
@@ -98,6 +100,34 @@ export class SqlMigratorTests {
     await Assert.throwsAsync(async () => migrator.migrateAsync(), Error);
     Assert.areEqual("ROLLBACK", connection.statements[connection.statements.length - 1]);
     Assert.areEqual(0, (await migrator.getAppliedMigrationsAsync()).length);
+  }
+
+  @TestMethod
+  public async runsTheDialectsStatementsAroundEachMigrationAndChecksItsForeignKeysBeforeItCommits(): Promise<void> {
+    const connection = new RecordingConnection(new DataSource("recording", ":memory:"), new RecordingSession(), new CheckingDialect());
+
+    await new SqlMigrator(connection, [new NotesMigration()]).migrateAsync();
+
+    const migration = connection.statements.slice(connection.statements.indexOf("CHECKS OFF"));
+    Assert.areEqual("CHECKS OFF", migration[0]);
+    Assert.areEqual("BEGIN", migration[1]);
+    Assert.areEqual("SELECT VIOLATION", migration[migration.length - 4]);
+    Assert.isTrue(migration[migration.length - 3]?.startsWith("INSERT INTO \"__migrations\"") === true);
+    Assert.areEqual("COMMIT", migration[migration.length - 2]);
+    Assert.areEqual("CHECKS ON", migration[migration.length - 1]);
+  }
+
+  @TestMethod
+  public async rollsBackAMigrationThatLeavesARowBreakingAForeignKey(): Promise<void> {
+    const session = new RecordingSession();
+    const connection = new RecordingConnection(new DataSource("recording", ":memory:"), session, new CheckingDialect());
+    session.queryResults.push(new DataRecord(new Map([["table", "notes"], ["parent", "owners"]])));
+
+    const exception = await Assert.throwsAsync(async () => new SqlMigrator(connection, [new NotesMigration()]).migrateAsync(), DataException);
+
+    Assert.areEqual("The migration \"20260908130000_Notes\" leaves rows in \"notes\" that refer to no row of \"owners\".", exception.message);
+    Assert.areEqual("ROLLBACK", connection.statements[connection.statements.length - 2]);
+    Assert.areEqual("CHECKS ON", connection.statements[connection.statements.length - 1]);
   }
 
   @TestMethod

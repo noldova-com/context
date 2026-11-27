@@ -46,6 +46,7 @@ export default class Config {
     new PackageInfo("noldova.context.parsers", "parsers/noldova.context.parsers", "@noldova/context.parsers"),
     new PackageInfo("noldova.context.parsers.regex", "parsers/noldova.context.parsers.regex", "@noldova/context.parsers.regex"),
     new PackageInfo("noldova.context.parsers.typescript", "parsers/noldova.context.parsers.typescript", "@noldova/context.parsers.typescript"),
+    new PackageInfo("noldova.context.data.tools", "data/noldova.context.data.tools", "@noldova/context.data.tools"),
   ];
 
   private static readVersion(): string {

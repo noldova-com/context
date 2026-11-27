@@ -21,12 +21,28 @@ import { PostgreSQLConnection } from "@noldova/context.data.sql.postgresql";
 import "@noldova/context.data.sql.sqlite";
 
 import { Released } from "./released.fixture.js";
+import { SchemaQueries } from "./schema-queries.fixture.js";
 
 export class ProviderDatabase implements AsyncDisposable {
   public static readonly sqlite: string = "sqlite";
   public static readonly postgresql: string = "postgresql";
 
   private static readonly serverVariable: string = "NOLDOVA_CONTEXT_POSTGRESQL_URL";
+  private static readonly sqliteSchema: SchemaQueries = new SchemaQueries(
+    "SELECT \"name\", \"type\", \"notnull\" AS \"notNull\" FROM pragma_table_info(?) ORDER BY \"name\"",
+    "SELECT \"name\" FROM pragma_table_info(?) WHERE \"pk\" > 0 ORDER BY \"pk\"",
+    "SELECT \"from\", \"table\", \"to\" FROM pragma_foreign_key_list(?) ORDER BY \"from\"");
+  private static readonly postgresqlSchema: SchemaQueries = new SchemaQueries(
+    "SELECT column_name::text AS \"name\", upper(data_type::text) AS \"type\", CASE WHEN is_nullable::text = 'NO' THEN 1 ELSE 0 END AS \"notNull\" "
+      + "FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ? ORDER BY column_name COLLATE \"C\"",
+    "SELECT k.column_name::text AS \"name\" FROM information_schema.table_constraints c JOIN information_schema.key_column_usage k "
+      + "ON k.constraint_schema = c.constraint_schema AND k.constraint_name = c.constraint_name "
+      + "WHERE c.table_schema = current_schema() AND c.table_name = ? AND c.constraint_type = 'PRIMARY KEY' ORDER BY k.ordinal_position",
+    "SELECT k.column_name::text AS \"from\", u.table_name::text AS \"table\", u.column_name::text AS \"to\" "
+      + "FROM information_schema.table_constraints c JOIN information_schema.key_column_usage k "
+      + "ON k.constraint_schema = c.constraint_schema AND k.constraint_name = c.constraint_name "
+      + "JOIN information_schema.constraint_column_usage u ON u.constraint_schema = c.constraint_schema AND u.constraint_name = c.constraint_name "
+      + "WHERE c.table_schema = current_schema() AND c.table_name = ? AND c.constraint_type = 'FOREIGN KEY' ORDER BY k.column_name COLLATE \"C\"");
 
   private readonly provider: string;
   private readonly location: string;
@@ -70,6 +86,18 @@ export class ProviderDatabase implements AsyncDisposable {
 
   public findIndex(name: string): SqlQuery {
     return this.indexes(name);
+  }
+
+  public async describeAsync(connection: SqlConnection, table: string): Promise<string> {
+    const schema = this.provider === ProviderDatabase.sqlite ? ProviderDatabase.sqliteSchema : ProviderDatabase.postgresqlSchema;
+    const columns = await connection.queryAsync(new SqlQuery(schema.columns, [table]));
+    const key = await connection.queryAsync(new SqlQuery(schema.key, [table]));
+    const foreignKeys = await connection.queryAsync(new SqlQuery(schema.foreignKeys, [table]));
+    const describedColumns = columns.map(t => `${t.readString("name")} ${t.readString("type")}${t.readInteger("notNull") === 1 ? " NOT NULL" : ""}`);
+    const describedKey = key.map(t => t.readString("name"));
+    const describedForeignKeys = foreignKeys.map(t => `${t.readString("from")}>${t.readString("table")}.${t.readString("to")}`);
+
+    return `${describedColumns.join(", ")}; key ${describedKey.join(", ")}; references ${describedForeignKeys.join(", ")}`;
   }
 
   public [Symbol.asyncDispose](): Promise<void> {

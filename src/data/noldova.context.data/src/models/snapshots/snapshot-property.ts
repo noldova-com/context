@@ -12,10 +12,12 @@ export class SnapshotProperty {
   public readonly name: string;
   public readonly type: PropertyType;
   public readonly isOptional: boolean;
+  public readonly columnName: string;
 
-  public constructor(name: string, type: PropertyType, isOptional: boolean) {
+  public constructor(name: string, type: PropertyType, isOptional: boolean, columnName: string) {
     this.name = name;
     this.type = type;
     this.isOptional = isOptional;
+    this.columnName = columnName;
   }
 }

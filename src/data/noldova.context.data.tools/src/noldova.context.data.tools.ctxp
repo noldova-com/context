@@ -1,0 +1,24 @@
+{
+  "name": "noldova.context.data.tools",
+  "version": "0.0.1",
+  "kind": "library",
+  "frameworks": [],
+  "internalsVisibleTo": [
+    "noldova.context.data.tools.tests"
+  ],
+  "dependencies": {
+    "projects": [],
+    "packages": [
+      "noldova.context",
+      "noldova.context.collections",
+      "noldova.context.core",
+      "noldova.context.data",
+      "noldova.context.data.sql",
+      "noldova.context.diagnostics",
+      "noldova.context.exceptions",
+      "noldova.context.json",
+      "noldova.context.parsers",
+      "noldova.context.parsers.typescript"
+    ]
+  }
+}

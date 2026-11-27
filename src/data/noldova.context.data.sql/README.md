@@ -45,15 +45,38 @@ await connection.runInTransactionAsync(async transaction => {
 ```
 
 A column's type is its provider's own, such as `TEXT` or `BIGINT`; the
-dialect's `formatColumnType` spells the one each property type needs. A
-context's model can be checked against the tables its migrations create,
-which throws `SchemaMismatchException` naming the table and column that
-differ:
+dialect's `formatColumnType` spells the one each property type needs.
+A migration also changes existing tables: it drops a table, adds, drops or
+alters a column, and changes a table's primary key and foreign keys. A
+required column added to a table with rows takes a default value, or a
+default written as SQL with `hasDefaultValueSql`:
+
+```ts
+builder.addColumn("notes", "rank", "BIGINT").hasDefaultValue(0);
+builder.addColumn("notes", "created", "TEXT").hasDefaultValueSql("CURRENT_TIMESTAMP");
+builder.alterColumn("notes", "text", "TEXT").makeNullable();
+builder.dropPrimaryKey("notes");
+builder.addPrimaryKey("notes", "id", "rank");
+builder.addForeignKey("notes", "ownerId", "owners", "id");
+```
+
+A dialect names keys `PK_<table>` and foreign keys `FK_<table>_<column>`.
+PostgreSQL alters a table in place. SQLite can't alter a column, so it
+rebuilds a changed table from the live schema. It creates the new table,
+copies the rows of the columns both keep, drops the old table, renames the
+new one and recreates each index whose columns all remain. Foreign keys are
+off around the migration's transaction and checked before it commits.
+
+`SchemaDiffer.diff` returns the operations that turn one list of tables into
+another, and `SqlSchema` gives the tables of a model or of a model snapshot.
+A context's model can be checked against its snapshot without reading a
+migration; the first difference throws `SchemaMismatchException`, naming the
+table and column:
 
 ```ts
 import { SqlModelValidator } from "@noldova/context.data.sql";
 
-SqlModelValidator.validate(context.model, migrations, context.database.connection.dialect);
+SqlModelValidator.validate(context.model, new NotesSnapshot(), context.database.connection.dialect);
 ```
 
 The declaration file `api/index.d.ts` documents every member with its

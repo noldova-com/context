@@ -7,8 +7,8 @@
  */
 
 import type { NameofSelector } from "@noldova/context.core";
-import { type Change, ChangeFeed, type ChangeOperation, Connection, DataException, DataProvider, type DataRecord, type DataSource, type DataValue, type Index, Migration, MigrationHistory, Migrator, type Model, type PropertyType,
-  Transaction } from "@noldova/context.data";
+import { type Change, ChangeFeed, type ChangeOperation, Connection, DataException, DataProvider, type DataRecord, type DataSource, type DataValue, type Index, Migration, MigrationHistory, Migrator, type Model, type ModelSnapshot,
+  type PropertyType, Transaction } from "@noldova/context.data";
 
 /**
  * Names a column after a property of the model the table stores, as a
@@ -45,8 +45,8 @@ export declare class SqlQuery {
 
 /**
  * One column of a table as a migration declares it: a name, its provider's
- * column type, and whether `NULL` is allowed. Keys are constraints of the table, not
- * properties of the column.
+ * column type, whether `NULL` is allowed, and the value a row takes when none
+ * is given. Keys are constraints of the table, not properties of the column.
  */
 export declare class Column {
   /**
@@ -65,9 +65,15 @@ export declare class Column {
   public readonly isNullable: boolean;
 
   /**
-   * Initializes the column. A blank name or type throws `ArgumentException`.
+   * The default value as SQL, such as `''` or `0`, or `null` for none.
    */
-  public constructor(name: string, type: string, isNullable: boolean);
+  public readonly defaultValueSql: string | null;
+
+  /**
+   * Initializes the column, with no default when `defaultValueSql` is left
+   * out. A blank name or type throws `ArgumentException`.
+   */
+  public constructor(name: string, type: string, isNullable: boolean, defaultValueSql?: string | null);
 }
 
 /**
@@ -152,6 +158,224 @@ export declare abstract class SchemaOperation {
    */
   public abstract render(dialect: SqlDialect): string;
 }
+
+/**
+ * Changes an existing table in a way a database may not support in place;
+ * SQLite applies each one by rebuilding the table.
+ */
+export declare abstract class TableChangeOperation extends SchemaOperation {
+  /**
+   * The name of the table it changes.
+   */
+  public readonly table: string;
+
+  /**
+   * Initializes the operation for the table.
+   */
+  protected constructor(table: string);
+
+  /**
+   * Returns the table as the operation leaves it.
+   */
+  public abstract applyTo(table: Table): Table;
+}
+
+/**
+ * Drops a table.
+ */
+export declare class DropTableOperation extends SchemaOperation {
+  /**
+   * The table's name.
+   */
+  public readonly table: string;
+
+  /**
+   * Initializes the operation for the table.
+   */
+  public constructor(table: string);
+
+  /**
+   * Renders `DROP TABLE`.
+   */
+  public override render(dialect: SqlDialect): string;
+}
+
+/**
+ * Adds a column to an existing table; a column that is `NOT NULL` needs a
+ * default when the table has rows.
+ */
+export declare class AddColumnOperation extends SchemaOperation {
+  /**
+   * The table's name.
+   */
+  public readonly table: string;
+
+  /**
+   * The column it adds.
+   */
+  public readonly column: Column;
+
+  /**
+   * Initializes the operation for the table and column.
+   */
+  public constructor(table: string, column: Column);
+
+  /**
+   * Renders `ALTER TABLE ... ADD COLUMN`.
+   */
+  public override render(dialect: SqlDialect): string;
+}
+
+/**
+ * Drops a column, with the foreign keys from it and its place in the primary key.
+ */
+export declare class DropColumnOperation extends TableChangeOperation {
+  /**
+   * The column's name.
+   */
+  public readonly column: string;
+
+  /**
+   * Initializes the operation for the table and column.
+   */
+  public constructor(table: string, column: string);
+
+  /**
+   * Renders `ALTER TABLE ... DROP COLUMN`.
+   */
+  public override render(dialect: SqlDialect): string;
+
+  /**
+   * Returns the table without the column. A table without it throws `InvalidOperationException`.
+   */
+  public override applyTo(table: Table): Table;
+}
+
+/**
+ * Changes a column's type and whether it allows `NULL`; its default stays.
+ */
+export declare class AlterColumnOperation extends TableChangeOperation {
+  /**
+   * The column as it becomes.
+   */
+  public readonly column: Column;
+
+  /**
+   * Initializes the operation for the table and column.
+   */
+  public constructor(table: string, column: Column);
+
+  /**
+   * Renders the dialect's `ALTER COLUMN`.
+   */
+  public override render(dialect: SqlDialect): string;
+
+  /**
+   * Returns the table with the column changed. A table without it throws `InvalidOperationException`.
+   */
+  public override applyTo(table: Table): Table;
+}
+
+/**
+ * Adds a primary key, named `PK_<table>`, to a table that has none.
+ */
+export declare class AddPrimaryKeyOperation extends TableChangeOperation {
+  /**
+   * The key it adds.
+   */
+  public readonly primaryKey: PrimaryKey;
+
+  /**
+   * Initializes the operation for the table and key.
+   */
+  public constructor(table: string, primaryKey: PrimaryKey);
+
+  /**
+   * Renders `ALTER TABLE ... ADD CONSTRAINT ... PRIMARY KEY`.
+   */
+  public override render(dialect: SqlDialect): string;
+
+  /**
+   * Returns the table with the key.
+   */
+  public override applyTo(table: Table): Table;
+}
+
+/**
+ * Drops a table's primary key, `PK_<table>`.
+ */
+export declare class DropPrimaryKeyOperation extends TableChangeOperation {
+  /**
+   * Initializes the operation for the table.
+   */
+  public constructor(table: string);
+
+  /**
+   * Renders `ALTER TABLE ... DROP CONSTRAINT`.
+   */
+  public override render(dialect: SqlDialect): string;
+
+  /**
+   * Returns the table without a key.
+   */
+  public override applyTo(table: Table): Table;
+}
+
+/**
+ * Adds a foreign key, named `FK_<table>_<column>`.
+ */
+export declare class AddForeignKeyOperation extends TableChangeOperation {
+  /**
+   * The foreign key it adds.
+   */
+  public readonly foreignKey: ForeignKey;
+
+  /**
+   * Initializes the operation for the table and foreign key.
+   */
+  public constructor(table: string, foreignKey: ForeignKey);
+
+  /**
+   * Renders `ALTER TABLE ... ADD CONSTRAINT ... FOREIGN KEY`.
+   */
+  public override render(dialect: SqlDialect): string;
+
+  /**
+   * Returns the table with the foreign key added.
+   */
+  public override applyTo(table: Table): Table;
+}
+
+/**
+ * Drops the foreign key from a column, `FK_<table>_<column>`.
+ */
+export declare class DropForeignKeyOperation extends TableChangeOperation {
+  /**
+   * The column the foreign key is from.
+   */
+  public readonly column: string;
+
+  /**
+   * Initializes the operation for the table and column.
+   */
+  public constructor(table: string, column: string);
+
+  /**
+   * Renders `ALTER TABLE ... DROP CONSTRAINT`.
+   */
+  public override render(dialect: SqlDialect): string;
+
+  /**
+   * Returns the table without the foreign keys from the column.
+   */
+  public override applyTo(table: Table): Table;
+}
+
+/**
+ * The operations `SchemaDiffer` finds between two schemas.
+ */
+export declare type SchemaDifference = AddColumnOperation | AddForeignKeyOperation | AddPrimaryKeyOperation | AlterColumnOperation | CreateTableOperation
+  | DropColumnOperation | DropForeignKeyOperation | DropPrimaryKeyOperation | DropTableOperation;
 
 /**
  * Creates a table.
@@ -250,15 +474,60 @@ export declare abstract class SqlDialect {
   public abstract formatLock(resource: string): readonly string[];
 
   /**
+   * Renders the database's statement that changes a column's type and
+   * whether it allows `NULL`; a database that can't throws
+   * `InvalidOperationException` and applies the change otherwise.
+   */
+  public abstract renderAlterColumn(table: string, column: Column): string;
+
+  /**
+   * Returns the statements the migrator runs before each migration's
+   * transaction begins; none by default.
+   */
+  public formatMigrationStart(): readonly string[];
+
+  /**
+   * Returns the statements the migrator runs after each migration's
+   * transaction ends, whether it committed or not; none by default.
+   */
+  public formatMigrationEnd(): readonly string[];
+
+  /**
+   * Returns the query that finds a row breaking a foreign key, with its
+   * `table` and `parent`, which the migrator runs before each migration
+   * commits; `null` by default, where the database checks every statement.
+   */
+  public formatForeignKeyCheck(): string | null;
+
+  /**
+   * Spells the value a new required column of the type takes in rows that
+   * exist: `0` for integers and `''` for text.
+   */
+  public formatDefaultValue(type: PropertyType): string;
+
+  /**
+   * Applies one migration operation in the transaction; by default it runs
+   * the statement the operation renders.
+   */
+  public applyAsync(operation: SchemaOperation, transaction: SqlTransaction): Promise<void>;
+
+  /**
    * Quotes an identifier with double quotes, doubling any it contains.
    */
   public quoteIdentifier(name: string): string;
 
   /**
    * Renders `CREATE TABLE` with every column definition, then the primary
-   * key and the foreign keys as table constraints.
+   * key and the foreign keys as table constraints named after the table.
+   * The table is created as `name` when given, such as a temporary name
+   * for a rebuild, with its constraints still named after `table`.
    */
-  public renderCreateTable(table: Table): string;
+  public renderCreateTable(table: Table, name?: string): string;
+
+  /**
+   * Renders `DROP TABLE`.
+   */
+  public renderDropTable(table: string): string;
 
   /**
    * Renders `CREATE INDEX` or `CREATE UNIQUE INDEX` over the index's fields.
@@ -266,19 +535,54 @@ export declare abstract class SqlDialect {
   public renderCreateIndex(index: Index): string;
 
   /**
-   * Renders one column definition, such as `"id" TEXT NOT NULL`.
+   * Renders one column definition, such as `"id" TEXT NOT NULL DEFAULT ''`.
    */
   public renderColumn(column: Column): string;
 
   /**
-   * Renders the constraint `PRIMARY KEY ("columns")`.
+   * Renders `ALTER TABLE "table" ADD COLUMN` with the column's definition.
    */
-  public renderPrimaryKey(primaryKey: PrimaryKey): string;
+  public renderAddColumn(table: string, column: Column): string;
 
   /**
-   * Renders the constraint `FOREIGN KEY ("column") REFERENCES "table" ("column")`.
+   * Renders `ALTER TABLE "table" DROP COLUMN "column"`.
    */
-  public renderForeignKey(foreignKey: ForeignKey): string;
+  public renderDropColumn(table: string, column: string): string;
+
+  /**
+   * Renders the constraint `CONSTRAINT "PK_table" PRIMARY KEY ("columns")`.
+   */
+  public renderPrimaryKey(table: string, primaryKey: PrimaryKey): string;
+
+  /**
+   * Renders `ALTER TABLE "table" ADD` with the primary key constraint.
+   */
+  public renderAddPrimaryKey(table: string, primaryKey: PrimaryKey): string;
+
+  /**
+   * Renders `ALTER TABLE "table" DROP CONSTRAINT "PK_table"`.
+   */
+  public renderDropPrimaryKey(table: string): string;
+
+  /**
+   * Renders the constraint `CONSTRAINT "FK_table_column" FOREIGN KEY ("column") REFERENCES "principal" ("column")`.
+   */
+  public renderForeignKey(table: string, foreignKey: ForeignKey): string;
+
+  /**
+   * Renders `ALTER TABLE "table" ADD` with the foreign key constraint.
+   */
+  public renderAddForeignKey(table: string, foreignKey: ForeignKey): string;
+
+  /**
+   * Renders `ALTER TABLE "table" DROP CONSTRAINT "FK_table_column"`.
+   */
+  public renderDropForeignKey(table: string, column: string): string;
+
+  /**
+   * Renders `ALTER TABLE "table"`, the start of every statement that changes a table.
+   */
+  protected renderAlterTable(table: string): string;
 }
 
 /**
@@ -502,6 +806,17 @@ export declare class ColumnBuilder {
   public makeNullable(): this;
 
   /**
+   * Gives the column a default: text quoted with its quotes doubled, a number as written.
+   */
+  public hasDefaultValue(value: string | number): this;
+
+  /**
+   * Gives the column a default written as SQL, as it is, such as `0` or
+   * `CURRENT_TIMESTAMP`. Blank SQL throws `ArgumentException`.
+   */
+  public hasDefaultValueSql(sql: string): this;
+
+  /**
    * Produces the column model; a blank name or type throws `ArgumentException`.
    */
   public toColumn(): Column;
@@ -536,16 +851,16 @@ export declare class ColumnsBuilder<TModel> {
  */
 export declare class ConstraintsBuilder<TModel> {
   /**
-   * Declares the primary key over the selected properties, in order. No
-   * properties throws `ArgumentException`.
+   * Declares the primary key over the columns, each a name or a selected
+   * property, in order. No columns throws `ArgumentException`.
    */
-  public addPrimaryKey(...columns: readonly ColumnSelector<TModel>[]): this;
+  public addPrimaryKey(...columns: readonly (string | ColumnSelector<TModel>)[]): this;
 
   /**
-   * Declares a foreign key from the selected property to the selected
-   * property of the principal model in the principal table.
+   * Declares a foreign key from the column to the principal column in the
+   * principal table, each a name or a selected property.
    */
-  public addForeignKey<TPrincipal>(column: ColumnSelector<TModel>, principalTable: string, principalColumn: ColumnSelector<TPrincipal>): this;
+  public addForeignKey<TPrincipal>(column: string | ColumnSelector<TModel>, principalTable: string, principalColumn: string | ColumnSelector<TPrincipal>): this;
 
   /**
    * Returns the primary key, or `null` when none was declared.
@@ -604,6 +919,49 @@ export declare class MigrationBuilder {
   public createUniqueIndex<TModel>(table: string, ...columns: readonly ColumnSelector<TModel>[]): void;
 
   /**
+   * Adds dropping the table.
+   */
+  public dropTable(name: string): void;
+
+  /**
+   * Adds a column to an existing table and returns its builder, which may
+   * still make it nullable or give it a default; a `NOT NULL` column added to
+   * a table with rows needs one.
+   */
+  public addColumn(table: string, name: string, type: string): ColumnBuilder;
+
+  /**
+   * Changes a column's type and returns its builder, which may make it
+   * nullable; otherwise it becomes `NOT NULL`.
+   */
+  public alterColumn(table: string, name: string, type: string): ColumnBuilder;
+
+  /**
+   * Adds dropping the column.
+   */
+  public dropColumn(table: string, name: string): void;
+
+  /**
+   * Adds a primary key over the columns, in order. No columns throws `ArgumentException`.
+   */
+  public addPrimaryKey(table: string, ...columns: readonly string[]): void;
+
+  /**
+   * Adds dropping the table's primary key.
+   */
+  public dropPrimaryKey(table: string): void;
+
+  /**
+   * Adds a foreign key from the column to the principal table's column.
+   */
+  public addForeignKey(table: string, column: string, principalTable: string, principalColumn: string): void;
+
+  /**
+   * Adds dropping the foreign key from the column.
+   */
+  public dropForeignKey(table: string, column: string): void;
+
+  /**
    * Adds a statement that runs as written, in declaration order with the
    * other operations. A blank statement throws
    * `ArgumentException`.
@@ -641,8 +999,8 @@ export declare class SqlMigrationHistory extends MigrationHistory {
 }
 
 /**
- * Raised when a context's model and the schema its migrations create
- * disagree, naming the table and, when the difference is in one, the column.
+ * Raised when a context's model and its snapshot disagree, naming the table
+ * and, when the difference is in one, the column.
  */
 export declare class SchemaMismatchException extends DataException {
   /**
@@ -663,25 +1021,62 @@ export declare class SchemaMismatchException extends DataException {
 }
 
 /**
- * Checks a context's model against the schema its migrations create.
+ * The tables a model or a model snapshot maps to, with each column's type in
+ * the dialect's words.
+ */
+export declare class SqlSchema {
+  private constructor();
+
+  /**
+   * Returns a table for each entity of the model, in the model's order; each
+   * column carries the dialect's default for its type, for a migration that
+   * adds it to rows that exist.
+   */
+  public static fromModel(model: Model, dialect: SqlDialect): readonly Table[];
+
+  /**
+   * Returns a table for each entity of the snapshot, in the snapshot's order,
+   * with no defaults.
+   */
+  public static fromSnapshot(snapshot: ModelSnapshot, dialect: SqlDialect): readonly Table[];
+}
+
+/**
+ * Finds the operations that turn one schema into another, in an order a
+ * database accepts: foreign keys that go, tables that go (dependents first),
+ * each kept table's primary key, dropped, altered and added columns, new
+ * tables (principals first) and foreign keys that come. Tables and columns
+ * match by name, so a renamed one is dropped and added.
+ */
+export declare class SchemaDiffer {
+  private constructor();
+
+  /**
+   * Returns the operations that turn `source` into `target`; none when they
+   * match. Column types compare without regard to letter case, and defaults
+   * are not compared.
+   */
+  public static diff(source: readonly Table[], target: readonly Table[]): readonly SchemaDifference[];
+}
+
+/**
+ * Checks a context's model against its snapshot, the model its migrations
+ * were written for, without reading a migration.
  *
  * @example
  * ```ts
- * SqlModelValidator.validate(context.model, migrations, context.database.connection.dialect);
+ * SqlModelValidator.validate(context.model, new BlogModelSnapshot(), context.database.connection.dialect);
  * ```
  */
 export declare class SqlModelValidator {
   private constructor();
 
   /**
-   * Replays the tables the migrations create and checks each mapped entity:
-   * its table exists, each property has its column with the type the dialect
-   * spells for it and the nullability its property allows, the primary key is
-   * the model's key, and each foreign key column refers to its principal's
-   * key. The first difference throws `SchemaMismatchException`. Statements a
-   * migration runs as SQL text are not read.
+   * Compares the tables of the snapshot with those of the model. The first
+   * difference throws `SchemaMismatchException`, naming the table and,
+   * where the difference is in one, the column: a migration is missing.
    */
-  public static validate(model: Model, migrations: readonly SqlMigration[], dialect: SqlDialect): void;
+  public static validate(model: Model, snapshot: ModelSnapshot, dialect: SqlDialect): void;
 }
 
 /**

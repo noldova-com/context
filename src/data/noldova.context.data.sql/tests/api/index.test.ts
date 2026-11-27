@@ -14,9 +14,11 @@ export class DataSqlApiTests {
   @TestMethod
   public exportsTheCompleteRuntimeSurface(): void {
     const expected = [
-      "Column", "ColumnBuilder", "ColumnsBuilder", "ConstraintsBuilder", "CreateIndexOperation", "CreateTableOperation", "ForeignKey",
-      "MigrationBuilder", "PrimaryKey", "SchemaMismatchException", "SchemaOperation", "SqlChangeFeed", "SqlConnection", "SqlDialect", "SqlMigration",
-      "SqlMigrationHistory", "SqlMigrator", "SqlModelValidator", "SqlProvider", "SqlQuery", "SqlSession", "SqlStatementOperation", "SqlTransaction", "Table"
+      "AddColumnOperation", "AddForeignKeyOperation", "AddPrimaryKeyOperation", "AlterColumnOperation", "Column", "ColumnBuilder", "ColumnsBuilder",
+      "ConstraintsBuilder", "CreateIndexOperation", "CreateTableOperation", "DropColumnOperation", "DropForeignKeyOperation",
+      "DropPrimaryKeyOperation", "DropTableOperation", "ForeignKey", "MigrationBuilder", "PrimaryKey", "SchemaDiffer", "SchemaMismatchException",
+      "SchemaOperation", "SqlChangeFeed", "SqlConnection", "SqlDialect", "SqlMigration", "SqlMigrationHistory", "SqlMigrator", "SqlModelValidator",
+      "SqlProvider", "SqlQuery", "SqlSchema", "SqlSession", "SqlStatementOperation", "SqlTransaction", "Table", "TableChangeOperation"
     ];
 
     Assert.areEqual(expected.join(","), Object.keys(api).sort().join(","));

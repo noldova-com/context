@@ -53,6 +53,7 @@ export class Resources {
   public static readonly directSslUnsupported: string = "Direct SSL negotiation is not supported; leave sslnegotiation unset or set it to postgres.";
   public static readonly dollarQuote: string = "$";
   public static readonly domainKind: string = "d";
+  public static readonly dropNotNull: string = "DROP NOT NULL";
   public static readonly duplicatePreparedStatementState: string = "42P05";
   public static readonly elementColumn: string = "element";
   public static readonly endingStatement: RegExp = /^\s*(commit|end|abort|rollback(?!\s+to\b)|prepare\s+transaction)\b/i;
@@ -137,6 +138,7 @@ export class Resources {
   public static readonly serverError: string = "The server reported an error without a message.";
   public static readonly serverKey: string = "Server Key";
   public static readonly sessionPoolSize: number = 1;
+  public static readonly setNotNull: string = "SET NOT NULL";
   public static readonly severalHostsUnsupported: string = "Connecting to one of several hosts is not supported; give one host.";
   public static readonly severityField: string = "severity";
   public static readonly shapeSeparator: string = ":";
@@ -193,6 +195,10 @@ export class Resources {
 
   public static formatAdvisoryLock(resource: string): string {
     return `SELECT pg_advisory_xact_lock(hashtext('${resource}'))`;
+  }
+
+  public static formatAlterColumn(table: string, column: string, type: string, nullability: string): string {
+    return `${table} ALTER COLUMN ${column} TYPE ${type} USING ${column}::${type}, ALTER COLUMN ${column} ${nullability}`;
   }
 
   public static formatBatchFailed(index: number): string {

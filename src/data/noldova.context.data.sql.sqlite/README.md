@@ -5,6 +5,9 @@ The SQLite provider of `noldova.context.data.sql`, on the host's
 and foreign keys on, creating its folder and the file when absent, and runs
 its statements and transactions one at a time. Inside a transaction's
 action, every statement goes through the transaction the action receives.
+A migration that changes an existing table rebuilds it from the live schema,
+keeping its rows and the indexes whose columns remain. Foreign keys are off
+around the migration's transaction and checked before it commits.
 
 ## Install
 

@@ -78,10 +78,13 @@ declare module "@noldova/context.data/models/entities/entity-type-definition.js"
 }
 
 declare module "@noldova/context.data/models/entities/model-builder.js" {
+  import type { IReadOnlyList } from "@noldova/context.collections";
   import type { EntityClass, EntityTypeBuilder, Model, ModelSnapshot } from "@noldova/context.data";
 
   export class ModelBuilder {
     public constructor();
+
+    public get entityClasses(): IReadOnlyList<EntityClass<object>>;
 
     public entity<TEntity extends object>(type: EntityClass<TEntity>): EntityTypeBuilder<TEntity>;
 
@@ -135,9 +138,15 @@ declare module "@noldova/context.data/models/snapshots/snapshot-entity-builder.j
   export class SnapshotEntityBuilder {
     public constructor(name: string);
 
-    public property(name: string, type: PropertyType): this;
+    public toTable(name: string): this;
 
-    public optionalProperty(name: string, type: PropertyType): this;
+    public property(name: string, type: PropertyType, columnName?: string): this;
+
+    public optionalProperty(name: string, type: PropertyType, columnName?: string): this;
+
+    public hasKey(...properties: readonly string[]): this;
+
+    public hasForeignKey(principal: string, ...properties: readonly string[]): this;
 
     public reference(name: string, target: string): this;
 
@@ -149,15 +158,31 @@ declare module "@noldova/context.data/models/snapshots/snapshot-entity-builder.j
 
 declare module "@noldova/context.data/models/snapshots/snapshot-entity.js" {
   import type { IReadOnlyList } from "@noldova/context.collections";
+  import type { SnapshotForeignKey } from "@noldova/context.data/models/snapshots/snapshot-foreign-key.js";
   import type { SnapshotNavigation } from "@noldova/context.data/models/snapshots/snapshot-navigation.js";
   import type { SnapshotProperty } from "@noldova/context.data/models/snapshots/snapshot-property.js";
 
   export class SnapshotEntity {
     public readonly name: string;
+    public readonly tableName: string;
     public readonly properties: IReadOnlyList<SnapshotProperty>;
+    public readonly key: IReadOnlyList<string>;
+    public readonly foreignKeys: IReadOnlyList<SnapshotForeignKey>;
     public readonly navigations: IReadOnlyList<SnapshotNavigation>;
 
-    public constructor(name: string, properties: Iterable<SnapshotProperty>, navigations: Iterable<SnapshotNavigation>);
+    public constructor(name: string, tableName: string, properties: Iterable<SnapshotProperty>, key: Iterable<string>, foreignKeys: Iterable<SnapshotForeignKey>,
+      navigations: Iterable<SnapshotNavigation>);
+  }
+}
+
+declare module "@noldova/context.data/models/snapshots/snapshot-foreign-key.js" {
+  import type { IReadOnlyList } from "@noldova/context.collections";
+
+  export class SnapshotForeignKey {
+    public readonly principal: string;
+    public readonly properties: IReadOnlyList<string>;
+
+    public constructor(principal: string, properties: Iterable<string>);
   }
 }
 
@@ -178,8 +203,9 @@ declare module "@noldova/context.data/models/snapshots/snapshot-property.js" {
     public readonly name: string;
     public readonly type: PropertyType;
     public readonly isOptional: boolean;
+    public readonly columnName: string;
 
-    public constructor(name: string, type: PropertyType, isOptional: boolean);
+    public constructor(name: string, type: PropertyType, isOptional: boolean, columnName: string);
   }
 }
 

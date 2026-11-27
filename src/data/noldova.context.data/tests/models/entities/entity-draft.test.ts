@@ -21,7 +21,7 @@ export class EntityDraftTests {
   @TestMethod
   public keepsWhatItWasGivenAndTakesItsNameFromItsSnapshot(): void {
     const definition = new EntityTypeDefinition(Tag);
-    const snapshot = new SnapshotEntity("Tag", [], []);
+    const snapshot = new SnapshotEntity("Tag", "Tag", [], [], [], []);
     const id = new EntityProperty("id", PropertyType.Integer, "id", true);
     const properties = new Dictionary<string, EntityProperty>();
     properties.set("id", id);
@@ -38,7 +38,7 @@ export class EntityDraftTests {
 
   @TestMethod
   public startsWithNoRelations(): void {
-    const draft = new EntityDraft(new EntityTypeDefinition(Tag), new SnapshotEntity("Tag", [], []), new Dictionary<string, EntityProperty>().asReadOnly(),
+    const draft = new EntityDraft(new EntityTypeDefinition(Tag), new SnapshotEntity("Tag", "Tag", [], [], [], []), new Dictionary<string, EntityProperty>().asReadOnly(),
       new List<EntityProperty>().asReadOnly());
 
     Assert.areEqual(0, draft.relations.count());

@@ -7,7 +7,7 @@
  */
 
 import { PropertyType } from "@noldova/context.data";
-import { SqlDialect } from "@noldova/context.data.sql";
+import { Column, SqlDialect } from "@noldova/context.data.sql";
 import { PostgreSQLDialect } from "@noldova/context.data.sql.postgresql";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
@@ -24,5 +24,15 @@ export class PostgreSQLDialectTests {
     Assert.areEqual("BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY", dialect.formatIdentityColumnType());
     Assert.areEqual("SELECT pg_advisory_xact_lock(hashtext('__migrations'))", dialect.formatLock("__migrations").join(";"));
     Assert.areEqual("SELECT pg_advisory_xact_lock(hashtext('a''b'))", dialect.formatLock("a'b").join(";"));
+  }
+
+  @TestMethod
+  public altersAColumnsTypeAndNullabilityInPlace(): void {
+    const dialect = new PostgreSQLDialect();
+
+    Assert.areEqual("ALTER TABLE \"notes\" ALTER COLUMN \"rank\" TYPE BIGINT USING \"rank\"::BIGINT, ALTER COLUMN \"rank\" DROP NOT NULL",
+      dialect.renderAlterColumn("notes", new Column("rank", "BIGINT", true)));
+    Assert.areEqual("ALTER TABLE \"notes\" ALTER COLUMN \"title\" TYPE TEXT USING \"title\"::TEXT, ALTER COLUMN \"title\" SET NOT NULL",
+      dialect.renderAlterColumn("notes", new Column("title", "TEXT", false)));
   }
 }

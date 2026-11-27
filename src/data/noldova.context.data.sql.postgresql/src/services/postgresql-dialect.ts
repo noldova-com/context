@@ -7,7 +7,7 @@
  */
 
 import { PropertyType } from "@noldova/context.data";
-import { SqlDialect } from "@noldova/context.data.sql";
+import { type Column, SqlDialect } from "@noldova/context.data.sql";
 
 import { Resources } from "../resources.js";
 
@@ -26,5 +26,11 @@ export class PostgreSQLDialect extends SqlDialect {
 
   public override formatLock(resource: string): readonly string[] {
     return [Resources.formatAdvisoryLock(resource.replaceAll(Resources.stringQuote, Resources.escapedStringQuote))];
+  }
+
+  public override renderAlterColumn(table: string, column: Column): string {
+    const name = this.quoteIdentifier(column.name);
+
+    return Resources.formatAlterColumn(this.renderAlterTable(table), name, column.type, column.isNullable ? Resources.dropNotNull : Resources.setNotNull);
   }
 }

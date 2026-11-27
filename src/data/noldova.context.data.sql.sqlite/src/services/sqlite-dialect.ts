@@ -7,9 +7,11 @@
  */
 
 import { PropertyType } from "@noldova/context.data";
-import { SqlDialect } from "@noldova/context.data.sql";
+import { type Column, type SchemaOperation, SqlDialect, type SqlTransaction, TableChangeOperation } from "@noldova/context.data.sql";
+import { InvalidOperationException } from "@noldova/context.exceptions";
 
 import { Resources } from "../resources.js";
+import { SQLiteTableRebuild } from "./sqlite-table-rebuild.js";
 
 export class SQLiteDialect extends SqlDialect {
   public override formatBeginTransaction(): string {
@@ -26,5 +28,28 @@ export class SQLiteDialect extends SqlDialect {
 
   public override formatLock(): readonly string[] {
     return [];
+  }
+
+  public override formatMigrationStart(): readonly string[] {
+    return [Resources.foreignKeysOffPragma];
+  }
+
+  public override formatMigrationEnd(): readonly string[] {
+    return [Resources.foreignKeysPragma];
+  }
+
+  public override formatForeignKeyCheck(): string {
+    return Resources.selectForeignKeyViolation;
+  }
+
+  public override renderAlterColumn(table: string, column: Column): string {
+    throw new InvalidOperationException(Resources.formatAlterColumnUnsupported(table, column.name));
+  }
+
+  public override async applyAsync(operation: SchemaOperation, transaction: SqlTransaction): Promise<void> {
+    if (operation instanceof TableChangeOperation)
+      await SQLiteTableRebuild.runAsync(this, operation, transaction);
+    else
+      await super.applyAsync(operation, transaction);
   }
 }

@@ -13,14 +13,16 @@ import { RecordingSession } from "./recording-session.fixture.js";
 import { TestDialect } from "./test-dialect.fixture.js";
 
 export class RecordingConnection extends SqlConnection {
-  private readonly testDialect: SqlDialect = new TestDialect();
+  private readonly testDialect: SqlDialect;
 
   public readonly session: RecordingSession;
 
-  public constructor(dataSource: DataSource = new DataSource("recording", ":memory:"), session: RecordingSession = new RecordingSession()) {
+  public constructor(dataSource: DataSource = new DataSource("recording", ":memory:"), session: RecordingSession = new RecordingSession(),
+    dialect: SqlDialect = new TestDialect()) {
     super(dataSource, session);
 
     this.session = session;
+    this.testDialect = dialect;
   }
 
   public override get dialect(): SqlDialect {

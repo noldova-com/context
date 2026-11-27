@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { DataSource, DbContext, DbContextOptionsBuilder, StaleSnapshotException } from "@noldova/context.data";
+import { DataSource, DbContext, DbContextOptionsBuilder, PropertyType, StaleSnapshotException } from "@noldova/context.data";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import { Author } from "../fixtures/author.fixture.js";
@@ -14,7 +14,10 @@ import { BlogContext } from "../fixtures/blog-context.fixture.js";
 import { MemoryProvider } from "../fixtures/memory-provider.fixture.js";
 import { NotesContext } from "../fixtures/notes-context.fixture.js";
 import { Post } from "../fixtures/post.fixture.js";
+import { ShapeSnapshot } from "../fixtures/shape-snapshot.fixture.js";
 import { StaleBlogContext } from "../fixtures/stale-blog-context.fixture.js";
+import { TagContext } from "../fixtures/tag-context.fixture.js";
+import { Tag } from "../fixtures/tag.fixture.js";
 
 @TestClass
 export class DbContextTests {
@@ -67,5 +70,23 @@ export class DbContextTests {
 
     Assert.areEqual("Author", Assert.throws(() => context.model, StaleSnapshotException).entity);
     Assert.areEqual("Author", Assert.throws(() => context.model, StaleSnapshotException).entity);
+  }
+
+  @TestMethod
+  public configuresAModelBuilderFromAContextClassWithoutConstructingIt(): void {
+    const snapshot = new ShapeSnapshot(t => t.entity("Tag").property("id", PropertyType.Integer).property("label", PropertyType.String)
+      .property("postId", PropertyType.Integer));
+
+    const builder = DbContext.createModelBuilder(TagContext);
+
+    Assert.areEqual("Tag", builder.entityClasses.select(t => t.name).toArray().join(","));
+    Assert.areEqual("tags", builder.build(snapshot).findEntityType(Tag)?.tableName);
+    Assert.areEqual(0, TagContext.constructions);
+    Assert.areNotEqual(builder, DbContext.createModelBuilder(TagContext));
+  }
+
+  @TestMethod
+  public buildsNoModelForAClassTheSnapshotDoesNotMatch(): void {
+    Assert.areEqual("Tag", Assert.throws(() => DbContext.createModelBuilder(TagContext).build(null), StaleSnapshotException).entity);
   }
 }

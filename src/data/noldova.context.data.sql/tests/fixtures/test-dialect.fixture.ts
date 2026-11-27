@@ -7,7 +7,7 @@
  */
 
 import { PropertyType } from "@noldova/context.data";
-import { SqlDialect } from "@noldova/context.data.sql";
+import { type Column, SqlDialect } from "@noldova/context.data.sql";
 
 export class TestDialect extends SqlDialect {
   public override formatBeginTransaction(): string {
@@ -24,5 +24,9 @@ export class TestDialect extends SqlDialect {
 
   public override formatLock(resource: string): readonly string[] {
     return [`LOCK ${resource}`];
+  }
+
+  public override renderAlterColumn(table: string, column: Column): string {
+    return `ALTER ${table}.${column.name} ${column.type}${column.isNullable ? " NULL" : ""}`;
   }
 }

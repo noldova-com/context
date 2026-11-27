@@ -9,6 +9,7 @@
 import type { Connection } from "./connection.js";
 import { DatabaseFacade } from "./database-facade.js";
 import type { DbContextOptions } from "./db-context-options.js";
+import type { IDbContextClass } from "../interfaces/i-db-context-class.js";
 import { ModelBuilder } from "./entities/model-builder.js";
 import type { Model } from "./entities/model.js";
 import type { Migration } from "./migration.js";
@@ -28,13 +29,15 @@ export abstract class DbContext<TConnection extends Connection, TMigration exten
   public get model(): Model {
     let model = DbContext.models.get(this.constructor);
     if (Object.isUndefined(model)) {
-      const builder = new ModelBuilder();
-      this.onModelCreating(builder);
-      model = builder.build(this.snapshot);
+      model = DbContext.configure(this).build(this.snapshot);
       DbContext.models.set(this.constructor, model);
     }
 
     return model;
+  }
+
+  public static createModelBuilder<TConnection extends Connection, TMigration extends Migration>(contextClass: IDbContextClass<TConnection, TMigration>): ModelBuilder {
+    return DbContext.configure(contextClass.prototype);
   }
 
   public async [Symbol.asyncDispose](): Promise<void> {
@@ -42,4 +45,11 @@ export abstract class DbContext<TConnection extends Connection, TMigration exten
   }
 
   protected onModelCreating(_builder: ModelBuilder): void { }
+
+  private static configure<TConnection extends Connection, TMigration extends Migration>(context: DbContext<TConnection, TMigration>): ModelBuilder {
+    const builder = new ModelBuilder();
+    context.onModelCreating(builder);
+
+    return builder;
+  }
 }

@@ -32,8 +32,10 @@ const changes = await context.database.changeFeed.readAfterAsync(0);
 ```
 
 A context maps entity classes to tables in its `model`. Types are not known
-at run time, so a model snapshot records each entity's properties with their
-types, and `onModelCreating` configures what the conventions leave out:
+at run time, so a model snapshot records the model as of the last migration:
+each entity's properties with their types, its table and column names, its
+key and its foreign keys. `onModelCreating` configures what the conventions
+leave out:
 
 ```ts
 import { DbContext, type ModelBuilder, ModelSnapshot, PropertyType, type SnapshotBuilder } from "@noldova/context.data";
@@ -53,9 +55,10 @@ class Post {
 
 class BlogSnapshot extends ModelSnapshot {
   protected override buildModel(builder: SnapshotBuilder): void {
-    builder.entity("Author").property("id", PropertyType.Integer).property("name", PropertyType.String).collection("posts", "Post");
+    builder.entity("Author").toTable("authors").property("id", PropertyType.Integer).property("name", PropertyType.String)
+      .hasKey("id").collection("posts", "Post");
     builder.entity("Post").property("id", PropertyType.Integer).property("title", PropertyType.String)
-      .property("authorId", PropertyType.Integer).reference("author", "Author");
+      .property("authorId", PropertyType.Integer).hasKey("id").hasForeignKey("Author", "authorId").reference("author", "Author");
   }
 }
 

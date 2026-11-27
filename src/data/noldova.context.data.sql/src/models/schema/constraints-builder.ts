@@ -16,13 +16,13 @@ export class ConstraintsBuilder<TModel> {
   private key: PrimaryKey | null = null;
   private readonly foreignKeys: ForeignKey[] = [];
 
-  public addPrimaryKey(...columns: readonly ColumnSelector<TModel>[]): this {
-    this.key = new PrimaryKey(columns.map(t => nameof<TModel>(t)));
+  public addPrimaryKey(...columns: readonly (string | ColumnSelector<TModel>)[]): this {
+    this.key = new PrimaryKey(columns.map(t => ConstraintsBuilder.nameOf(t)));
     return this;
   }
 
-  public addForeignKey<TPrincipal>(column: ColumnSelector<TModel>, principalTable: string, principalColumn: ColumnSelector<TPrincipal>): this {
-    this.foreignKeys.push(new ForeignKey(nameof<TModel>(column), principalTable, nameof<TPrincipal>(principalColumn)));
+  public addForeignKey<TPrincipal>(column: string | ColumnSelector<TModel>, principalTable: string, principalColumn: string | ColumnSelector<TPrincipal>): this {
+    this.foreignKeys.push(new ForeignKey(ConstraintsBuilder.nameOf(column), principalTable, ConstraintsBuilder.nameOf(principalColumn)));
     return this;
   }
 
@@ -32,5 +32,9 @@ export class ConstraintsBuilder<TModel> {
 
   public toForeignKeys(): readonly ForeignKey[] {
     return [...this.foreignKeys];
+  }
+
+  private static nameOf<T>(column: string | ColumnSelector<T>): string {
+    return Object.isString(column) ? column : nameof<T>(column);
   }
 }
