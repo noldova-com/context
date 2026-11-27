@@ -13,6 +13,7 @@ export class PluginResources {
   public static readonly base64Encoding: BufferEncoding = "base64";
   public static readonly buildFolderName: string = "_build";
   public static readonly compiledExtensionPattern: RegExp = /\.js$/u;
+  public static readonly compiledInputExtensions: IReadOnlyList<string> = new List([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs", ".json"]);
   public static readonly compilerLocationPattern: RegExp = /^(.+?)\((\d+),(\d+)\)(: .*)$/u;
   public static readonly compilerOptionsField: string = "compilerOptions";
   public static readonly dataEvent: string = "data";
@@ -30,6 +31,8 @@ export class PluginResources {
   public static readonly outputDirectoryField: string = "outDir";
   public static readonly packageManifestFileName: string = "package.json";
   public static readonly packagesFolderName: string = "node_modules";
+  public static readonly pathsField: string = "paths";
+  public static readonly relativeCurrentFolder: string = "./";
   public static readonly relativePrefix: string = ".";
   public static readonly rootDirectoryField: string = "rootDir";
   public static readonly scopePrefix: string = "@";
@@ -38,6 +41,8 @@ export class PluginResources {
   public static readonly sourceExtension: string = ".ts";
   public static readonly sourceMapExtension: string = ".map";
   public static readonly sourceRootField: string = "sourceRoot";
+  public static readonly seenSeparator: string = "\n";
+  public static readonly sourcesContentField: string = "sourcesContent";
   public static readonly sourcesField: string = "sources";
   public static readonly typesField: string = "types";
   public static readonly versionField: string = "version";

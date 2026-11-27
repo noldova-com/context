@@ -8,12 +8,14 @@
 
 import type { SourcePosition } from "@noldova/context.parsers";
 
+import type { SourceText } from "./source-text.js";
+
 export class OriginalPosition {
-  public readonly path: string;
+  public readonly source: SourceText;
   public readonly position: SourcePosition;
 
-  public constructor(path: string, position: SourcePosition) {
-    this.path = path;
+  public constructor(source: SourceText, position: SourcePosition) {
+    this.source = source;
     this.position = position;
   }
 }

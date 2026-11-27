@@ -46,14 +46,14 @@ export class DeclarationResolver {
   }
 
   public resolve(source: SourceFile, name: string): Declaration | undefined {
-    return this.resolveIn(source, name, new HashSet<SourceFile>());
+    return this.resolveIn(source, name, new HashSet<string>());
   }
 
-  private resolveIn(source: SourceFile, name: string, seen: HashSet<SourceFile>): Declaration | undefined {
+  private resolveIn(source: SourceFile, name: string, seen: HashSet<string>): Declaration | undefined {
     return DeclarationResolver.localOf(source, name) ?? this.importedOf(source, name, seen);
   }
 
-  private importedOf(source: SourceFile, name: string, seen: HashSet<SourceFile>): Declaration | undefined {
+  private importedOf(source: SourceFile, name: string, seen: HashSet<string>): Declaration | undefined {
     for (const node of source.rootNode.children) {
       if (!(node instanceof TypeScriptImportDeclarationNode) || !(node.importClauseNode?.namedBindingsNode instanceof TypeScriptNamedImportsNode))
         continue;
@@ -66,11 +66,15 @@ export class DeclarationResolver {
     return undefined;
   }
 
-  private exportedOf(file: SourceFile | undefined, name: string, seen: HashSet<SourceFile>): Declaration | undefined {
-    if (Object.isUndefined(file) || seen.contains(file))
+  private exportedOf(file: SourceFile | undefined, name: string, seen: HashSet<string>): Declaration | undefined {
+    if (Object.isUndefined(file))
       return undefined;
 
-    seen.add(file);
+    const key = `${file.path}${PluginResources.seenSeparator}${name}`;
+    if (seen.contains(key))
+      return undefined;
+
+    seen.add(key);
     const local = DeclarationResolver.localOf(file, name);
     if (!Object.isUndefined(local))
       return local;

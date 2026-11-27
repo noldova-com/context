@@ -23,6 +23,7 @@ import { PositionSegment } from "../models/position-segment.js";
 import type { ProjectConfiguration } from "../models/project-configuration.js";
 import { ProjectPluginContext } from "../models/project-plugin-context.js";
 import { SourceFile } from "../models/source-file.js";
+import { SourceText } from "../models/source-text.js";
 import { PluginResources } from "../plugin-resources.js";
 import { DeclarationResolver } from "./declaration-resolver.js";
 import { PluginHost } from "./plugin-host.js";
@@ -90,18 +91,25 @@ export class PluginBuilder {
   private static async writeAsync(context: ProjectPluginContext): Promise<GeneratedProject> {
     const root = PluginBuilder.generatedRootOf(context.projectDirectory);
     const copyOf = (path: string): string => PluginHost.join(root, PluginHost.relativePath(context.projectDirectory, path));
-    for (const input of context.inputs)
-      await PluginHost.copyAsync(input, copyOf(input));
-
     const maps = new Dictionary<string, PositionMap>();
+    const sources = context.sources.select(t => t.path).toHashSet();
+    for (const input of context.inputs) {
+      await PluginHost.copyAsync(input, copyOf(input));
+      if (!sources.contains(input) && PluginResources.compiledInputExtensions.any(t => input.endsWith(t)))
+        maps.set(copyOf(input), PositionMap.identityOf(copyOf(input), SourceText.of(input, await BuildHost.readAsync(input))));
+    }
+
+    const written = new List<PositionMap>();
     for (const source of context.sources)
-      maps.set(copyOf(source.path), SourceRewriter.rewrite(copyOf(source.path), source, context.editsOf(source)));
+      written.add(SourceRewriter.rewrite(copyOf(source.path), source, context.editsOf(source)));
     for (const file of context.addedFiles) {
       const path = PluginHost.join(copyOf(context.configuration.rootDirectory), file.path);
-      maps.set(path, new PositionMap(path, file.text, new PositionSegment(0, file.text.length, file.origin.source, file.origin.span.startOffset, true), new List<PositionSegment>()));
+      written.add(new PositionMap(path, file.text, new PositionSegment(0, file.text.length, file.origin.source, file.origin.span.startOffset, true), new List<PositionSegment>()));
     }
-    for (const map of maps.values())
+    for (const map of written) {
+      maps.set(map.path, map);
       await PluginHost.writeAsync(map.path, map.text);
+    }
 
     const files = context.configuration.files.select(t => PluginHost.isInside(context.configuration.rootDirectory, t) ? copyOf(t) : t)
       .concat(context.addedFiles.select(t => PluginHost.join(copyOf(context.configuration.rootDirectory), t.path)));
@@ -110,13 +118,23 @@ export class PluginBuilder {
       extends: PluginHost.relativePath(root, PluginHost.join(context.projectDirectory, Resources.configurationFileName)),
       compilerOptions: {
         rootDir: PluginHost.relativePath(root, copyOf(context.configuration.rootDirectory)),
-        outDir: PluginHost.relativePath(root, context.configuration.outputDirectory)
+        outDir: PluginHost.relativePath(root, context.configuration.outputDirectory),
+        ...context.configuration.paths.any()
+          ? { paths: Object.fromEntries(context.configuration.paths.select((t): readonly [string, readonly string[]] => [t.key, t.value.select(path => PluginBuilder.relativeTo(root,
+            PluginHost.isInside(context.configuration.rootDirectory, path) ? copyOf(path) : path)).toArray()])) }
+          : {}
       },
       files: files.select(t => PluginHost.relativePath(root, t)).toArray(),
       include: []
     }, undefined, 2));
 
     return new GeneratedProject(configurationPath, context.configuration.outputDirectory, maps);
+  }
+
+  private static relativeTo(folder: string, path: string): string {
+    const relative = PluginHost.relativePath(folder, path);
+
+    return relative.startsWith(PluginResources.relativePrefix) ? relative : `${PluginResources.relativeCurrentFolder}${relative}`;
   }
 
   private static generatedRootOf(projectDirectory: string): string {

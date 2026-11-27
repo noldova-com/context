@@ -14,6 +14,7 @@ import { SourcePosition } from "@noldova/context.parsers";
 import { BuildHost } from "../../services/build-host.js";
 import type { PositionMap } from "../models/position-map.js";
 import type { SourceMapping } from "../models/source-mapping.js";
+import type { SourceText } from "../models/source-text.js";
 import { PluginResources } from "../plugin-resources.js";
 import { Base64Vlq } from "./base64-vlq.js";
 import { PluginHost } from "./plugin-host.js";
@@ -44,27 +45,28 @@ export class SourceMapComposer {
       return undefined;
 
     const sourceMaps = paths.select(t => maps.get(t)).toList();
-    const sources = new List<string>();
+    const sources = new List<SourceText>();
     const lines = Base64Vlq.decode(reader.readString(PluginResources.mappingsField)).select(line => line.select(t => SourceMapComposer.compose(t, sourceMaps, sources)).toList()).toList();
 
     return JSON.stringify({
       version: reader.readInteger(PluginResources.versionField),
       file: reader.readOptionalString(PluginResources.fileField),
-      sources: sources.select(t => PluginHost.relativePath(folder, t)).toArray(),
+      sources: sources.select(t => PluginHost.relativePath(folder, t.path)).toArray(),
+      sourcesContent: reader.hasField(PluginResources.sourcesContentField) ? sources.select(t => t.source.content).toArray() : undefined,
       names: reader.readStringArray(PluginResources.namesField),
       mappings: Base64Vlq.encode(lines)
     });
   }
 
-  private static compose(mapping: SourceMapping, maps: IReadOnlyList<PositionMap>, sources: List<string>): SourceMapping {
+  private static compose(mapping: SourceMapping, maps: IReadOnlyList<PositionMap>, sources: List<SourceText>): SourceMapping {
     const map = maps.tryGet(mapping.sourceIndex);
     if (!mapping.hasSource || Object.isUndefined(map))
       return mapping;
 
     const original = map.originalOf(new SourcePosition(mapping.line, mapping.character));
-    if (!sources.contains(original.path))
-      sources.add(original.path);
+    if (!sources.contains(original.source))
+      sources.add(original.source);
 
-    return mapping.withSource(sources.indexOf(original.path), original.position.lineIndex, original.position.characterIndex);
+    return mapping.withSource(sources.indexOf(original.source), original.position.lineIndex, original.position.characterIndex);
   }
 }

@@ -8,6 +8,7 @@
 import { List } from "@noldova/context.collections";
 import { Diagnostic, DiagnosticAuthority, DiagnosticCategory, DiagnosticCode, DiagnosticLocation, DiagnosticMessage } from "@noldova/context.diagnostics";
 import { SourceSpan } from "@noldova/context.parsers";
+import { JsonReader } from "@noldova/context.json";
 import { TypeScriptSourceKind } from "@noldova/context.parsers.typescript";
 import { SDKException } from "@noldova/context.sdk";
 import type { Plugin } from "@noldova/context.sdk/plugins/models/plugin.js";
@@ -135,7 +136,7 @@ export class PluginBuilderTests {
     ].join("\n"));
     await project.writeAsync("package.json", JSON.stringify({ type: "module" }));
     await project.writeAsync("tsconfig.json", JSON.stringify({
-      compilerOptions: { rootDir: "src", outDir: "build", module: "nodenext", target: "es2022", strict: true, resolveJsonModule: true, types: [] },
+      compilerOptions: { rootDir: "src", outDir: "build", module: "nodenext", target: "es2022", strict: true, resolveJsonModule: true, sourceMap: true, types: [] },
       include: ["src", "types"]
     }));
     await project.writeAsync("src/data.json", JSON.stringify({ count: 2 }));
@@ -146,6 +147,36 @@ export class PluginBuilderTests {
     Assert.isTrue((await project.readAsync("build/index.js")).includes("value = 2 + data.count"));
     Assert.isTrue((await project.readAsync("build/data.json")).includes("\"count\": 2"));
     Assert.isTrue(await project.existsAsync("build/other.mjs"));
+    Assert.areEqual("../src/other.mts", JsonReader.parse(await project.readAsync("build/other.mjs.map")).readStringArray("sources").join(","));
+  }
+
+  @TestMethod
+  public async keepsTheOriginalTextInAMapWithInlineSourcesAsync(): Promise<void> {
+    await using project = await PluginBuilderTests.createAsync(SDKProject.validSource);
+    await project.writeConfigurationAsync({ sourceMap: true, inlineSources: true });
+
+    Assert.isTrue(await PluginBuilder.buildAsync(await project.readBuildAsync(), new List<Plugin>([TestPlugin.replacing("= 1", "= 2")]), [], new RecordingOutput()));
+    const map = JsonReader.parse(await project.readAsync("build/index.js.map"));
+
+    Assert.areEqual("../src/index.ts", map.readStringArray("sources").join(","));
+    Assert.areEqual(SDKProject.validSource, map.readStringArray("sourcesContent").join(","));
+  }
+
+  @TestMethod
+  public async mapsThePathsOfTheProjectsOwnSourcesIntoTheCopyAsync(): Promise<void> {
+    await using project = await PluginBuilderTests.createAsync("import { other } from \"@app/other.js\";\nexport const value: number = 1 + other;");
+    await project.writeAsync("tsconfig.json", JSON.stringify({
+      compilerOptions: { rootDir: "src", outDir: "build", module: "nodenext", target: "es2022", strict: true, types: [], paths: { "@app/*": ["./src/*"], "@lib/*": ["./lib/*"] } },
+      include: ["src"]
+    }));
+    await project.writeAsync("src/other.ts", "export const other: number = 3;");
+
+    Assert.isTrue(await PluginBuilder.buildAsync(await project.readBuildAsync(), new List<Plugin>([TestPlugin.replacing("= 1", "= 2")]), [], new RecordingOutput()));
+    const paths = JsonReader.parse(await project.readAsync("_build/.generated/tsconfig.json")).readObject("compilerOptions").readObject("paths");
+
+    Assert.isTrue((await project.readAsync("build/index.js")).includes("value = 2 + other"));
+    Assert.areEqual("./src/*", paths.readStringArray("@app/*").join(","));
+    Assert.areEqual("../../lib/*", paths.readStringArray("@lib/*").join(","));
   }
 
   @TestMethod

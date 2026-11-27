@@ -6,16 +6,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { SourceFile } from "./source-file.js";
+import type { SourceText } from "./source-text.js";
 
 export class PositionSegment {
   public readonly generatedStart: number;
   public readonly generatedEnd: number;
-  public readonly source: SourceFile;
+  public readonly source: SourceText;
   public readonly originalStart: number;
   public readonly isGenerated: boolean;
 
-  public constructor(generatedStart: number, generatedEnd: number, source: SourceFile, originalStart: number, isGenerated: boolean) {
+  public constructor(generatedStart: number, generatedEnd: number, source: SourceText, originalStart: number, isGenerated: boolean) {
     this.generatedStart = generatedStart;
     this.generatedEnd = generatedEnd;
     this.source = source;

@@ -6,20 +6,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { Source, SourceLineMap } from "@noldova/context.parsers";
+import { Source } from "@noldova/context.parsers";
 import { type TypeScriptNode, TypeScriptParser, type TypeScriptSourceKind } from "@noldova/context.parsers.typescript";
-import { EcmaScriptLineTerminator } from "@noldova/context.text";
 
-export class SourceFile {
-  public readonly path: string;
-  public readonly source: Source;
-  public readonly lines: SourceLineMap;
+import { SourceText } from "./source-text.js";
+
+export class SourceFile extends SourceText {
   public readonly rootNode: TypeScriptNode;
 
   private constructor(path: string, source: Source, sourceKind: TypeScriptSourceKind) {
-    this.path = path;
-    this.source = source;
-    this.lines = new SourceLineMap(source, new EcmaScriptLineTerminator());
+    super(path, source);
     this.rootNode = new TypeScriptParser(source, sourceKind).parse().rootNode;
   }
 

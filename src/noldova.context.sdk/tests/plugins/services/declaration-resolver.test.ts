@@ -28,6 +28,7 @@ export class DeclarationResolverTests {
     "import { Unknown } from \"unknown\";",
     "import { Nowhere } from \"./nowhere.js\";",
     "import { Cycle } from \"./cycle-a.js\";",
+    "import { Mutual } from \"./mutual-a.js\";",
     "import Default from \"./local.js\";",
     "import * as Namespace from \"./local.js\";",
     "import \"./local.js\";",
@@ -62,6 +63,7 @@ export class DeclarationResolverTests {
   @TestData("Unknown", "undefined")
   @TestData("Nowhere", "undefined")
   @TestData("Cycle", "undefined")
+  @TestData("Mutual", "src/mutual-a.ts Inner TypeScriptClassDeclarationNode")
   @TestData("Default", "undefined")
   @TestData("Namespace", "undefined")
   @TestData("NotImported", "undefined")
@@ -81,6 +83,8 @@ export class DeclarationResolverTests {
     await project.writeAsync("src/inner.ts", "export class Inner {}");
     await project.writeAsync("src/cycle-a.ts", "import { Cycle } from \"./cycle-b.js\";\nexport { Cycle };");
     await project.writeAsync("src/cycle-b.ts", "import { Cycle } from \"./cycle-a.js\";\nexport { Cycle };");
+    await project.writeAsync("src/mutual-a.ts", "import { Outer } from \"./mutual-b.js\";\nexport { Outer as Mutual };\nexport class Inner {}");
+    await project.writeAsync("src/mutual-b.ts", "import { Inner } from \"./mutual-a.js\";\nexport { Inner as Outer };");
     await project.writeAsync("src/declared.d.ts", "export declare class Declared {}");
     await project.writeAsync("node_modules/typed/package.json", JSON.stringify({ name: "typed", types: "index.d.ts" }));
     await project.writeAsync("node_modules/typed/index.d.ts", "export declare class Typed {}\nexport declare class TypedToo {}");

@@ -44,7 +44,7 @@ export class MappedOutput extends CommandOutput {
 
       const original = map.originalOf(new SourcePosition(Number(line) - 1, Number(character) - 1));
 
-      return PluginResources.formatCompilerLocation(PluginHost.relativePath(this.directory, original.path), original.position.lineIndex + 1, original.position.characterIndex + 1, rest);
+      return PluginResources.formatCompilerLocation(PluginHost.relativePath(this.directory, original.source.path), original.position.lineIndex + 1, original.position.characterIndex + 1, rest);
     });
   }
 }

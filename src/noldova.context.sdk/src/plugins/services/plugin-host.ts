@@ -126,8 +126,10 @@ export class PluginHost {
       return undefined;
 
     const folder = dirname(configurationPath);
+    const paths = options.hasField(PluginResources.pathsField) ? options.readObject(PluginResources.pathsField) : JsonReader.fromValue({});
 
     return new ProjectConfiguration(resolve(folder, options.readString(PluginResources.rootDirectoryField)), resolve(folder, options.readString(PluginResources.outputDirectoryField)),
-      Enumerable.from(reader.hasField(PluginResources.filesField) ? reader.readStringArray(PluginResources.filesField) : []).select(t => resolve(folder, t)).toList());
+      Enumerable.from(reader.hasField(PluginResources.filesField) ? reader.readStringArray(PluginResources.filesField) : []).select(t => resolve(folder, t)).toList(),
+      Enumerable.from(Object.keys(paths.toJson())).toDictionary(t => t, t => Enumerable.from(paths.readStringArray(t)).select(path => resolve(folder, path)).toList()));
   }
 }
