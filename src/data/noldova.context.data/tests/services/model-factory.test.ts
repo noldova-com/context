@@ -8,7 +8,7 @@
 
 import {
   AmbiguousRelationException, ColumnMappedTwiceException, EntityKeyMissingException, EntityPropertyMissingException, ForeignKeyMismatchException, type Model, PropertyType,
-  RelationTargetUnmappedException, StaleSnapshotException, TableMappedTwiceException
+  ReferenceMissingException, RelationTargetUnmappedException, StaleSnapshotException, TableMappedTwiceException
 } from "@noldova/context.data";
 import { ModelBuilder } from "@noldova/context.data/models/entities/model-builder.js";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
@@ -222,6 +222,28 @@ export class ModelFactoryTests {
 
     Assert.areEqual("Post", exception.entity);
     Assert.areEqual("author", exception.property);
+  }
+
+  @TestMethod
+  public throwsWhenAForeignKeyIsConfiguredOnACollection(): void {
+    const builder = ModelFactoryTests.blogBuilder();
+    builder.entity(Author).hasOne(t => t.posts).hasForeignKey(t => t.id);
+
+    const exception = Assert.throws(() => builder.build(new BlogSnapshot()), ReferenceMissingException);
+
+    Assert.areEqual("Author", exception.entity);
+    Assert.areEqual("posts", exception.navigation);
+  }
+
+  @TestMethod
+  public throwsWhenAForeignKeyIsConfiguredOnAProperty(): void {
+    const builder = ModelFactoryTests.blogBuilder();
+    builder.entity(Author).hasOne(t => t.name).hasForeignKey(t => t.id);
+
+    const exception = Assert.throws(() => builder.build(new BlogSnapshot()), ReferenceMissingException);
+
+    Assert.areEqual("Author", exception.entity);
+    Assert.areEqual("name", exception.navigation);
   }
 
   @TestMethod

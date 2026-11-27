@@ -15,6 +15,7 @@ export { DataException } from "../exceptions/data.exception.js";
 export { EntityKeyMissingException } from "../exceptions/entity-key-missing.exception.js";
 export { EntityPropertyMissingException } from "../exceptions/entity-property-missing.exception.js";
 export { ForeignKeyMismatchException } from "../exceptions/foreign-key-mismatch.exception.js";
+export { ReferenceMissingException } from "../exceptions/reference-missing.exception.js";
 export { RelationTargetUnmappedException } from "../exceptions/relation-target-unmapped.exception.js";
 export { StaleSnapshotException } from "../exceptions/stale-snapshot.exception.js";
 export { TableMappedTwiceException } from "../exceptions/table-mapped-twice.exception.js";

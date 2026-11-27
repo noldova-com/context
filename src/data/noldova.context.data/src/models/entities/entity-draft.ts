@@ -21,9 +21,9 @@ export class EntityDraft {
   public readonly relations: List<EntityRelation> = new List();
 
   public constructor(
-    definition: EntityTypeDefinition, 
-    snapshot: SnapshotEntity, 
-    properties: IReadOnlyDictionary<string, EntityProperty>, 
+    definition: EntityTypeDefinition,
+    snapshot: SnapshotEntity,
+    properties: IReadOnlyDictionary<string, EntityProperty>,
     key: IReadOnlyList<EntityProperty>) {
     this.definition = definition;
     this.snapshot = snapshot;

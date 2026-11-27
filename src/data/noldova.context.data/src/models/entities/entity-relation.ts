@@ -20,9 +20,9 @@ export class EntityRelation {
   public readonly foreignKey: IReadOnlyList<EntityProperty>;
 
   public constructor(
-    kind: RelationKind, 
-    navigation: string | null, 
-    principal: EntityClass<object>, 
+    kind: RelationKind,
+    navigation: string | null,
+    principal: EntityClass<object>,
     inverseNavigation: string | null,
     foreignKey: Iterable<EntityProperty>) {
     this.kind = kind;

@@ -30,8 +30,8 @@ export class ModelBuilder {
   }
 
   public build(snapshot: ModelSnapshot | null): Model {
-    return ModelFactory.create(this.definitions.values().toList().asReadOnly(), snapshot === null 
-      ? new List<SnapshotEntity>().asReadOnly() 
-      : snapshot.toEntities());
+    const entities = Object.isNull(snapshot) ? new List<SnapshotEntity>().asReadOnly() : snapshot.toEntities();
+
+    return ModelFactory.create(this.definitions.values().toList().asReadOnly(), entities);
   }
 }

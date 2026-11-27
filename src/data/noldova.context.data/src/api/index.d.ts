@@ -690,6 +690,27 @@ export declare class ForeignKeyMismatchException extends DataException {
 }
 
 /**
+ * Raised when a foreign key is configured on a navigation the entity's
+ * snapshot doesn't record as a reference, such as a collection or a property.
+ */
+export declare class ReferenceMissingException extends DataException {
+  /**
+   * The name of the entity the foreign key is configured on.
+   */
+  public readonly entity: string;
+
+  /**
+   * The navigation the foreign key is configured on.
+   */
+  public readonly navigation: string;
+
+  /**
+   * Initializes the exception for the entity and the navigation.
+   */
+  public constructor(entity: string, navigation: string);
+}
+
+/**
  * Raised when a navigation leads to an entity the model doesn't map.
  */
 export declare class RelationTargetUnmappedException extends DataException {
@@ -993,7 +1014,9 @@ export declare class EntityTypeBuilder<TEntity> {
   public property(property: PropertySelector<TEntity>): PropertyBuilder;
 
   /**
-   * Returns the builder of the relation the reference navigation follows.
+   * Returns the builder of the relation the reference navigation follows. A
+   * foreign key configured on a navigation the snapshot doesn't record as a
+   * reference throws `ReferenceMissingException` when the model is built.
    */
   public hasOne(navigation: PropertySelector<TEntity>): RelationBuilder<TEntity>;
 }

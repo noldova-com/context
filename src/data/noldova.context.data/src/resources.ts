@@ -64,6 +64,10 @@ export class Resources {
     return `The foreign key of "${entity}.${navigation}" does not match its principal's key in count or type.`;
   }
 
+  public static formatReferenceMissing(entity: string, navigation: string): string {
+    return `The entity "${entity}" has no reference "${navigation}" to configure a foreign key on.`;
+  }
+
   public static formatRelationTargetUnmapped(entity: string, navigation: string, target: string): string {
     return `The relation "${entity}.${navigation}" leads to "${target}", which the model does not map.`;
   }

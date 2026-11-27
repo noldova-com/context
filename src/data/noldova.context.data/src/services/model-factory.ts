@@ -14,6 +14,7 @@ import { ColumnMappedTwiceException } from "../exceptions/column-mapped-twice.ex
 import { EntityKeyMissingException } from "../exceptions/entity-key-missing.exception.js";
 import { EntityPropertyMissingException } from "../exceptions/entity-property-missing.exception.js";
 import { ForeignKeyMismatchException } from "../exceptions/foreign-key-mismatch.exception.js";
+import { ReferenceMissingException } from "../exceptions/reference-missing.exception.js";
 import { RelationTargetUnmappedException } from "../exceptions/relation-target-unmapped.exception.js";
 import { StaleSnapshotException } from "../exceptions/stale-snapshot.exception.js";
 import { TableMappedTwiceException } from "../exceptions/table-mapped-twice.exception.js";
@@ -72,6 +73,9 @@ export class ModelFactory {
     }
     for (const name of definition.columnNames.keys())
       ModelFactory.getProperty(properties, entity.name, name);
+    for (const name of definition.foreignKeys.keys())
+      if (!entity.navigations.any(t => t.name === name && !t.isCollection))
+        throw new ReferenceMissingException(entity.name, name);
 
     return new EntityDraft(definition, entity, properties.asReadOnly(), keyNames.select(t => ModelFactory.getProperty(properties, entity.name, t)).toList().asReadOnly());
   }
@@ -142,12 +146,12 @@ export class ModelFactory {
     const foreignKey = names.select(t => ModelFactory.getProperty(dependent.properties, dependent.name, t)).toList().asReadOnly();
     ModelFactory.throwIfMismatched(dependent.name, navigation.name, foreignKey, principal.key);
     const inverses = principal.snapshot.navigations.where(t => t.target === dependent.name && t !== navigation && !this.holdsForeignKey(principal, t)).toList();
-    const inverse = inverses.tryGet(0) ?? null;
-    if (inverses.count() > 1 || (inverse !== null && this.claimed.contains(inverse)))
+    const inverse = inverses.tryGet(0);
+    if (inverses.count() > 1 || (!Object.isUndefined(inverse) && this.claimed.contains(inverse)))
       throw new AmbiguousRelationException(dependent.name, navigation.name);
 
     this.claimed.add(navigation);
-    if (inverse === null) {
+    if (Object.isUndefined(inverse)) {
       dependent.relations.add(new EntityRelation(RelationKind.OneToMany, navigation.name, principal.definition.type, null, foreignKey));
       return;
     }
