@@ -8,7 +8,7 @@
 
 import { List } from "@noldova/context.collections";
 import "@noldova/context.core";
-import { type Connection, DbContext, type IDbContextClass, type Migration, type Model, type ModelBuilder, ModelSnapshot } from "@noldova/context.data";
+import { type Connection, DbContext, type IDbContextClass, type Migration, type Model, type ModelBuilder, ModelSnapshot, StaleSnapshotException } from "@noldova/context.data";
 import { SchemaDiffer, SqlDialect, SqlSchema } from "@noldova/context.data.sql";
 import { ExceptionOptions } from "@noldova/context.exceptions";
 
@@ -107,6 +107,9 @@ export class MigrationAdder {
       return builder.build(new ShapeSnapshot(shapes));
     }
     catch (exception) {
+      if (exception instanceof StaleSnapshotException)
+        throw new DataToolsException(Resources.formatCompiledStale(exception.entity), new ExceptionOptions(exception));
+
       throw new DataToolsException(Resources.formatModelInvalid(context, exception), new ExceptionOptions(exception));
     }
   }

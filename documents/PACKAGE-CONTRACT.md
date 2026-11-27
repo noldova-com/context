@@ -80,6 +80,7 @@ These manifests are removed with the bootstrap.
 
 Resolution produces one deterministic graph with exact identities.
 The graph owner validates every reference before compilation; rejects missing, duplicate, ambiguous, case-mismatched, wrong-kind, and cyclic dependencies; computes a stable topological order independent of filesystem or map iteration order; and provides that order to build, test, generation, and packaging workflows.
+During the Node bootstrap the graph owner is the SDK's `ProjectGraphReader`, which `ctx build` uses; test, generation, and packaging take its order as they move onto `ctx`.
 Only library package projects may be package dependencies; executables cannot be consumed as libraries.
 
 ## 6. Compilation-unit boundary and internal access

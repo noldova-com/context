@@ -30,6 +30,8 @@
     "query/noldova.context.query.expressions/tests/noldova.context.query.expressions.tests.ctxp",
     "query/noldova.context.query/src/noldova.context.query.ctxp",
     "query/noldova.context.query/tests/noldova.context.query.tests.ctxp",
+    "noldova.context.sdk/src/noldova.context.sdk.ctxp",
+    "noldova.context.sdk/tests/noldova.context.sdk.tests.ctxp",
     "noldova.context.testing/src/noldova.context.testing.ctxp",
     "noldova.context.testing/tests/noldova.context.testing.tests.ctxp",
     "noldova.context.text/src/noldova.context.text.ctxp",
