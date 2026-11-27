@@ -12,8 +12,9 @@ import { ScriptDriver } from "../fixtures/scripts/script-driver.fixture.js";
 
 @TestClass
 export class TypeScriptExpectedProcessMemoryTests {
-  private static readonly ROOT_SCRIPT: string = "require(\"node:child_process\").spawn(process.execPath, [process.argv[1]], { stdio: \"inherit\" }); " +
-    "setInterval(() => undefined, 1_000);";
+  private static readonly ROOT_SCRIPT: string = "const child = require(\"node:child_process\").spawn(process.execPath, [process.argv[1]], { stdio: \"inherit\" }); " +
+    "console.log(\"child \" + child.pid); setInterval(() => undefined, 1_000);";
+  private static readonly FLOOR_BYTES: number = 64 * 1024 * 1024;
   private static readonly IDLE_SCRIPT: string = "setInterval(() => undefined, 1_000);";
   private static readonly ENDING_SCRIPT: string = "console.log(\"ready\"); process.stdin.once(\"data\", () => process.exit(1));";
 
@@ -22,14 +23,22 @@ export class TypeScriptExpectedProcessMemoryTests {
     const output = await ScriptDriver.runAsync(`
       const memory = await load("typescript-expected-process-memory.ts").then(t => t.startAsync());
       const root = spawn(process.execPath, ["--eval", ${JSON.stringify(TypeScriptExpectedProcessMemoryTests.ROOT_SCRIPT)}, growPath], { stdio: ["ignore", "pipe", "inherit"] });
-      await lineOf(root, "grown");
-      const bytes = await memory.readTreeBytesAsync(root.pid);
+      let childId;
+      await new Promise(resolve => readline.createInterface({ input: root.stdout }).on("line", t => {
+        if (t.startsWith("child "))
+          childId = Number(t.slice("child ".length));
+        else if (t === "grown")
+          resolve();
+      }));
+      const treeBytes = await memory.readTreeBytesAsync(root.pid);
+      const childBytes = await memory.readTreeBytesAsync(childId);
       root.kill();
       await memory.closeAsync();
-      console.log("tree at least grown: " + (bytes >= grownBytes));
+      const holds = treeBytes >= childBytes && childBytes >= ${TypeScriptExpectedProcessMemoryTests.FLOOR_BYTES};
+      console.log("tree at least its child of at least 64 MiB: " + (holds || \`false, tree \${treeBytes} bytes, child \${childBytes} bytes\`));
     `);
 
-    Assert.areEqual("tree at least grown: true", output);
+    Assert.areEqual("tree at least its child of at least 64 MiB: true", output);
   }
 
   @TestMethod
@@ -44,10 +53,11 @@ export class TypeScriptExpectedProcessMemoryTests {
       root.kill();
       other.kill();
       await memory.closeAsync();
-      console.log("root below: " + (rootBytes < grownBytes) + ", other at least grown: " + (otherBytes >= grownBytes));
+      const holds = rootBytes < otherBytes && otherBytes >= ${TypeScriptExpectedProcessMemoryTests.FLOOR_BYTES};
+      console.log("root below the other of at least 64 MiB: " + (holds || \`false, root \${rootBytes} bytes, other \${otherBytes} bytes\`));
     `);
 
-    Assert.areEqual("root below: true, other at least grown: true", output);
+    Assert.areEqual("root below the other of at least 64 MiB: true", output);
   }
 
   @TestMethod
