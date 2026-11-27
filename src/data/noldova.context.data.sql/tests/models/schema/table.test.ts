@@ -6,13 +6,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { Column, ColumnType, ForeignKey, PrimaryKey, Table } from "@noldova/context.data.sql";
+import { Column, ForeignKey, PrimaryKey, Table } from "@noldova/context.data.sql";
 import { ArgumentException } from "@noldova/context.exceptions";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 @TestClass
 export class TableTests {
-  private static readonly id: Column = new Column("id", ColumnType.Text, false);
+  private static readonly id: Column = new Column("id", "TEXT", false);
 
   @TestMethod
   public holdsANameAndCopiesOfItsParts(): void {

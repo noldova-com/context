@@ -8,7 +8,6 @@
 
 import { nameof } from "@noldova/context.core";
 
-import type { ColumnType } from "../../enums/column-type.js";
 import type { Column } from "./column.js";
 import type { ColumnSelector } from "../../types/column-selector.js";
 import { ColumnBuilder } from "./column-builder.js";
@@ -16,9 +15,9 @@ import { ColumnBuilder } from "./column-builder.js";
 export class ColumnsBuilder<TModel> {
   private readonly columns: ColumnBuilder[] = [];
 
-  public addColumn(name: string, type: ColumnType): ColumnBuilder;
-  public addColumn(selector: ColumnSelector<TModel>, type: ColumnType): ColumnBuilder;
-  public addColumn(nameOrSelector: string | ColumnSelector<TModel>, type: ColumnType): ColumnBuilder {
+  public addColumn(name: string, type: string): ColumnBuilder;
+  public addColumn(selector: ColumnSelector<TModel>, type: string): ColumnBuilder;
+  public addColumn(nameOrSelector: string | ColumnSelector<TModel>, type: string): ColumnBuilder {
     const column = new ColumnBuilder(Object.isString(nameOrSelector) ? nameOrSelector : nameof<TModel>(nameOrSelector), type);
     this.columns.push(column);
     return column;

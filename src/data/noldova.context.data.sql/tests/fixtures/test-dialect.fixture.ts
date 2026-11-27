@@ -6,15 +6,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { ColumnType, SqlDialect } from "@noldova/context.data.sql";
+import { PropertyType } from "@noldova/context.data";
+import { SqlDialect } from "@noldova/context.data.sql";
 
 export class TestDialect extends SqlDialect {
   public override formatBeginTransaction(): string {
     return "BEGIN";
   }
 
-  public override formatColumnType(type: ColumnType): string {
-    return type === ColumnType.Integer ? "INTEGER" : "TEXT";
+  public override formatColumnType(type: PropertyType): string {
+    return type === PropertyType.Integer ? "INTEGER" : "TEXT";
   }
 
   public override formatIdentityColumnType(): string {

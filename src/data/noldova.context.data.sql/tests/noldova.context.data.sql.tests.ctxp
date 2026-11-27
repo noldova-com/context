@@ -10,6 +10,7 @@
       "../../noldova.context.data.sql.sqlite/src/noldova.context.data.sql.sqlite.ctxp"
     ],
     "packages": [
+      "noldova.context.collections",
       "noldova.context.core",
       "noldova.context.data",
       "noldova.context.exceptions",

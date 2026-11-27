@@ -14,8 +14,11 @@ export class DataApiTests {
   @TestMethod
   public exportsTheCompleteRuntimeSurface(): void {
     const expected = [
-      "Change", "ChangeFeed", "ChangeOperation", "Connection", "DataException", "DataProvider", "DataRecord", "DataSource", "DatabaseFacade",
-      "DbContext", "DbContextOptions", "DbContextOptionsBuilder", "Index", "Migration", "MigrationHistory", "Migrator", "Transaction"
+      "AmbiguousRelationException", "Change", "ChangeFeed", "ChangeOperation", "ColumnMappedTwiceException", "Connection", "DataException", "DataProvider",
+      "DataRecord", "DataSource", "DatabaseFacade", "DbContext", "DbContextOptions", "DbContextOptionsBuilder", "EntityKeyMissingException", "EntityProperty",
+      "EntityPropertyMissingException", "EntityRelation", "EntityType", "EntityTypeBuilder", "ForeignKeyMismatchException", "Index", "Migration",
+      "MigrationHistory", "Migrator", "Model", "ModelBuilder", "ModelSnapshot", "PropertyBuilder", "PropertyType", "RelationBuilder", "RelationKind",
+      "RelationTargetUnmappedException", "SnapshotBuilder", "SnapshotEntityBuilder", "StaleSnapshotException", "TableMappedTwiceException", "Transaction"
     ];
 
     Assert.areEqual(expected.join(","), Object.keys(api).sort().join(","));

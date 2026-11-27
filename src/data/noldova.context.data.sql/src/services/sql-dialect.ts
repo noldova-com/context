@@ -7,9 +7,8 @@
  */
 
 import "@noldova/context.core";
-import type { Index } from "@noldova/context.data";
+import type { Index, PropertyType } from "@noldova/context.data";
 
-import type { ColumnType } from "../enums/column-type.js";
 import type { Column } from "../models/schema/column.js";
 import type { ForeignKey } from "../models/schema/foreign-key.js";
 import type { PrimaryKey } from "../models/schema/primary-key.js";
@@ -19,7 +18,7 @@ import { Resources } from "../resources.js";
 export abstract class SqlDialect {
   public abstract formatBeginTransaction(): string;
 
-  public abstract formatColumnType(type: ColumnType): string;
+  public abstract formatColumnType(type: PropertyType): string;
 
   public abstract formatIdentityColumnType(): string;
 
@@ -45,7 +44,7 @@ export abstract class SqlDialect {
   }
 
   public renderColumn(column: Column): string {
-    const parts = [this.quoteIdentifier(column.name), this.formatColumnType(column.type)];
+    const parts = [this.quoteIdentifier(column.name), column.type];
     if (!column.isNullable)
       parts.push(Resources.notNullConstraint);
     return parts.join(Resources.wordSeparator);

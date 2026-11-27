@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-export { ColumnType } from "../enums/column-type.js";
+export { SchemaMismatchException } from "../exceptions/schema-mismatch.exception.js";
 export { CreateIndexOperation } from "../models/operations/create-index-operation.js";
 export { CreateTableOperation } from "../models/operations/create-table-operation.js";
 export { SchemaOperation } from "../models/operations/schema-operation.js";
@@ -26,6 +26,7 @@ export { SqlDialect } from "../services/sql-dialect.js";
 export { SqlMigration } from "../models/sql-migration.js";
 export { SqlMigrationHistory } from "../services/sql-migration-history.js";
 export { SqlMigrator } from "../services/sql-migrator.js";
+export { SqlModelValidator } from "../services/sql-model-validator.js";
 export { SqlProvider } from "../services/sql-provider.js";
 export { SqlSession } from "../models/sql-session.js";
 export { SqlTransaction } from "../models/sql-transaction.js";

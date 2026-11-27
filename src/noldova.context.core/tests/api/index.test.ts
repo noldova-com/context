@@ -15,8 +15,9 @@ export class CoreApiTests {
   public exportsTheCompleteRuntimeSurface(): void {
     const exportNames = Object.keys(api);
 
-    Assert.areEqual(1, exportNames.length);
-    Assert.areEqual("nameof", exportNames[0]);
+    Assert.areEqual(2, exportNames.length);
+    Assert.areEqual("StringComparison", exportNames[0]);
+    Assert.areEqual("nameof", exportNames[1]);
     Assert.areEqual("empty", api.nameof<StringConstructor>(t => t.empty));
   }
 
@@ -50,6 +51,7 @@ export class CoreApiTests {
     Assert.areEqual(String.empty, emptyDescriptor.value);
 
     const extensionNames = [
+      api.nameof<StringConstructor>(t => t.equals),
       api.nameof<StringConstructor>(t => t.format),
       api.nameof<StringConstructor>(t => t.isAsciiDigit),
       api.nameof<StringConstructor>(t => t.isAsciiHexDigit),

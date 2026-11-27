@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { ColumnsBuilder, ColumnType } from "@noldova/context.data.sql";
+import { ColumnsBuilder } from "@noldova/context.data.sql";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
 import type { Note } from "../../fixtures/note.fixture.js";
@@ -16,22 +16,22 @@ export class ColumnsBuilderTests {
   @TestMethod
   public namesColumnsBySelectorOrText(): void {
     const builder = new ColumnsBuilder<Note>();
-    builder.addColumn(t => t.id, ColumnType.Text);
-    builder.addColumn(t => t.ownerId, ColumnType.Text).makeNullable();
-    builder.addColumn("json", ColumnType.Text);
-    builder.addColumn("count", ColumnType.Integer);
+    builder.addColumn(t => t.id, "TEXT");
+    builder.addColumn(t => t.ownerId, "TEXT").makeNullable();
+    builder.addColumn("json", "TEXT");
+    builder.addColumn("count", "INTEGER");
 
     const columns = builder.toColumns();
 
     Assert.areEqual("id,ownerId,json,count", columns.map(t => t.name).join(","));
     Assert.isTrue(columns[1]?.isNullable === true);
-    Assert.areEqual(ColumnType.Integer, columns[3]?.type);
+    Assert.areEqual("INTEGER", columns[3]?.type);
   }
 
   @TestMethod
   public producesAFreshListEachTime(): void {
     const builder = new ColumnsBuilder<Note>();
-    builder.addColumn(t => t.id, ColumnType.Text);
+    builder.addColumn(t => t.id, "TEXT");
     const columns = [...builder.toColumns()];
     columns.length = 0;
 

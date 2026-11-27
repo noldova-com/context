@@ -9,5 +9,6 @@
 import "../extensions/object.extensions.js";
 import "../extensions/string.extensions.js";
 
+export { StringComparison } from "../enums/string-comparison.js";
 export { nameof } from "../intrinsics/nameof.js";
 export type { NameofSelector } from "../types/nameof-selector.js";

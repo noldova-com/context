@@ -7,22 +7,8 @@
  */
 
 import type { NameofSelector } from "@noldova/context.core";
-import { type Change, ChangeFeed, type ChangeOperation, Connection, DataProvider, type DataRecord, type DataSource, type DataValue, type Index, Migration, MigrationHistory, Migrator, Transaction } from "@noldova/context.data";
-
-/**
- * The storage classes a migration may declare for a column; the dialect spells
- * them for its database.
- */
-export declare enum ColumnType {
-  /**
-   * Text; also the class for JSON documents and ISO 8601 timestamps.
-   */
-  Text = "Text",
-  /**
-   * An integer.
-   */
-  Integer = "Integer"
-}
+import { type Change, ChangeFeed, type ChangeOperation, Connection, DataException, DataProvider, type DataRecord, type DataSource, type DataValue, type Index, Migration, MigrationHistory, Migrator, type Model, type PropertyType,
+  Transaction } from "@noldova/context.data";
 
 /**
  * Names a column after a property of the model the table stores, as a
@@ -58,8 +44,8 @@ export declare class SqlQuery {
 }
 
 /**
- * One column of a table as a migration declares it: a name, a storage class,
- * and whether `NULL` is allowed. Keys are constraints of the table, not
+ * One column of a table as a migration declares it: a name, its provider's
+ * column type, and whether `NULL` is allowed. Keys are constraints of the table, not
  * properties of the column.
  */
 export declare class Column {
@@ -69,9 +55,9 @@ export declare class Column {
   public readonly name: string;
 
   /**
-   * The storage class.
+   * The column type in the provider's own words, such as `TEXT` or `BIGINT`.
    */
-  public readonly type: ColumnType;
+  public readonly type: string;
 
   /**
    * True when `NULL` is allowed; otherwise the column is `NOT NULL`.
@@ -79,9 +65,9 @@ export declare class Column {
   public readonly isNullable: boolean;
 
   /**
-   * Initializes the column. A blank name throws `ArgumentException`.
+   * Initializes the column. A blank name or type throws `ArgumentException`.
    */
-  public constructor(name: string, type: ColumnType, isNullable: boolean);
+  public constructor(name: string, type: string, isNullable: boolean);
 }
 
 /**
@@ -245,9 +231,10 @@ export declare abstract class SqlDialect {
   public abstract formatBeginTransaction(): string;
 
   /**
-   * Spells a column's storage class, such as `TEXT`.
+   * Spells the column type that holds a property of the type, such as `TEXT`
+   * for `PropertyType.String`.
    */
-  public abstract formatColumnType(type: ColumnType): string;
+  public abstract formatColumnType(type: PropertyType): string;
 
   /**
    * Spells the type and constraints of an integer primary key the database
@@ -500,14 +487,14 @@ export declare class ColumnBuilder {
   public readonly name: string;
 
   /**
-   * The storage class.
+   * The column type in the provider's own words, such as `TEXT` or `BIGINT`.
    */
-  public readonly type: ColumnType;
+  public readonly type: string;
 
   /**
    * Initializes the builder for a `NOT NULL` column.
    */
-  public constructor(name: string, type: ColumnType);
+  public constructor(name: string, type: string);
 
   /**
    * Allows `NULL`.
@@ -515,7 +502,7 @@ export declare class ColumnBuilder {
   public makeNullable(): this;
 
   /**
-   * Produces the column model; a blank name throws `ArgumentException`.
+   * Produces the column model; a blank name or type throws `ArgumentException`.
    */
   public toColumn(): Column;
 }
@@ -529,12 +516,12 @@ export declare class ColumnsBuilder<TModel> {
   /**
    * Adds a column with the given name.
    */
-  public addColumn(name: string, type: ColumnType): ColumnBuilder;
+  public addColumn(name: string, type: string): ColumnBuilder;
 
   /**
    * Adds a column named after the selected property of the model.
    */
-  public addColumn(selector: ColumnSelector<TModel>, type: ColumnType): ColumnBuilder;
+  public addColumn(selector: ColumnSelector<TModel>, type: string): ColumnBuilder;
 
   /**
    * Produces the column models in declaration order.
@@ -651,6 +638,50 @@ export declare class SqlMigrationHistory extends MigrationHistory {
    * Inserts the id with the current time.
    */
   public override recordAsync(id: string, transaction?: SqlTransaction): Promise<void>;
+}
+
+/**
+ * Raised when a context's model and the schema its migrations create
+ * disagree, naming the table and, when the difference is in one, the column.
+ */
+export declare class SchemaMismatchException extends DataException {
+  /**
+   * The table that differs.
+   */
+  public readonly table: string;
+
+  /**
+   * The column that differs, or `null` when the table is missing or its
+   * primary key differs.
+   */
+  public readonly column: string | null;
+
+  /**
+   * Initializes the exception with its message, the table and the column.
+   */
+  public constructor(message: string, table: string, column: string | null);
+}
+
+/**
+ * Checks a context's model against the schema its migrations create.
+ *
+ * @example
+ * ```ts
+ * SqlModelValidator.validate(context.model, migrations, context.database.connection.dialect);
+ * ```
+ */
+export declare class SqlModelValidator {
+  private constructor();
+
+  /**
+   * Replays the tables the migrations create and checks each mapped entity:
+   * its table exists, each property has its column with the type the dialect
+   * spells for it and the nullability its property allows, the primary key is
+   * the model's key, and each foreign key column refers to its principal's
+   * key. The first difference throws `SchemaMismatchException`. Statements a
+   * migration runs as SQL text are not read.
+   */
+  public static validate(model: Model, migrations: readonly SqlMigration[], dialect: SqlDialect): void;
 }
 
 /**

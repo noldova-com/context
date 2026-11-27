@@ -6,7 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import { ColumnType, SqlDialect } from "@noldova/context.data.sql";
+import { PropertyType } from "@noldova/context.data";
+import { SqlDialect } from "@noldova/context.data.sql";
 import { PostgreSQLDialect } from "@noldova/context.data.sql.postgresql";
 import { Assert, TestClass, TestMethod } from "@noldova/context.testing";
 
@@ -18,8 +19,8 @@ export class PostgreSQLDialectTests {
 
     Assert.isInstanceOf(dialect, SqlDialect);
     Assert.areEqual("BEGIN", dialect.formatBeginTransaction());
-    Assert.areEqual("TEXT", dialect.formatColumnType(ColumnType.Text));
-    Assert.areEqual("BIGINT", dialect.formatColumnType(ColumnType.Integer));
+    Assert.areEqual("TEXT", dialect.formatColumnType(PropertyType.String));
+    Assert.areEqual("BIGINT", dialect.formatColumnType(PropertyType.Integer));
     Assert.areEqual("BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY", dialect.formatIdentityColumnType());
     Assert.areEqual("SELECT pg_advisory_xact_lock(hashtext('__migrations'))", dialect.formatLock("__migrations").join(";"));
     Assert.areEqual("SELECT pg_advisory_xact_lock(hashtext('a''b'))", dialect.formatLock("a'b").join(";"));

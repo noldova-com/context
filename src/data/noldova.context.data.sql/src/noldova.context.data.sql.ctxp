@@ -6,6 +6,7 @@
   "dependencies": {
     "projects": [],
     "packages": [
+      "noldova.context.collections",
       "noldova.context.core",
       "noldova.context.data",
       "noldova.context.exceptions"

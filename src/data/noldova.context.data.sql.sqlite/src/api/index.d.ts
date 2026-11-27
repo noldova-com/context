@@ -6,8 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import type { DataSource, DbContextOptions } from "@noldova/context.data";
-import { ColumnType, SqlConnection, SqlDialect, type SqlMigration, SqlProvider } from "@noldova/context.data.sql";
+import type { DataSource, DbContextOptions, PropertyType } from "@noldova/context.data";
+import { SqlConnection, SqlDialect, type SqlMigration, SqlProvider } from "@noldova/context.data.sql";
 
 declare module "@noldova/context.data" {
   interface DbContextOptionsBuilder {
@@ -32,9 +32,9 @@ export declare class SQLiteDialect extends SqlDialect {
   public override formatBeginTransaction(): string;
 
   /**
-   * `TEXT` or `INTEGER`.
+   * `INTEGER` for `PropertyType.Integer`, otherwise `TEXT`.
    */
-  public override formatColumnType(type: ColumnType): string;
+  public override formatColumnType(type: PropertyType): string;
 
   /**
    * `INTEGER PRIMARY KEY AUTOINCREMENT`, so a key is never reused after its
