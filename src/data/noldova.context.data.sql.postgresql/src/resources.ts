@@ -200,9 +200,10 @@ export class Resources {
   }
 
   public static formatAlterColumn(table: string, column: string, type: string, value: string, defaultValue: string | null, nullability: string): string {
+    const dropDefault = Object.isNull(defaultValue) ? "" : `ALTER COLUMN ${column} DROP DEFAULT, `;
     const setDefault = Object.isNull(defaultValue) ? "" : `, ALTER COLUMN ${column} SET DEFAULT ${defaultValue}`;
 
-    return `${table} ALTER COLUMN ${column} TYPE ${type} USING ${value}${setDefault}, ALTER COLUMN ${column} ${nullability}`;
+    return `${table} ${dropDefault}ALTER COLUMN ${column} TYPE ${type} USING ${value}${setDefault}, ALTER COLUMN ${column} ${nullability}`;
   }
 
   public static formatBatchFailed(index: number): string {

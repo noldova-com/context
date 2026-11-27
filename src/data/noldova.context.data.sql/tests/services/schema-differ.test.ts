@@ -59,13 +59,13 @@ export class SchemaDifferTests {
   }
 
   @TestMethod
-  public givesAColumnMadeRequiredItsDefaultForTheRowsThatHoldNone(): void {
+  public givesAColumnMadeRequiredOrOfAnotherTypeItsNewDefault(): void {
     const source = [SchemaDifferTests.table("notes", ["id"], [], "id TEXT", "title TEXT?", "rank INTEGER", "body TEXT")];
     const target = [SchemaDifferTests.table("notes", ["id"], [], "id TEXT", "title TEXT=''", "rank TEXT=''", "body TEXT?=''")];
 
     const columns = SchemaDiffer.diff(source, target).filter(t => t instanceof AlterColumnOperation).map(t => t.column);
 
-    Assert.areEqual("title:false:'',rank:false:null,body:true:null", columns.map(t => `${t.name}:${t.isNullable}:${t.defaultValueSql}`).join(","));
+    Assert.areEqual("title:false:'',rank:false:'',body:true:null", columns.map(t => `${t.name}:${t.isNullable}:${t.defaultValueSql}`).join(","));
   }
 
   @TestMethod

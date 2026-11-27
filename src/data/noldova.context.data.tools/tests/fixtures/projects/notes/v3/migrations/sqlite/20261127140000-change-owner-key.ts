@@ -9,7 +9,7 @@ export class ChangeOwnerKey extends SqlMigration {
     builder.dropForeignKey("notes", "ownerId");
     builder.dropColumn("notes", "ownerId");
     builder.alterColumn("notes", "title", "TEXT").hasDefaultValueSql("''");
-    builder.alterColumn("notes", "rank", "TEXT");
+    builder.alterColumn("notes", "rank", "TEXT").hasDefaultValueSql("''");
     builder.dropPrimaryKey("owners");
     builder.dropColumn("owners", "id");
     builder.addColumn("owners", "code", "TEXT").hasDefaultValueSql("''");

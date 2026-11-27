@@ -935,7 +935,9 @@ export declare class MigrationBuilder {
    * nullable; otherwise it becomes `NOT NULL`. A default given to the builder
    * becomes the column's default, and a `NOT NULL` column takes it in each
    * row that holds `NULL`; without one, a row that holds `NULL` fails the
-   * change.
+   * change. Give one, too, when the type changes and the column has a default
+   * of the old type: PostgreSQL drops the old default before it converts the
+   * column, then sets the new one.
    */
   public alterColumn(table: string, name: string, type: string): ColumnBuilder;
 

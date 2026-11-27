@@ -34,9 +34,9 @@ export class PostgreSQLDialectTests {
       dialect.renderAlterColumn("notes", new Column("rank", "BIGINT", true)));
     Assert.areEqual("ALTER TABLE \"notes\" ALTER COLUMN \"title\" TYPE TEXT USING \"title\"::TEXT, ALTER COLUMN \"title\" SET NOT NULL",
       dialect.renderAlterColumn("notes", new Column("title", "TEXT", false)));
-    Assert.areEqual("ALTER TABLE \"notes\" ALTER COLUMN \"title\" TYPE TEXT USING COALESCE(\"title\"::TEXT, ''), ALTER COLUMN \"title\" SET DEFAULT '', "
-      + "ALTER COLUMN \"title\" SET NOT NULL", dialect.renderAlterColumn("notes", new Column("title", "TEXT", false, "''")));
-    Assert.areEqual("ALTER TABLE \"notes\" ALTER COLUMN \"rank\" TYPE BIGINT USING \"rank\"::BIGINT, ALTER COLUMN \"rank\" SET DEFAULT 0, "
-      + "ALTER COLUMN \"rank\" DROP NOT NULL", dialect.renderAlterColumn("notes", new Column("rank", "BIGINT", true, "0")));
+    Assert.areEqual("ALTER TABLE \"notes\" ALTER COLUMN \"title\" DROP DEFAULT, ALTER COLUMN \"title\" TYPE TEXT USING COALESCE(\"title\"::TEXT, ''), "
+      + "ALTER COLUMN \"title\" SET DEFAULT '', ALTER COLUMN \"title\" SET NOT NULL", dialect.renderAlterColumn("notes", new Column("title", "TEXT", false, "''")));
+    Assert.areEqual("ALTER TABLE \"notes\" ALTER COLUMN \"rank\" DROP DEFAULT, ALTER COLUMN \"rank\" TYPE BIGINT USING \"rank\"::BIGINT, "
+      + "ALTER COLUMN \"rank\" SET DEFAULT 0, ALTER COLUMN \"rank\" DROP NOT NULL", dialect.renderAlterColumn("notes", new Column("rank", "BIGINT", true, "0")));
   }
 }

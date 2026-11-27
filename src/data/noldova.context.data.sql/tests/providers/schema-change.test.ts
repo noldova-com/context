@@ -130,6 +130,27 @@ export class SchemaChangeTests {
   }
 
   @TestMethod
+  @TestData("sqlite")
+  @TestData("postgresql")
+  public async changesTheTypeOfAColumnThatHasADefaultOfTheOldType(provider: string): Promise<void> {
+    await using database = await ProviderDatabase.createAsync(provider);
+    await using context = new ShapeContext(database.options(), [new ShapeMigration("20261127160000_Notes", t => {
+      t.createTable("notes", c => c.addColumn("id", "TEXT"), c => c.addPrimaryKey("id"));
+      t.addColumn("notes", "rank", "TEXT").hasDefaultValueSql("'none'");
+      t.executeSql("INSERT INTO \"notes\" (\"id\", \"rank\") VALUES ('1', '5')");
+    }), new ShapeMigration("20261127160001_Rank", t => {
+      t.alterColumn("notes", "rank", "BIGINT").hasDefaultValueSql("0");
+    })]);
+
+    await context.database.migrateAsync();
+    const connection = context.database.connection;
+    await connection.executeAsync(new SqlQuery("INSERT INTO \"notes\" (\"id\") VALUES ('2')"));
+    const rows = await connection.queryAsync(new SqlQuery("SELECT \"id\", \"rank\" FROM \"notes\" ORDER BY \"id\""));
+
+    Assert.areEqual("1:5,2:0", rows.map(t => `${t.readString("id")}:${t.readInteger("rank")}`).join(","));
+  }
+
+  @TestMethod
   public async failsOnPostgreSQLToChangeAKeyThatAForeignKeyRefersTo(): Promise<void> {
     await using database = await ProviderDatabase.createAsync("postgresql");
     await using context = new ShapeContext(database.options(), [new ShapeMigration("20261127150000_Owners", t => {

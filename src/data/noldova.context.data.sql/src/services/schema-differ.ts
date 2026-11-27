@@ -61,11 +61,14 @@ export class SchemaDiffer {
         operations.push(new DropColumnOperation(source.name, column.name));
     for (const column of target.columns) {
       const existing = source.columns.find(t => t.name === column.name);
-      if (Object.isUndefined(existing))
+      if (Object.isUndefined(existing)) {
         operations.push(new AddColumnOperation(target.name, column.isNullable ? new Column(column.name, column.type, true) : column));
-      else if (existing.type.toUpperCase() !== column.type.toUpperCase() || existing.isNullable !== column.isNullable)
+        continue;
+      }
+      const retyped = existing.type.toUpperCase() !== column.type.toUpperCase();
+      if (retyped || existing.isNullable !== column.isNullable)
         operations.push(new AlterColumnOperation(target.name, new Column(column.name, column.type, column.isNullable,
-          existing.isNullable && !column.isNullable ? column.defaultValueSql : null)));
+          retyped || (existing.isNullable && !column.isNullable) ? column.defaultValueSql : null)));
     }
     if (keyChanged && !Object.isNull(target.primaryKey))
       operations.push(new AddPrimaryKeyOperation(target.name, target.primaryKey));
