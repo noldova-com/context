@@ -25,6 +25,15 @@ is shown as it comes. It returns 1 when `tsc` reports a failure; a project
 with no `tsconfig.json` or no `typescript` package installed fails, too, and
 `ctx` prints why. `ctx build --help` shows its use.
 
+Before `tsc`, `ctx build` runs the plugins of the packages the project names
+in `dependencies.packages`. A plugin changes a copy of the source in
+`_build/.generated`, never your files: `tsc` checks your source as you wrote
+it, then compiles the copy into your `outDir`. Errors, and stack traces run
+with `node --enable-source-maps`, point at your source. Such a project's
+`tsconfig.json`, or one it extends, sets `rootDir` and `outDir`, and
+the copy holds every file under `rootDir`. No package brings a plugin
+yet.
+
 The projects it depends on are the `.ctxp` files its `dependencies.projects`
 names, each a path relative to the project file that names it, with forward
 slashes:

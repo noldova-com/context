@@ -23,8 +23,8 @@ export class ProjectGraphReaderTests {
 
     const projects = await ProjectGraphReader.readAsync(project.projectFilePath);
 
-    Assert.areEqual("notes", projects.map(t => t.name).join(","));
-    Assert.areEqual(project.projectFilePath, projects[0]?.manifestPath);
+    Assert.areEqual("notes", projects.select(t => t.project.name).toArray().join(","));
+    Assert.areEqual(project.projectFilePath, projects.get(0).project.manifestPath);
   }
 
   @TestMethod
@@ -37,9 +37,20 @@ export class ProjectGraphReaderTests {
 
     const projects = await ProjectGraphReader.readAsync(project.projectFilePath);
 
-    Assert.areEqual("c,b,a,notes", projects.map(t => t.name).join(","));
-    Assert.areEqual(project.path("c/c.ctxp"), projects[0]?.manifestPath);
-    Assert.areEqual(project.path("c"), projects[0]?.directory);
+    Assert.areEqual("c,b,a,notes", projects.select(t => t.project.name).toArray().join(","));
+    Assert.areEqual(project.path("c/c.ctxp"), projects.get(0).project.manifestPath);
+    Assert.areEqual(project.path("c"), projects.get(0).project.directory);
+  }
+
+  @TestMethod
+  public async readsThePackagesEachProjectNamesAsync(): Promise<void> {
+    await using project = await SDKProject.createAsync(SDKProject.validSource);
+    await project.writeManifestAsync({ name: "notes", kind: "library", dependencies: { projects: ["a/a.ctxp"], packages: ["noldova.context.di"] } });
+    await project.writeProjectAsync("a", { name: "a", kind: "library", dependencies: { packages: ["noldova.context.data", "noldova.context.query"] } });
+
+    const projects = await ProjectGraphReader.readAsync(project.projectFilePath);
+
+    Assert.areEqual("a:noldova.context.data+noldova.context.query,notes:noldova.context.di", projects.select(t => `${t.project.name}:${t.packages.toArray().join("+")}`).toArray().join(","));
   }
 
   @TestMethod

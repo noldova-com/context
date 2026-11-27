@@ -35,7 +35,6 @@ export default class Config {
     new PackageInfo("noldova.context.processes", "noldova.context.processes", "@noldova/context.processes"),
     new PackageInfo("noldova.context.threading", "noldova.context.threading", "@noldova/context.threading"),
     new PackageInfo("noldova.context", "noldova.context", "@noldova/context"),
-    new PackageInfo("noldova.context.sdk", "noldova.context.sdk", "@noldova/context.sdk"),
     new PackageInfo("noldova.context.query.expressions", "query/noldova.context.query.expressions", "@noldova/context.query.expressions"),
     new PackageInfo("noldova.context.query", "query/noldova.context.query", "@noldova/context.query"),
     new PackageInfo("noldova.context.data", "data/noldova.context.data", "@noldova/context.data"),
@@ -47,6 +46,7 @@ export default class Config {
     new PackageInfo("noldova.context.parsers", "parsers/noldova.context.parsers", "@noldova/context.parsers"),
     new PackageInfo("noldova.context.parsers.regex", "parsers/noldova.context.parsers.regex", "@noldova/context.parsers.regex"),
     new PackageInfo("noldova.context.parsers.typescript", "parsers/noldova.context.parsers.typescript", "@noldova/context.parsers.typescript"),
+    new PackageInfo("noldova.context.sdk", "noldova.context.sdk", "@noldova/context.sdk"),
     new PackageInfo("noldova.context.data.tools", "data/noldova.context.data.tools", "@noldova/context.data.tools"),
   ];
 

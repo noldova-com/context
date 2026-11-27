@@ -41,7 +41,7 @@ export class BuildHost {
   public static async isFileAtExactPathAsync(folder: string, path: string): Promise<boolean> {
     let current = folder;
     for (const segment of path.split(Resources.pathSeparator)) {
-      if (!Resources.relativeSegments.includes(segment) && !(await BuildHost.namesOfAsync(current)).includes(segment))
+      if (!Resources.relativeSegments.contains(segment) && !(await BuildHost.namesOfAsync(current)).includes(segment))
         return false;
 
       current = join(current, segment);
@@ -55,8 +55,11 @@ export class BuildHost {
     }
   }
 
-  public static async compileAsync(project: Project, arguments_: readonly string[], output: CommandOutput): Promise<boolean> {
-    const configuration = join(project.directory, Resources.configurationFileName);
+  public static compileAsync(project: Project, arguments_: readonly string[], output: CommandOutput): Promise<boolean> {
+    return BuildHost.compileWithAsync(project, join(project.directory, Resources.configurationFileName), arguments_, output);
+  }
+
+  public static async compileWithAsync(project: Project, configuration: string, arguments_: readonly string[], output: CommandOutput): Promise<boolean> {
     try {
       await access(configuration);
     }
@@ -73,21 +76,21 @@ export class BuildHost {
     return code === 0;
   }
 
+  public static compilerOf(project: Project): string {
+    try {
+      return join(dirname(createRequire(project.manifestPath).resolve(Resources.compilerManifest)), ...Resources.compilerPath);
+    }
+    catch (exception) {
+      throw new SDKException(Resources.formatCompilerMissing(project.name), new ExceptionOptions(exception));
+    }
+  }
+
   private static async namesOfAsync(folder: string): Promise<readonly string[]> {
     try {
       return await readdir(folder);
     }
     catch {
       return [];
-    }
-  }
-
-  private static compilerOf(project: Project): string {
-    try {
-      return join(dirname(createRequire(project.manifestPath).resolve(Resources.compilerManifest)), ...Resources.compilerPath);
-    }
-    catch (exception) {
-      throw new SDKException(Resources.formatCompilerMissing(project.name), new ExceptionOptions(exception));
     }
   }
 }
