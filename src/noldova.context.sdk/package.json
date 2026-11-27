@@ -20,8 +20,13 @@
   },
   "peerDependencies": {
     "@noldova/context": ">=__VERSION__ <__UPPER_BOUND__",
+    "@noldova/context.collections": ">=__VERSION__ <__UPPER_BOUND__",
     "@noldova/context.core": ">=__VERSION__ <__UPPER_BOUND__",
+    "@noldova/context.diagnostics": ">=__VERSION__ <__UPPER_BOUND__",
     "@noldova/context.exceptions": ">=__VERSION__ <__UPPER_BOUND__",
-    "@noldova/context.json": ">=__VERSION__ <__UPPER_BOUND__"
+    "@noldova/context.json": ">=__VERSION__ <__UPPER_BOUND__",
+    "@noldova/context.parsers": ">=__VERSION__ <__UPPER_BOUND__",
+    "@noldova/context.parsers.typescript": ">=__VERSION__ <__UPPER_BOUND__",
+    "@noldova/context.text": ">=__VERSION__ <__UPPER_BOUND__"
   }
 }

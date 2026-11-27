@@ -62,6 +62,23 @@ export class BuildCommandTests {
   }
 
   @TestMethod
+  public async buildsEachProjectWithTheCompilerInstalledForItAsync(): Promise<void> {
+    await using project = await SDKProject.createAsync(SDKProject.validSource);
+    await project.writeManifestAsync({ name: "notes", kind: "library", dependencies: { projects: ["a/a.ctxp"] } });
+    await project.writeProjectAsync("a", { name: "a", kind: "library" });
+    await project.writeAsync("a/node_modules/typescript/package.json", JSON.stringify({ name: "typescript" }));
+    await project.writeAsync("a/node_modules/typescript/bin/tsc", "console.log(\"The compiler of a.\");");
+    const output = new RecordingOutput();
+
+    const code = await new BuildCommand().runAsync(new CommandContext(project.projectFilePath, [], output));
+
+    Assert.areEqual(0, code);
+    Assert.areEqual("Building \"a\"...,The compiler of a.,Built \"a\".,Building \"notes\"...,Built \"notes\".", output.lines.join(","));
+    Assert.isFalse(await project.existsAsync("a/build/index.js"));
+    Assert.isTrue(await project.existsAsync("build/index.js"));
+  }
+
+  @TestMethod
   public async buildsNothingAfterTheFirstProjectThatFailsAsync(): Promise<void> {
     await using project = await SDKProject.createAsync(SDKProject.validSource);
     await project.writeManifestAsync({ name: "notes", kind: "library", dependencies: { projects: ["a/a.ctxp"] } });

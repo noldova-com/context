@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import { type Enumerable, type IReadOnlyList, List } from "@noldova/context.collections";
+
 export class Resources {
   public static readonly backslash: string = "\\";
   public static readonly closeEvent: string = "close";
@@ -16,22 +18,23 @@ export class Resources {
   public static readonly configurationFileName: string = "tsconfig.json";
   public static readonly cycleSeparator: string = " -> ";
   public static readonly dependenciesField: string = "dependencies";
-  public static readonly helpOptions: readonly string[] = ["-h", "--help"];
+  public static readonly helpOptions: IReadOnlyList<string> = new List(["-h", "--help"]);
   public static readonly lineEvent: string = "line";
+  public static readonly packagesField: string = "packages";
   public static readonly pathSeparator: string = "/";
   public static readonly projectExtension: string = ".ctxp";
   public static readonly projectOption: string = "--project";
   public static readonly projectsField: string = "projects";
-  public static readonly relativeSegments: readonly string[] = [".", ".."];
+  public static readonly relativeSegments: IReadOnlyList<string> = new List([".", ".."]);
   public static readonly textEncoding: BufferEncoding = "utf8";
-  public static readonly usage: readonly string[] = [
+  public static readonly usage: IReadOnlyList<string> = new List([
     "Usage: ctx build [<tsc options>]",
     "",
     "Builds the project and the projects it depends on, each with the TypeScript compiler installed for it,",
     "on the tsconfig.json beside its project file. Every argument goes to each compiler as given.",
     "",
     "  -h, --help  Shows this help."
-  ];
+  ]);
 
   public static formatBuildFailed(project: string): string {
     return `"${project}" didn't build.`;
@@ -57,8 +60,8 @@ export class Resources {
     return `The project dependencies of "${project}" can't be read: ${String(error)}`;
   }
 
-  public static formatDependencyCycle(projects: readonly string[]): string {
-    return `The project dependencies form a cycle: ${projects.join(Resources.cycleSeparator)}.`;
+  public static formatDependencyCycle(projects: Enumerable<string>): string {
+    return `The project dependencies form a cycle: ${projects.toArray().join(Resources.cycleSeparator)}.`;
   }
 
   public static formatDependencyExecutable(project: string, dependency: string): string {
